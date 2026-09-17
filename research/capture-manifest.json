@@ -1,0 +1,439 @@
+{
+  "capturedAt": "2026-09-13T22:32:40.950Z",
+  "repo": "primer/react",
+  "branch": "main",
+  "commit": "6c645987c5ad27d5c23f57190a10b8707b29c58c",
+  "pr": 8414,
+  "issue": 8390,
+  "auth": "signed-out public repository; no private account settings",
+  "records": [
+    {
+      "device": "desktop",
+      "name": "repository",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/desktop/repository.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "branches",
+      "url": "https://github.com/primer/react/branches",
+      "title": "Branches · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/branches.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "directory",
+      "url": "https://github.com/primer/react/tree/main/.github",
+      "title": "react/.github at main · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/directory.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "file",
+      "url": "https://github.com/primer/react/blob/main/package.json",
+      "title": "react/package.json at main · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/file.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "commits",
+      "url": "https://github.com/primer/react/commits/main/",
+      "title": "Commits · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/commits.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "file-history",
+      "url": "https://github.com/primer/react/commits/main/package.json",
+      "title": "History for package.json - primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/file-history.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "commit",
+      "url": "https://github.com/primer/react/commit/6c645987c5ad27d5c23f57190a10b8707b29c58c",
+      "title": "DataTable: Add config-driven row groups (#8386) · primer/react@6c64598 · GitHub",
+      "file": "research/screenshots/github/desktop/commit.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "blame",
+      "url": "https://github.com/primer/react/blame/main/package.json",
+      "title": "Blaming react/package.json at main · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/blame.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "issues",
+      "url": "https://github.com/primer/react/issues",
+      "title": "Issues · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/issues.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "issue",
+      "url": "https://github.com/primer/react/issues/8390",
+      "title": "Incident repair: migrate 1 feature flag check(s) off raising helpers to resilient default-value variants or graduate · Issue #8390 · primer/react",
+      "file": "research/screenshots/github/desktop/issue.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "pulls",
+      "url": "https://github.com/primer/react/pulls",
+      "title": "Pull requests · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/pulls.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "pull",
+      "url": "https://github.com/primer/react/pull/8414",
+      "title": "Fix Autocomplete dropping the last typed character by wivy1 · Pull Request #8414 · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/pull.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "pull-commits",
+      "url": "https://github.com/primer/react/pull/8414/commits",
+      "title": "Fix Autocomplete dropping the last typed character by wivy1 · Pull Request #8414 · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/pull-commits.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "pull-files",
+      "url": "https://github.com/primer/react/pull/8414/files",
+      "title": "Fix Autocomplete dropping the last typed character by wivy1 · Pull Request #8414 · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/pull-files.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "compare",
+      "url": "https://github.com/primer/react/compare/6c645987c5ad27d5c23f57190a10b8707b29c58c...main",
+      "title": "Comparing 6c645987c5ad27d5c23f57190a10b8707b29c58c...main · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/compare.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "search",
+      "url": "https://github.com/search?q=repo%3Aprimer%2Freact+Button&type=issues",
+      "title": "Issue search results · GitHub",
+      "file": "research/screenshots/github/desktop/search.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "actions",
+      "url": "https://github.com/primer/react/actions",
+      "title": "Workflow runs · primer/react · GitHub",
+      "file": "research/screenshots/github/desktop/actions.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "action-run",
+      "url": "https://github.com/primer/react/actions/runs/34786023251",
+      "title": "Code Scan · primer/react@6c64598 · GitHub",
+      "file": "research/screenshots/github/desktop/action-run.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "desktop",
+      "name": "branch-switcher",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/desktop/branch-switcher.png",
+      "status": "interaction-observed",
+      "dialogs": 2,
+      "active": {
+        "tag": "INPUT",
+        "role": null,
+        "label": "Filter branches"
+      }
+    },
+    {
+      "device": "desktop",
+      "name": "keyboard-help",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/desktop/keyboard-help.png",
+      "status": "needs-manual-validation",
+      "dialogs": 0,
+      "active": null
+    },
+    {
+      "device": "desktop",
+      "name": "file-finder",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/desktop/file-finder.png",
+      "status": "needs-manual-validation",
+      "dialogs": 0,
+      "active": {
+        "tag": "INPUT",
+        "role": "combobox",
+        "label": "Go to file"
+      }
+    },
+    {
+      "device": "desktop",
+      "name": "clone-menu",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/desktop/clone-menu.png",
+      "status": "needs-manual-validation",
+      "dialogs": 0,
+      "active": {
+        "tag": "A",
+        "role": null,
+        "label": null
+      }
+    },
+    {
+      "device": "mobile",
+      "name": "repository",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/mobile/repository.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "branches",
+      "url": "https://github.com/primer/react/branches",
+      "title": "Branches · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/branches.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "directory",
+      "url": "https://github.com/primer/react/tree/main/.github",
+      "title": "react/.github at main · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/directory.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "file",
+      "url": "https://github.com/primer/react/blob/main/package.json",
+      "title": "react/package.json at main · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/file.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "commits",
+      "url": "https://github.com/primer/react/commits/main/",
+      "title": "Commits · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/commits.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "file-history",
+      "url": "https://github.com/primer/react/commits/main/package.json",
+      "title": "History for package.json - primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/file-history.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "commit",
+      "url": "https://github.com/primer/react/commit/6c645987c5ad27d5c23f57190a10b8707b29c58c",
+      "title": "DataTable: Add config-driven row groups (#8386) · primer/react@6c64598 · GitHub",
+      "file": "research/screenshots/github/mobile/commit.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "blame",
+      "url": "https://github.com/primer/react/blame/main/package.json",
+      "title": "Blaming react/package.json at main · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/blame.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "issues",
+      "url": "https://github.com/primer/react/issues",
+      "title": "Issues · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/issues.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "issue",
+      "url": "https://github.com/primer/react/issues/8390",
+      "title": "Incident repair: migrate 1 feature flag check(s) off raising helpers to resilient default-value variants or graduate · Issue #8390 · primer/react",
+      "file": "research/screenshots/github/mobile/issue.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "pulls",
+      "url": "https://github.com/primer/react/pulls",
+      "title": "Pull requests · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/pulls.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "pull",
+      "url": "https://github.com/primer/react/pull/8414",
+      "title": "Fix Autocomplete dropping the last typed character by wivy1 · Pull Request #8414 · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/pull.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "pull-commits",
+      "url": "https://github.com/primer/react/pull/8414/commits",
+      "title": "Fix Autocomplete dropping the last typed character by wivy1 · Pull Request #8414 · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/pull-commits.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "pull-files",
+      "url": "https://github.com/primer/react/pull/8414/files",
+      "title": "Fix Autocomplete dropping the last typed character by wivy1 · Pull Request #8414 · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/pull-files.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "compare",
+      "url": "https://github.com/primer/react/compare/6c645987c5ad27d5c23f57190a10b8707b29c58c...main",
+      "title": "Comparing 6c645987c5ad27d5c23f57190a10b8707b29c58c...main · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/compare.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "search",
+      "url": "https://github.com/search?q=repo%3Aprimer%2Freact+Button&type=issues",
+      "title": "Issue search results · GitHub",
+      "file": "research/screenshots/github/mobile/search.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "actions",
+      "url": "https://github.com/primer/react/actions",
+      "title": "Workflow runs · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/actions.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "action-run",
+      "url": "https://github.com/primer/react/actions/runs/34786023251",
+      "title": "Code Scan · primer/react@6c64598 · GitHub",
+      "file": "research/screenshots/github/mobile/action-run.png",
+      "httpStatus": 200,
+      "status": "captured"
+    },
+    {
+      "device": "mobile",
+      "name": "branch-switcher",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/mobile/branch-switcher.png",
+      "status": "interaction-observed",
+      "dialogs": 2,
+      "active": {
+        "tag": "INPUT",
+        "role": null,
+        "label": "Filter branches"
+      }
+    },
+    {
+      "device": "mobile",
+      "name": "keyboard-help",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/mobile/keyboard-help.png",
+      "status": "needs-manual-validation",
+      "dialogs": 0,
+      "active": null
+    },
+    {
+      "device": "mobile",
+      "name": "file-finder",
+      "url": "https://github.com/primer/react/tree/main?search=1",
+      "title": "react/ at main · primer/react · GitHub",
+      "file": "research/screenshots/github/mobile/file-finder.png",
+      "status": "needs-manual-validation",
+      "dialogs": 0,
+      "active": {
+        "tag": "INPUT",
+        "role": null,
+        "label": "Go to file"
+      }
+    },
+    {
+      "device": "mobile",
+      "name": "clone-menu",
+      "url": "https://github.com/primer/react",
+      "title": "GitHub - primer/react: An implementation of GitHub's Primer Design System using React · GitHub",
+      "file": "research/screenshots/github/mobile/clone-menu.png",
+      "status": "needs-manual-validation",
+      "dialogs": 0,
+      "active": {
+        "tag": "A",
+        "role": null,
+        "label": null
+      }
+    }
+  ]
+}

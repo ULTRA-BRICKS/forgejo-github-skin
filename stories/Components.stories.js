@@ -1,0 +1,7 @@
+import octicons from '@primer/octicons';
+const I=n=>octicons[n]?.toSVG({width:16,height:16})||'';
+export default {title:'Components/Git workflows'};
+export const Buttons={render:()=>`<div class="story-pad"><button class="btn">Cancel</button> <button class="btn green" style="margin-left:8px">${I('code')} Code⌄</button> <button class="btn" style="margin-left:8px">${I('git-branch')} main⌄</button></div>`};
+export const IssueRow={render:()=>`<div class="story-pad"><div class="issue-row"><b class="issue-icon">${I('issue-opened')}</b><div><div class="issue-title">Incident repair: migrate feature flag check off raising helpers</div><div class="muted">#8390 opened 2 days ago by contributor</div></div></div></div>`};
+export const PullRequestTabs={render:()=>`<div class="story-pad"><nav class="repo-tabs" style="border-bottom:1px solid #d1d9e0"><span class="repo-tab active">Conversation</span><span class="repo-tab">Commits <b class="counter">3</b></span><span class="repo-tab">Checks <b class="counter">12</b></span><span class="repo-tab">Files changed <b class="counter">5</b></span></nav></div>`};
+export const Diff={render:()=>`<div class="story-pad"><div class="filebox" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace"><div class="commitbar">${I('file-diff')} src/navigation.ts</div><div class="file-row diff-del"><span>- 42</span><span>return oldRoute;</span><span></span></div><div class="file-row diff-add"><span>+ 42</span><span>return preserveRepository(route);</span><span></span></div></div></div>`};
