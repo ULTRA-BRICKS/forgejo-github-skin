@@ -1,0 +1,91 @@
+@import '../src/skin.css';
+:root{--hgh-font-sans:"Mona Sans Variable","Mona Sans VF",-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;--hgh-font-mono:ui-monospace,SFMono-Regular,Menlo,monospace;--hgh-font-bodySize:14px;--hgh-color-text:#1f2328;--hgh-color-canvas:#fff;--hgh-color-subtle:#f6f8fa;--hgh-color-border:#d1d9e0;--hgh-color-focus:#0969da;--hgh-control-focusWidth:2px;--color-body:#fff;--color-text:#1f2328;--color-text-light:#59636e;--color-primary:#0969da;--color-input-border:#d1d9e0;--color-secondary:#f6f8fa;--color-box-header:#f6f8fa;--color-box-body:#fff;--color-header-wrapper:#f6f8fa;--color-secondary-nav-bg:#f6f8fa;--color-nav-bg:#010409;--color-nav-hover-bg:#21262d;--color-button:#f6f8fa;--color-active:#f6f8fa;--color-hover:#f3f4f6;--color-success-bg:#dafbe1;--color-success-border:#aceebb;--color-error-bg:#ffebe9;--color-error-border:#ffcecb;--color-focus:#0969da}
+*{box-sizing:border-box} body{margin:0;background:var(--color-body);color:var(--color-text);font-size:14px;line-height:1.5;font-family:"Mona Sans Variable","Mona Sans VF",-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}
+a{color:#0969da;text-decoration:none}.gh-canvas{min-height:100vh;background:#fff}.gh-header{height:72px;background:#010409;color:#fff;display:flex;align-items:center;padding:16px 32px;gap:24px}.gh-mark{font-size:28px}.gh-search{margin-left:auto;border:1px solid #30363d;border-radius:6px;padding:5px 12px;min-width:200px}.repo-head{background:#f6f8fa;border-bottom:1px solid #d1d9e0;padding:16px 32px 0}.repo-title{font-size:20px;margin-bottom:18px}.repo-tabs{display:flex;gap:8px}.repo-tab{color:#1f2328;padding:8px 12px 10px;border-bottom:2px solid transparent}.repo-tab.active{font-weight:600;border-color:#fd8c73}.repo-main{max-width:1216px;margin:28px auto;display:grid;grid-template-columns:minmax(0,904px) 272px;gap:40px}.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px}.btn{height:32px;padding:5px 12px;border:1px solid #d1d9e0;border-radius:6px;background:#f6f8fa;font-weight:500}.btn.green{background:#1f883d;color:#fff;border-color:#1f232826;margin-left:auto}.filebox{border:1px solid #d1d9e0;border-radius:6px;overflow:hidden}.commitbar{height:54px;background:#f6f8fa;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid #d1d9e0;font-weight:600}.file-row{height:41px;display:grid;grid-template-columns:360px 1fr 110px;align-items:center;padding:0 16px;border-bottom:1px solid #d1d9e0}.file-row:last-child{border-bottom:0}.folder{color:#54aeff;margin-right:12px}.muted{color:#59636e}.about h3{margin:0 0 16px}.about p{font-size:16px;line-height:1.5}.pill{display:inline-block;background:#ddf4ff;color:#0969da;border-radius:2em;padding:3px 10px;margin:2px}.story-pad{padding:32px}.issue-row{max-width:960px;border:1px solid #d1d9e0;padding:12px 16px;display:flex;gap:12px}.issue-icon{color:#1a7f37}.issue-title{font-weight:600}.counter{background:#818b981f;border-radius:2em;padding:0 7px}.diff-add{background:#dafbe1}.diff-del{background:#ffebe9}
+@media(max-width:700px){.gh-header{height:72px;padding:16px 20px;justify-content:space-between}.gh-search{display:none}.repo-head{padding:16px 16px 0}.repo-title{margin-bottom:16px}.repo-tabs{overflow:hidden}.repo-main{display:block;margin:19px 8px}.about{display:none}.toolbar{flex-wrap:wrap}.btn.green{margin-left:0}.file-row{grid-template-columns:minmax(140px,1fr) 90px;height:48px}.file-row>:nth-child(2){display:none}.commitbar{height:74px}.repo-tab:nth-child(n+4){display:none}}
+
+.repo-actions{float:right;font-size:14px;color:#59636e}.go-file{margin-left:auto;width:204px;text-align:left}.commit-tail{margin-left:auto;font-weight:400;color:#59636e}.about-links{line-height:29px;color:#59636e;margin-top:10px}.about-links hr{border:0;border-top:1px solid #d1d9e0;margin:16px 0}.sign-in,.mobile-menu{display:none}
+@media(max-width:700px){.desktop-nav,.gh-search,.repo-actions{display:none}.gh-header{position:relative}.mobile-menu{display:block;font-size:22px}.gh-mark{position:absolute;left:50%;transform:translateX(-50%)}.sign-in{display:block;margin-left:auto;background:#010409;color:#fff;border:1px solid #30363d;border-radius:6px;padding:6px 12px}.repo-title{font-size:20px}.repo-tabs{margin-inline:-8px}.repo-tab{white-space:nowrap}.toolbar{gap:8px}.toolbar>span{display:none}.go-file{display:none}.commit-tail{display:none}.file-row{padding:0 16px}.file-row:nth-child(n+12){display:none}.filebox:after{content:'View all files';display:block;text-align:center;color:#0969da;padding:8px;border-top:1px solid #d1d9e0}}
+.octicon{display:inline-block;vertical-align:text-bottom;fill:currentColor}.folder .octicon{color:#54aeff;margin-right:12px}.repo-tab .octicon,.toolbar .octicon,.repo-actions .octicon{margin-right:4px}.gh-mark .octicon{fill:#fff}
+.screen-main{max-width:1216px;margin:24px auto}.crumb{font-size:16px;margin-left:12px}.commit-card{border:1px solid #d1d9e0;border-radius:6px;padding:16px;display:flex;gap:5px;justify-content:flex-start}.commit-card>div{margin-left:auto}.file-meta{padding:18px 4px}.codebox{border:1px solid #d1d9e0;border-radius:6px;overflow:hidden}.code-tabs{background:#f6f8fa;padding:8px;border-bottom:1px solid #d1d9e0}.codebox pre{margin:0;padding:16px 0;font:12px/20px ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;overflow:auto}.list-toolbar{display:flex;gap:8px;margin-bottom:16px}.list-toolbar input{height:32px;flex:1;border:1px solid #d1d9e0;border-radius:6px;padding:5px 12px;background:#f6f8fa}.issue-list{border:1px solid #d1d9e0;border-radius:6px;overflow:hidden}.issue-screen-row{min-height:64px;padding:10px 16px;border-bottom:1px solid #d1d9e0;display:flex;gap:10px}.issue-screen-row:last-child{border:0}.issue-screen-row>.octicon{color:#1a7f37;margin-top:3px}.row-end{margin-left:auto;color:#59636e}.commit-row{min-height:72px;border-left:2px solid #d1d9e0;margin-left:10px;padding:8px 16px;display:flex;gap:12px}.commit-row code{margin-left:auto}
+@media(max-width:700px){.screen-main{margin:16px 8px}.list-toolbar{flex-wrap:wrap}.list-toolbar input{flex-basis:100%}.commit-row code{display:none}.codebox{border-radius:0;margin-inline:-8px}}
+
+:root{--hgh-color-success:#1a7f37;--hgh-color-successSubtle:#dafbe1;--hgh-color-danger:#cf222e;--hgh-color-dangerSubtle:#ffebe9;--hgh-color-attention:#9a6700;--hgh-color-attentionSubtle:#fff8c5;--hgh-radius-small:3px;--hgh-radius-medium:6px;--hgh-radius-large:12px;--hgh-motion-micro:100ms;--hgh-motion-hover:cubic-bezier(.25,.1,.25,1)}
+.feedback-grid{display:grid;gap:16px;max-width:760px}.feedback-empty{padding:48px 24px;text-align:center;border:1px solid #d1d9e0;border-radius:6px}.feedback-empty .octicon{width:32px;height:32px;color:#59636e;margin-bottom:8px}.feedback-loading{display:grid;gap:10px;border:1px solid #d1d9e0;border-radius:6px;padding:16px}.feedback-loading .hgh-skeleton{height:14px}.feedback-loading .hgh-skeleton:nth-child(2){width:72%}.feedback-loading .hgh-skeleton:nth-child(3){width:46%}
+
+.state-demo{max-width:920px}.state-demo h3{margin:24px 0 10px}.state-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.demo-hover{background:#eff2f5}.demo-focus{outline:2px solid #0969da;outline-offset:2px}.demo-active{background:#d8dee4;transform:translateY(1px)}.btn:disabled{color:#818b98;background:#f6f8fa;cursor:not-allowed}.demo-disclosure{position:relative;width:max-content}.demo-disclosure summary{list-style:none;cursor:pointer}.demo-popover{position:absolute;z-index:2;top:38px;right:0;width:390px;padding:16px;background:#fff;border:1px solid #d1d9e0;border-radius:12px;box-shadow:0 8px 24px rgb(31 35 40 / 16%);animation:hgh-pop 100ms cubic-bezier(.25,.1,.25,1)}.clone-field{display:flex;gap:8px;align-items:center;margin:12px 0}.clone-field code{flex:1;padding:7px 10px;background:#f6f8fa;border:1px solid #d1d9e0;border-radius:6px;overflow:hidden;text-overflow:ellipsis}.demo-tooltip{position:relative}.tooltip-bubble{position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);white-space:nowrap;background:#24292f;color:#fff;padding:5px 8px;border-radius:6px;font-size:12px}.demo-toast{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #d1d9e0;border-left:4px solid #1a7f37;border-radius:6px;box-shadow:0 8px 24px rgb(31 35 40 / 12%)}
+
+/* Deterministic micro-interaction fixture layout. */
+.state-demo .demo-disclosure{margin-bottom:190px}.state-demo .demo-popover{left:0;right:auto}.state-demo .demo-tooltip{margin-right:150px}.state-demo .demo-toast{width:max-content}
+
+.state-demo .demo-tooltip .tooltip-bubble{left:100%;bottom:auto;top:50%;transform:translate(8px,-50%)}
+
+.mobile-kebab,.mobile-commit-age,.mobile-commit-actions,.mobile-readme{display:none}
+.toolbar>.btn:first-child{min-width:105px}.repo-main .toolbar .btn.green{min-width:108px}
+@media(max-width:700px){.repo-main{margin:19px 16px}.repo-main .toolbar{margin-bottom:17px}.repo-main .toolbar>.btn:first-child{min-width:105px}.repo-main .toolbar .btn.green{min-width:92px;margin-left:auto}.repo-main .toolbar .btn.green .octicon{display:none}.mobile-kebab{display:inline-flex;width:32px;min-width:32px;padding:5px 7px}.file-row{height:41px}.commitbar{height:80px;align-content:flex-start;flex-wrap:wrap;padding:10px 12px}.commit-message{display:none}.mobile-commit-age{display:inline;margin-left:auto;font-weight:400;color:#59636e}.mobile-commit-actions{display:block;flex-basis:100%;font-weight:400;color:#59636e;margin-top:8px}.mobile-readme{display:flex;height:53px;margin-top:16px;border:1px solid #d1d9e0;border-radius:6px 6px 0 0;align-items:center;justify-content:space-between;padding:0 16px}.mobile-readme span{color:#59636e}}
+/* Pixel-convergence pass: mobile repository geometry measured from GitHub. */
+.folder{margin-right:0}
+.avatar-dot{display:inline-block;flex:0 0 20px;width:20px;height:20px;margin-right:8px;border-radius:50%;background:linear-gradient(135deg,#c7e1f7 0 52%,#7fa8c8 52% 100%)}
+.file-row .age{text-align:right;white-space:nowrap}
+@media(max-width:700px){
+  .gh-header{height:64px}
+  .repo-head{padding-top:19px}
+  .repo-title{margin-bottom:10px}
+  .repo-tabs{height:48px;align-items:center}
+  .repo-tab{display:inline-flex;align-items:center;height:30px;padding:0 12px}
+  .repo-main{margin-top:24px}
+  .file-row{grid-template-columns:minmax(0,1fr) 110px}
+  .commitbar{height:80px}
+}
+/* GitHub-measured navigation geometry and Storybook-only font fidelity. */
+body{font-family:"Mona Sans Variable","Mona Sans VF",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.repo-title{margin-bottom:16px}
+.repo-tabs{height:48px;align-items:center}
+.repo-tab{display:inline-flex;align-items:center;height:30px;padding:0 12px}
+.repo-main{margin-top:24px}
+.file-row{line-height:17px}
+.file-name{color:#1f2328}
+@media(max-width:700px){
+  .repo-title{margin-bottom:10px}
+  .repo-tabs{margin-inline:-16px;padding-inline:16px;overflow:hidden}
+  .repo-main{margin-top:24px}
+}
+/* Fine alignment against measured Primer repository chrome. */
+.repo-title{font-size:18px}
+.repo-tab .octicon{margin-right:0}
+.repo-tab .counter{margin-left:4px;padding-inline:6px}
+.repo-main{margin-top:23px}
+.file-name{display:inline-block;line-height:17px}
+@media(max-width:700px){
+  .repo-title{font-size:17px}
+  .repo-main{margin-top:23px}
+}
+/* Revert overfitted tab/title experiment after raw pixel regression. */
+.repo-title{font-size:20px}
+.repo-tab .octicon{margin-right:4px}
+.repo-main{margin-top:24px}
+@media(max-width:700px){
+  .repo-title{font-size:20px}
+  .repo-main{margin-top:24px}
+}
+/* Raw desktop rasterization currently matches the captured reference better with the platform fallback. */
+@media(min-width:701px){body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}}
+/* Mobile repository nav mirrors GitHub's two visible tabs plus overflow trigger. */
+.mobile-tab-more{display:none}
+.folder .octicon{margin-right:10px}
+@media(max-width:700px){
+  .repo-head{position:relative}
+  .repo-tab:nth-child(n+3){display:none}
+  .mobile-tab-more{display:inline-flex;position:absolute;right:16px;top:67px;width:32px;height:32px;align-items:center;justify-content:center;border:1px solid #d1d9e0;border-radius:6px;background:#f6f8fa;color:#59636e}
+  .repo-main{margin-top:23px}
+}
+/* High-fidelity workflow screen fixtures. */
+.gh-auth{height:32px;padding:4px 12px;border:1px solid #30363d;border-radius:6px;background:#010409;color:#fff;font-weight:600}
+.file-layout{display:grid;grid-template-columns:320px minmax(0,1fr);height:818px}
+.file-tree{border-right:1px solid #d1d9e0;overflow:hidden;padding-top:16px}.file-tree h3{margin:0 16px 16px;font-size:16px}.tree-ref,.tree-find{margin:0 16px 8px;width:288px}.tree-ref{text-align:left}.tree-find{height:32px;border:1px solid #d1d9e0;border-radius:6px;padding:5px 10px;color:#59636e}.tree-list{border-top:1px solid #d1d9e0}.tree-row{height:32px;display:flex;align-items:center;gap:9px;padding:0 16px 0 40px;color:#59636e;white-space:nowrap}.tree-row .octicon{flex:0 0 auto}.tree-row:nth-child(-n+10) .octicon{color:#54aeff}.tree-row.selected{background:#f0f1f2;border-left:4px solid #0969da;padding-left:36px;color:#1f2328}
+.file-pane{min-width:0;padding:16px}.file-pane-title{height:32px;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:16px}.file-pane-title .kebab{margin-left:auto}.bot-avatar{display:inline-flex;width:22px;height:22px;border-radius:50%;background:#ddf4ff;align-items:center;justify-content:center;color:#0969da}.commit-summary{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.github-code{margin-top:16px}.code-toolbar{height:44px;background:#f6f8fa;border-bottom:1px solid #d1d9e0;display:flex;align-items:center;padding:7px 8px;gap:0}.code-toolbar .btn{border-radius:0}.code-toolbar .btn:first-child{border-radius:6px 0 0 6px}.code-toolbar .btn:nth-child(2){border-radius:0 6px 6px 0}.code-toolbar .selected{background:#fff}.code-toolbar>.muted{margin-left:10px}.code-actions{margin-left:auto;color:#59636e}.github-code pre{height:645px;color:#1f2328;background:#fff;padding-left:42px}
+.issue-layout{display:grid;grid-template-columns:256px minmax(0,1fr);min-height:818px}.issue-side{position:relative;border-right:1px solid #d1d9e0;padding:16px 8px}.issue-side>b,.issue-side>span{display:block;height:32px;padding:6px 16px;border-radius:6px}.issue-side>b{background:#eaeef2;border-left:4px solid #0969da;padding-left:12px}.issue-side hr{border:0;border-top:1px solid #d1d9e0;margin:16px 0}.issue-side footer{position:absolute;left:24px;bottom:24px;line-height:36px;color:#59636e}.issue-pane{padding:24px;max-width:1184px}.issue-titlebar{height:40px;display:flex;align-items:center}.issue-titlebar h2{font-size:20px;margin:0}.new-disabled{margin-left:auto;color:#59636e}.issue-search{height:32px;border:1px solid #d1d9e0;border-radius:6px;background:#fff;padding:5px 12px;margin:10px 0 16px}.issue-search>span:last-child{float:right}.issue-search mark{background:#b6d7fe;color:#0969da}
+.github-issue-list,.pull-list{border:1px solid #d1d9e0;border-radius:6px;overflow:hidden}.issue-filters{height:48px;background:#f6f8fa;display:flex;align-items:center;gap:18px;padding:0 16px;color:#59636e}.filter-spacer{flex:1}.github-issue-row{min-height:65px;border-top:1px solid #d1d9e0;display:flex;align-items:flex-start;gap:10px;padding:10px 16px}.github-issue-row>.octicon{color:#1a7f37;margin-top:4px;flex:0 0 auto}.github-issue-row>div{min-width:0;flex:1}.github-issue-row b{font-size:16px}.github-issue-row small{display:block;margin-top:3px;color:#59636e}.label-chip{display:inline-block;padding:1px 8px;margin-left:5px;border-radius:999px;background:#ddf4ff;font-size:12px}.label-chip.danger{background:#ff8182;color:#1f2328}.github-issue-row .row-end{margin-left:auto;color:#59636e;white-space:nowrap}
+.pull-layout{max-width:1216px;margin:24px auto}.pull-toolbar{display:flex;gap:8px;margin-bottom:16px}.pull-toolbar .issue-search{margin:0;flex:1}.pull-toolbar .btn.green{margin-left:0}.pull-list .github-issue-row{min-height:65px}.pull-list .issue-filters{height:54px}
+.commit-screen{max-width:1000px;margin:24px auto}.commit-screen h2{font-size:24px}.commit-day{border-left:2px solid #d1d9e0;padding-left:24px}.commit-day>b{display:block;margin-bottom:12px}.commit-row{position:relative;min-height:72px;margin:0;border:1px solid #d1d9e0;border-bottom:0;border-left:0;padding:12px 12px 10px 24px}.commit-row:last-child{border-bottom:1px solid #d1d9e0}.commit-node{position:absolute;left:-36px;top:14px;background:#fff}.commit-row small{display:block;color:#59636e;margin-top:3px}.commit-row code{margin-left:auto}.commit-row .icon-btn{margin-left:8px}
+@media(max-width:700px){.file-layout{display:block;height:auto}.file-tree{display:none}.file-pane{padding:16px 8px}.file-pane-title{margin-inline:8px}.github-code pre{height:620px}.issue-layout{display:block}.issue-side{display:none}.issue-pane{padding:16px 8px}.issue-titlebar{padding-inline:8px}.pull-layout{margin:16px 8px}.pull-toolbar{flex-wrap:wrap}.pull-toolbar .issue-search{flex-basis:100%}.issue-filters{overflow:hidden;white-space:nowrap}.commit-screen{margin:16px}.repo-actions,.gh-auth{display:none}}
