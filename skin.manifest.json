@@ -1,0 +1,18 @@
+{
+  "name": "hypergithub",
+  "version": "0.1.0",
+  "status": "experimental",
+  "manifestFormat": "hyperide-skin-manifest-1 (project-specific, NOT a DTCG extension standard)",
+  "testedForgejo": ["16.0.3"],
+  "compatibilityMeaning": "Exact-version source audit, isolated asset/template loading and synthetic browser contracts; NOT full authenticated workflow parity certification.",
+  "themes": ["hypergithub-light", "hypergithub-dark", "hypergithub-auto"],
+  "upstreamCommit": "eccddb2d17c93b42b2c8995725e03e549ac9ec0c",
+  "sourceAudit": "research/source-audit.json",
+  "forkRequired": false,
+  "fullTemplateOverrides": [],
+  "hook": "templates/custom/footer.tmpl",
+  "excludedUiUnits": ["projects", "releases", "wiki"],
+  "externalNetworkAtRuntime": false,
+  "fontFilesBundled": false,
+  "permissions": "Existing server-generated links and forms only; no mutation API client."
+}

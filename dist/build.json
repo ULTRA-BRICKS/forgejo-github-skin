@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "tokenCount": 98,
+  "files": [
+    "skin.css",
+    "skin.mjs",
+    "core.mjs"
+  ],
+  "format": "DTCG 2025.10",
+  "fontFiles": 0
+}
