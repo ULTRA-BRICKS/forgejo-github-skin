@@ -49,10 +49,10 @@
       1440,
       1000
     ],
-    "mae255": 11.527,
-    "pixelsDeltaGt8": 11.81,
-    "pixelsDeltaGt24": 9.706,
-    "exactMatch": 79.999
+    "mae255": 10.346,
+    "pixelsDeltaGt8": 10.694,
+    "pixelsDeltaGt24": 8.579,
+    "exactMatch": 81.346
   },
   {
     "name": "pulls-desktop",
@@ -60,10 +60,10 @@
       1440,
       1000
     ],
-    "mae255": 13.157,
-    "pixelsDeltaGt8": 13.459,
-    "pixelsDeltaGt24": 12.268,
-    "exactMatch": 78.92
+    "mae255": 13.329,
+    "pixelsDeltaGt8": 13.092,
+    "pixelsDeltaGt24": 11.862,
+    "exactMatch": 79.229
   },
   {
     "name": "commits-desktop",
