@@ -32,6 +32,15 @@ for (const [kind, fixture] of Object.entries(previewFixtures))
     assert.ok(!svg.includes("foreignObject"));
     assert.ok(!svg.includes("<script"));
   });
+test("protected fallback is still a compact visual, while authorized private fixtures render real facts", () => {
+  const unavailable = graphic(previewFixtures.protectedUnavailable, tokens, sizes);
+  assert.ok(unavailable.includes("Protected link"));
+  assert.ok(unavailable.includes("Ultrabricks"));
+  const privateRepo = graphic(previewFixtures.privateRepository, tokens, sizes);
+  assert.ok(privateRepo.includes("Visibility"));
+  assert.ok(privateRepo.includes("Private"));
+  assert.ok(!privateRepo.includes("Protected link"));
+});
 test("missing counts stay unknown; zero remains zero; invalid state never becomes Open", () => {
   const facts = baseFacts(
     { updated_at: "" },
