@@ -2,9 +2,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
-const read = name => JSON.parse(fs.readFileSync(path.join(root, 'research/observations', name), 'utf8'));
-const light = read('github-desktop-repository.json').tokens;
-const dark = read('github-desktop-dark.json').tokens;
+const read = name => JSON.parse(fs.readFileSync(path.join(root, 'research/token-sources', name), 'utf8'));
+const light = read('github-light.json').tokens;
+const dark = read('github-dark.json').tokens;
 if (light['--bgColor-default'] === dark['--bgColor-default']) throw Error('Dark capture did not switch appearance; do not invent a measured palette');
 export function hexColor(hex) {
   if (!/^#[0-9a-f]{3,8}$/i.test(hex)) throw Error(`Expected measured hex color, received ${hex}`);
@@ -14,7 +14,7 @@ export function hexColor(hex) {
   return {colorSpace:'srgb', components:[0,2,4].map(i => parseInt(h.slice(i,i+2),16) / 255), alpha:h.length === 8 ? parseInt(h.slice(6,8),16)/255 : 1};
 }
 const token = (type, value, description, source) => ({$type:type, $value:value, $description:description, $extensions:{'ai.hyperide.provenance':source}});
-const source = (mode, variable) => ({kind:'measured-css', file:`research/observations/github-desktop-${mode === 'light' ? 'repository' : 'dark'}.json`, variable});
+const source = (mode, variable) => ({kind:'measured-css', file:`research/token-sources/github-${mode}.json`, variable});
 const colorMap = {canvas:'--bgColor-default',subtle:'--bgColor-muted',text:'--fgColor-default',muted:'--fgColor-muted',link:'--fgColor-accent',border:'--borderColor-default',success:'--bgColor-success-emphasis',successSubtle:'--bgColor-success-muted',danger:'--fgColor-danger',dangerSubtle:'--bgColor-danger-muted',attention:'--fgColor-attention',attentionSubtle:'--bgColor-attention-muted',primary:'--button-primary-bgColor-rest',primaryHover:'--button-primary-bgColor-hover',primaryActive:'--button-primary-bgColor-active',onPrimary:'--button-primary-fgColor-rest',counter:'--counter-bgColor-muted',focus:'--focus-outlineColor',added:'--diffBlob-additionLine-bgColor',removed:'--diffBlob-deletionLine-bgColor',addedWord:'--diffBlob-additionWord-bgColor',removedWord:'--diffBlob-deletionWord-bgColor',hunk:'--diffBlob-hunkLine-bgColor'};
 const out = {$description:'GitHub public product UI reference and explicitly marked Hyperide design decisions. No font binaries or GitHub branding are distributed.', $extensions:{'ai.hyperide.reference':{format:'DTCG 2025.10',specification:'https://www.designtokens.org/tr/2025.10/format/',capture:'research/capture-manifest.json',implementation:'0.1.0',notice:'DTCG Community Group specification, not a W3C Recommendation. Light and dark are ordinary token groups; no non-standard $themes field.'}},color:{},space:{},radius:{},font:{},control:{},layout:{},motion:{}};
 for (const [mode, values] of [['light',light],['dark',dark]]) {
@@ -40,8 +40,8 @@ out.control.paddingInline=dimension(measuredPx('--control-medium-paddingInline-n
 out.control.focusWidth=dimension(measuredPx('--focus-outline-width'),'Visible focus outline',source('light','--focus-outline-width'));
 out.font.sans=token('fontFamily', ['Mona Sans VF','-apple-system','BlinkMacSystemFont','Segoe UI','Noto Sans','Helvetica','Arial','sans-serif'],'Measured family order simplified for portability; fonts are NOT bundled',source('light','--fontStack-sansSerif'));
 out.font.mono=token('fontFamily',['ui-monospace','SFMono-Regular','SF Mono','Menlo','Consolas','Liberation Mono','monospace'],'Code font stack',source('light','--fontStack-monospace'));
-out.font.bodySize=dimension(14,'Computed body size',{kind:'measured-computed-style',file:'research/observations/github-desktop-repository.json',element:'BODY',property:'fontSize'});
-out.font.bodyLine=dimension(21,'Computed body line height',{kind:'measured-computed-style',file:'research/observations/github-desktop-repository.json',element:'BODY',property:'lineHeight'});
+out.font.bodySize=dimension(14,'Computed body size',{kind:'measured-computed-style',file:'research/token-sources/github-light.json',element:'BODY',property:'fontSize'});
+out.font.bodyLine=dimension(21,'Computed body line height',{kind:'measured-computed-style',file:'research/token-sources/github-light.json',element:'BODY',property:'lineHeight'});
 out.font.codeSize=dimension(12,'Initial code typography; validate per file and diff screen');
 out.font.smallSize=dimension(12,'Secondary metadata size');
 out.font.weightNormal=token('fontWeight',400,'Normal weight',{kind:'measured-computed-style',element:'BODY'});
