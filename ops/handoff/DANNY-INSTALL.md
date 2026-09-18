@@ -81,34 +81,25 @@ python3 scripts/check-compat.py --help
 python3 scripts/install.py --help
 ```
 
-Use the real options from that checkout. The current installer implementation was
-not readable in this turn, so no guessed `--apply` or compatibility-bypass flag is
-provided here. A version label alone is insufficient: check the upstream template/
-source fingerprints required by the repository's manifest.
+The current verified installer flags and version-specific checks are in
+`docs/DANNY-INSTALL.md` in the canonical source checkout. Do not bypass a failed
+source-fingerprint check.
 
 ## 4. Stage the real demo and gallery
 
-Download or export the original Forgejo SVG from the reviewed distribution. An
-existing instance normally serves its logo at `/assets/img/logo.svg`; the official
-customization guide documents the asset family.[2] For example:
+Use the reviewed `assets/forgejo-graphite.svg` from the canonical source checkout.
+It preserves the original Forgejo geometry with a monochrome palette. The staging
+validator deliberately rejects SVG style blocks, XML processing instructions and
+external resources; do not pass the raw upstream `logo.svg` without reviewing and
+normalizing it. The bundled graphite SVG has a regression test against this validator.
 
-```sh
-curl --fail --proto '=https' --tlsv1.2 \
-  https://git.hyperide.ai/assets/img/logo.svg \
-  --output /srv/forgejo-logo.svg
-```
-
-Verify that it is the actual Forgejo mark, not an HTML login/error page or a custom
-third-party logo. The script checks self-contained SVG syntax but cannot certify
-visual brand identity from the filename.
-
-Unpack this handoff into a separate folder, then run there:
+Run from `/srv/forgejo-skin-source/ops/handoff` (or a separately copied handoff folder):
 
 ```sh
 python3 scripts/stage_demo.py \
   --repo /srv/forgejo-skin-source \
   --output ./staging \
-  --logo-svg /srv/forgejo-logo.svg \
+  --logo-svg /srv/forgejo-skin-source/assets/forgejo-graphite.svg \
   --expected-sha FULL_REVIEWED_COMMIT_SHA \
   --reviewed-forgejo-version EXACT_REVIEWED_VERSION
 ```
