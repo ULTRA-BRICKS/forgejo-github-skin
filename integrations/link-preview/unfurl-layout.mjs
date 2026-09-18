@@ -7,7 +7,7 @@ const escape = (value) =>
     /[&<>|]/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "|": "¦" })[c],
   );
-export function unfurlLayout(meta, facts, policy, serviceOrigin) {
+export function unfurlLayout(meta, facts, policy, imageUrl) {
   // Authorization is checked by the existing policy core before any protected content is composed.
   const checked = richCard({
     facts,
@@ -38,13 +38,10 @@ export function unfurlLayout(meta, facts, policy, serviceOrigin) {
       type: "section",
       text: { type: "plain_text", text: meta.description, emoji: false },
     });
-  if (decision === "public" && serviceOrigin) {
+  if ((decision === "public" || decision === "disclosed") && imageUrl) {
     blocks.push({
       type: "image",
-      image_url:
-        serviceOrigin +
-        "/image?v=2&url=" +
-        encodeURIComponent(meta.link.originalUrl),
+      image_url: imageUrl,
       alt_text:
         "Activity and object statistics; title and description are provided above",
     });

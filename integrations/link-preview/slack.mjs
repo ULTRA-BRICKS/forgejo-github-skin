@@ -49,6 +49,23 @@ export class SlackIntegration {
     this.store.put("ref:" + id, { team, url }, 86400);
     return id;
   }
+  imageSnapshot(meta) {
+    if (!meta?.summary || typeof meta.private !== "boolean") return null;
+    const summary = meta.summary;
+    const meaningful = (summary.metrics || []).some(metric => metric.value !== null && metric.value !== undefined && metric.value !== "") ||
+      (summary.code || []).length > 0 || !!summary.activity || !!summary.number || !!summary.sha;
+    if (!meaningful) return null;
+    const safe = structuredClone(meta);
+    // Shared images may contain aggregate/status facts, never code or protected prose.
+    if (safe.private) {
+      safe.title = "Private repository preview";
+      safe.description = "";
+      if (safe.summary) safe.summary.code = null;
+    }
+    const id = randomBytes(24).toString("hex");
+    this.store.put("image:" + id, safe, 3600);
+    return this.config.origin + "/image/s/" + id;
+  }
   async publicMetadata(url) {
     try {
       return await this.forgejo.metadata(url);
@@ -71,9 +88,6 @@ export class SlackIntegration {
       if (!parsed) continue;
       const anonymousMeta = await this.publicMetadata(raw.url);
       let meta = anonymousMeta, facts;
-      // The image endpoint is anonymous. An authenticated metadata fallback
-      // cannot make its protected placeholder a useful shared statistics image.
-      const publicImageReadable = anonymousMeta?.private === false;
       if (!meta) {
         const viewerToken = await this.oauth.access(envelope.team_id, event.user, raw.url);
         if (viewerToken) {
@@ -156,7 +170,7 @@ export class SlackIntegration {
               privateMode: "explicit-channel-disclosure",
               destinations: this.config.privateDestinations,
             },
-            publicImageReadable ? this.config.origin : undefined,
+            this.imageSnapshot(meta),
           );
         } catch {
           /* Fail closed to a neutral, personal-view card. */

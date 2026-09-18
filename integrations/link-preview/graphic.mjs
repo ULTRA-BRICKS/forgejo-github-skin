@@ -22,6 +22,18 @@ const num = (value) =>
           maximumFractionDigits: 1,
         }).format(value)
       : String(value);
+const syntaxSegments = (line) => {
+  const pattern = /(\b(?:const|let|var|function|return|if|else|for|while|async|await|import|export|from|true|false|null)\b|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b\d+(?:\.\d+)?\b|\/\/.*$)/g;
+  const out = []; let last = 0;
+  for (const match of String(line).matchAll(pattern)) {
+    if (match.index > last) out.push({ text: line.slice(last, match.index), tone: "text" });
+    const token = match[0];
+    const tone = token.startsWith("//") ? "muted" : /^["']/.test(token) ? "success" : /^\d/.test(token) ? "danger" : "link";
+    out.push({ text: token, tone }); last = match.index + token.length;
+  }
+  if (last < line.length) out.push({ text: line.slice(last), tone: "text" });
+  return out;
+};
 const color = (token) =>
   "#" +
   token.$value.components
@@ -111,10 +123,13 @@ export function graphic(
         String((fact.lineStart || 1) + i),
         { tone: "muted", size: dim("codeSize"), mono: true },
       );
-      body += t(G + 40, 99 + i * dim("lineHeight"), cut(text, 39), {
-        size: dim("codeSize"),
-        mono: true,
-      });
+      let codeX = G + 40;
+      for (const segment of syntaxSegments(cut(text, 39))) {
+        body += t(codeX, 99 + i * dim("lineHeight"), segment.text, {
+          size: dim("codeSize"), tone: segment.tone, mono: true,
+        });
+        codeX += [...segment.text].length * dim("codeSize") * 0.61;
+      }
     });
     body += t(
       G,
