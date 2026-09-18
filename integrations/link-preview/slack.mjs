@@ -69,8 +69,11 @@ export class SlackIntegration {
     for (const raw of event.links.slice(0, 5)) {
       const parsed = this.forgejo.parse(raw.url);
       if (!parsed) continue;
-      let meta = await this.publicMetadata(raw.url),
-        facts;
+      const anonymousMeta = await this.publicMetadata(raw.url);
+      let meta = anonymousMeta, facts;
+      // The image endpoint is anonymous. An authenticated metadata fallback
+      // cannot make its protected placeholder a useful shared statistics image.
+      const publicImageReadable = anonymousMeta?.private === false;
       if (!meta) {
         const viewerToken = await this.oauth.access(envelope.team_id, event.user, raw.url);
         if (viewerToken) {
@@ -153,7 +156,7 @@ export class SlackIntegration {
               privateMode: "explicit-channel-disclosure",
               destinations: this.config.privateDestinations,
             },
-            this.config.origin,
+            publicImageReadable ? this.config.origin : undefined,
           );
         } catch {
           /* Fail closed to a neutral, personal-view card. */
