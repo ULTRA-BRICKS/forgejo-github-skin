@@ -13,7 +13,10 @@
     "storybook": "storybook dev -p 6006 --no-open",
     "storybook:build": "storybook build -o storybook-static",
     "storybook:screenshots": "node scripts/storybook-screenshots.mjs",
-    "check:generated": "node scripts/check-generated.mjs"
+    "check:generated": "node scripts/check-generated.mjs",
+    "test:sharing": "node --test tests/sharing/*.test.mjs",
+    "sharing:serve": "node integrations/link-preview/server.mjs",
+    "sharing:verify": "node scripts/sharing/verify-public.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

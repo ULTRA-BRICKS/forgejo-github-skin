@@ -1,0 +1,39 @@
+{
+  "display_information": {
+    "name": "Forgejo Link Preview",
+    "description": "Private-aware Forgejo link cards and personal authorized views",
+    "background_color": "#24292f"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Forgejo Links",
+      "always_online": false
+    },
+    "unfurl_domains": [
+      "forgejo-ui-demo.hyperide.ai"
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "links:read",
+        "links:write",
+        "groups:read"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "event_subscriptions": {
+      "request_url": "https://forgejo-links.hyperide.ai/slack/events",
+      "bot_events": [
+        "link_shared"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://forgejo-links.hyperide.ai/slack/interactions"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-09-18T13:31:53.321Z",
+  "scope": "Real browser OAuth on synthetic Forgejo only. No browser storage, credentials or tokens exported; not a Slack event-delivery claim.",
+  "results": [
+    {
+      "name": "Anonymous personal endpoint denied",
+      "pass": true
+    },
+    {
+      "name": "Real Forgejo consent and PKCE callback expose only authorized synthetic content",
+      "pass": true
+    },
+    {
+      "name": "Revoked repository access denied immediately without re-login",
+      "pass": true
+    },
+    {
+      "name": "Independent browser cannot reuse another viewers authorization",
+      "pass": true
+    }
+  ]
+}

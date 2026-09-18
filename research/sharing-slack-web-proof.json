@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-09-18T13:17:14.552Z",
+  "workspace": "Glide",
+  "channel": "C0C2X21ECTB",
+  "kind": "Slack classic automatic web unfurl, not app-authenticated unfurl",
+  "title": "Issue #1: Return focus after closing the branch selector",
+  "description": "Forgejo\nIssue #1: Return focus after closing the branch selector\nAcceptance: open with W, use arrow keys, close with Escape, focus returns to the trigger. (33 kB)\nForgejo",
+  "images": 0
+}

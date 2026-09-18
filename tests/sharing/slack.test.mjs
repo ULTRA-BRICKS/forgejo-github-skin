@@ -1,0 +1,173 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { randomBytes } from "node:crypto";
+import { SlackIntegration } from "../../integrations/link-preview/slack.mjs";
+import { Store } from "../../integrations/link-preview/store.mjs";
+import { parseForgejoLink } from "../../ops/handoff/slack/preview-core.mjs";
+import {
+  validEnvelope,
+  validInteraction,
+  Budget,
+} from "../../integrations/link-preview/protocol.mjs";
+const source = "https://forge.example",
+  raw = source + "/owner/private/issues/1";
+const config = {
+  forgejo: source,
+  slack: {
+    teamId: "T123",
+    appId: "A123",
+    disclosureUser: "U123",
+    demoChannel: "C123",
+  },
+  privateDestinations: [
+    {
+      workspaceId: "T123",
+      channelId: "C123",
+      repositoryId: "2",
+      instanceOrigin: source,
+      approvedToCopy: true,
+    },
+  ],
+};
+const event = (extra = {}) => ({
+  type: "event_callback",
+  team_id: "T123",
+  api_app_id: "A123",
+  event_id: "Ev123",
+  event: {
+    type: "link_shared",
+    user: "U123",
+    channel: "C123",
+    message_ts: "1789733603.123",
+    source: "conversations_history",
+    links: [{ url: raw }],
+    ...extra,
+  },
+});
+function fixture({ connected = true, shared = false, allowed = true } = {}) {
+  const store = new Store(":memory:", randomBytes(32)),
+    calls = [],
+    reads = [];
+  const forgejo = {
+    parse: (url) => parseForgejoLink(url, source),
+    metadata: async (url, token) => {
+      reads.push({ url, token: !!token });
+      if (!token || !allowed) {
+        const e = new Error("Unavailable");
+        e.status = 404;
+        throw e;
+      }
+      return {
+        link: parseForgejoLink(url, source),
+        private: true,
+        repositoryId: "2",
+        title: "PRIVATE SENTINEL",
+        description: "PRIVATE BODY",
+        status: "Open",
+        repository: "owner/private",
+      };
+    },
+  };
+  const slack = new SlackIntegration(config, store, forgejo, {
+    access: async () => (connected ? "synthetic-token" : null),
+    ticket: () => "https://links.example/connect?ticket=" + "a".repeat(64),
+  });
+  slack.call = async (method, payload) => {
+    calls.push({ method, payload });
+    if (method === "conversations.info")
+      return {
+        channel: {
+          id: "C123",
+          is_private: true,
+          is_ext_shared: shared,
+          is_pending_ext_shared: false,
+          is_org_shared: false,
+          is_shared: shared,
+        },
+      };
+    if (method === "views.open") return { view: { id: "V123" } };
+    return { ok: true };
+  };
+  return { store, calls, reads, slack };
+}
+test("unlinked private link only produces a neutral card", async () => {
+  const f = fixture({ connected: false });
+  try {
+    await f.slack.unfurl(event());
+    assert.ok(!JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
+    assert.match(JSON.stringify(f.calls), /View privately/);
+    assert.ok(f.reads.every((x) => !x.token));
+  } finally {
+    f.store.close();
+  }
+});
+test("approved synthetic channel copy requires linked actor and fresh safe audience", async () => {
+  const f = fixture();
+  try {
+    await f.slack.unfurl(event());
+    assert.ok(JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
+    assert.ok(JSON.stringify(f.calls).includes("Shared copy"));
+  } finally {
+    f.store.close();
+  }
+});
+for (const [name, options, extra] of [
+  ["external Slack Connect channel", { shared: true }, {}],
+  ["unapproved channel", {}, { channel: "C999" }],
+  ["different sender", {}, { user: "U999" }],
+  ["composer", {}, { source: "composer", unfurl_id: "composer123" }],
+  ["revoked source access", { allowed: false }, {}],
+])
+  test(name + " cannot publish protected metadata", async () => {
+    const f = fixture(options);
+    try {
+      await f.slack.unfurl(event(extra));
+      assert.ok(!JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
+      assert.match(JSON.stringify(f.calls), /View privately/);
+    } finally {
+      f.store.close();
+    }
+  });
+test("forged workspace cannot cause any Slack API calls", async () => {
+  const f = fixture();
+  try {
+    await f.slack.unfurl({ ...event(), team_id: "T999" });
+    assert.equal(f.calls.length, 0);
+  } finally {
+    f.store.close();
+  }
+});
+test("private modal rechecks the clicking viewer and reports revoked access generically", async () => {
+  const f = fixture({ allowed: false });
+  try {
+    const reference = f.slack.reference("T123", raw);
+    await f.slack.interact({
+      team: { id: "T123" },
+      api_app_id: "A123",
+      user: { id: "U123" },
+      trigger_id: "trigger",
+      actions: [{ action_id: "forgejo_view_private", value: reference }],
+    });
+    assert.equal(f.calls[0].method, "views.open");
+    assert.equal(f.calls.at(-1).method, "views.update");
+    assert.ok(!JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
+    assert.match(JSON.stringify(f.calls), /unavailable to your linked account/);
+  } finally {
+    f.store.close();
+  }
+});
+test("protocol refuses missing destinations, invalid identities and unbounded link batches", () => {
+  assert.ok(validEnvelope(event(), config));
+  assert.ok(!validEnvelope({ ...event(), team_id: "T999" }, config));
+  assert.ok(!validEnvelope(event({ message_ts: "invalid" }), config));
+  assert.ok(
+    !validEnvelope(event({ links: Array(21).fill({ url: raw }) }), config),
+  );
+  assert.ok(
+    !validInteraction({ team: { id: "T123" }, api_app_id: "A123" }, config),
+  );
+  const budget = new Budget(2, 60000);
+  assert.equal(budget.allow(), true);
+  assert.equal(budget.allow(), true);
+  assert.equal(budget.allow(), false);
+});
