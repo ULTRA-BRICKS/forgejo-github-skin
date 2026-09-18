@@ -85,11 +85,19 @@ def main():
         subprocess.run(['launchctl', 'bootout', f'{domain}/{LABEL}'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         target.write_bytes(plistlib.dumps(data))
         target.chmod(0o600)
-        bootstrap = subprocess.run(['launchctl', 'bootstrap', domain, str(target)], capture_output=True, text=True, check=False)
-        if bootstrap.returncode != 0:
-            retry = subprocess.run(['launchctl', 'bootstrap', domain, str(target)], capture_output=True, text=True, check=False)
-            if retry.returncode != 0:
-                raise RuntimeError('Unable to activate launchd release: ' + (retry.stderr or bootstrap.stderr).strip())
+        # launchd may return EIO for a short interval after bootout even though the
+        # label is gone. Retry with a bounded settle delay instead of immediately
+        # repeating the same race.
+        errors = []
+        for attempt in range(5):
+            if attempt:
+                time.sleep(0.75 * attempt)
+            bootstrap = subprocess.run(['launchctl', 'bootstrap', domain, str(target)], capture_output=True, text=True, check=False)
+            if bootstrap.returncode == 0:
+                break
+            errors.append((bootstrap.stderr or bootstrap.stdout).strip())
+        else:
+            raise RuntimeError('Unable to activate launchd release after bounded settle retries: ' + errors[-1])
         proof = health(3190)
         if proof.get('build') != revision:
             raise RuntimeError('Supervisor did not activate the staged revision')
