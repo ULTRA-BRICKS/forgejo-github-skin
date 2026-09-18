@@ -36,13 +36,12 @@ export class SlackIntegration {
       throw e;
     }
     const data = await r.json();
-    if (!data.ok)
-      throw new Error(
-        "Slack rejected " +
-          String(data.error)
-            .replace(/[^a-z_]/g, "")
-            .slice(0, 60),
-      );
+    if (!data.ok) {
+      const code = String(data.error).replace(/[^a-z_]/g, "").slice(0, 60);
+      const error = new Error("Slack rejected " + code);
+      error.slackCode = code;
+      throw error;
+    }
     return data;
   }
   reference(team, url) {
@@ -166,7 +165,17 @@ export class SlackIntegration {
     const target = event.unfurl_id
       ? { unfurl_id: event.unfurl_id, source: event.source }
       : { channel: event.channel, ts: event.message_ts };
-    await this.call("chat.unfurl", { ...target, unfurls });
+    try {
+      await this.call("chat.unfurl", { ...target, unfurls });
+    } catch (error) {
+      // A rich image must never make the entire snippet disappear. Slack can
+      // reject an otherwise valid unfurl when it cannot fetch the image.
+      if (!["cannot_unfurl_url", "invalid_blocks"].includes(error.slackCode)) throw error;
+      const fallback = Object.fromEntries(Object.entries(unfurls).map(([url, card]) => [url, {
+        blocks: card.blocks.filter(block => block.type !== "image"),
+      }]));
+      await this.call("chat.unfurl", { ...target, unfurls: fallback });
+    }
   }
   modal(blocks) {
     return {
