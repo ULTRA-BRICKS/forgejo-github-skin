@@ -1,0 +1,21 @@
+{
+  "origin": "https://forgejo-links.example.invalid",
+  "forgejo": "https://forgejo.example.invalid",
+  "port": 3190,
+  "encryptionKey": "REPLACE_WITH_64_HEX_CHARACTERS_FROM_A_RANDOM_32_BYTE_KEY",
+  "oauth": {
+    "clientId": "REPLACE_WITH_NORMAL_USER_OAUTH_CLIENT_ID",
+    "clientSecret": "REPLACE_WITH_OAUTH_CLIENT_SECRET"
+  },
+  "slack": {
+    "teamId": "T_REPLACE",
+    "appId": "A_REPLACE",
+    "signingSecret": "",
+    "botToken": "",
+    "demoChannel": "C_REPLACE",
+    "disclosureUser": "U_REPLACE"
+  },
+  "privateDestinations": [],
+  "demoPrivateUrl": "https://forgejo.example.invalid/demo-owner/synthetic-private/issues/1",
+  "demoPublicUrl": "https://forgejo.example.invalid/demo-owner/synthetic-public/issues/1"
+}

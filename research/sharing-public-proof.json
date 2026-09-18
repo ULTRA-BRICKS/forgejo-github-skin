@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-09-18T13:31:48.961Z",
+  "scope": "Actual HTTP/browser and anonymous source checks; not a proof of Slack event delivery or private OAuth success.",
+  "results": [
+    {
+      "name": "public",
+      "pass": true,
+      "title": "Issue #1: Return focus after closing the branch selector",
+      "imageSize": [
+        1200,
+        630
+      ]
+    },
+    {
+      "name": "protected",
+      "pass": true,
+      "title": "Forgejo link — sign in to view",
+      "imageSize": [
+        1200,
+        630
+      ]
+    },
+    {
+      "name": "nonexistent",
+      "pass": true,
+      "title": "Forgejo link — sign in to view",
+      "imageSize": [
+        1200,
+        630
+      ]
+    },
+    {
+      "name": "private API requires authorized session",
+      "pass": true
+    },
+    {
+      "name": "unsigned Slack requests cannot trigger source access",
+      "pass": true,
+      "status": 503
+    }
+  ]
+}

@@ -19,3 +19,5 @@ research/preview-report.json
 .demo/
 ops/handoff/staging/
 .vercel
+
+.sharing/

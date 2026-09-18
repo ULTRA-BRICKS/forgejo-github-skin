@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-09-18T13:32:47.852898+00:00",
+  "service": "https://forgejo-links.hyperide.ai",
+  "host": "Mac, supervised; requires host online",
+  "source": "isolated Forgejo 16.0.5 synthetic repositories",
+  "slack": {
+    "appId": "A0C2QBRV3NH",
+    "workspace": "Glide",
+    "channelId": "C0C2X21ECTB",
+    "appInstalled": true,
+    "runtimeConfigured": false,
+    "authenticatedUnfurlVerified": false,
+    "classicWebUnfurlVerified": true,
+    "protectedClassicPreviewVerified": true,
+    "manifestIsDesiredConfigurationNotAppliedProof": true
+  },
+  "proofs": [
+    "sharing-public-proof.json",
+    "sharing-oauth-proof.json",
+    "sharing-slack-web-proof.json",
+    "sharing-slack-protected-proof.json"
+  ],
+  "blocker": "Operator must supply newly installed Slack app signing secret and bot token through local-only setup; no secret extraction workarounds. Then verify events/domain registration and app membership.",
+  "productionChanged": false,
+  "checks": {
+    "sharingUnitAndHttp": 32,
+    "baseNodeUnit": 15,
+    "basePythonUnit": 16,
+    "baseBrowserContracts": 59,
+    "livePublicHttpAndBrowser": 5,
+    "liveOAuthAndAccess": 4,
+    "actualSlackClassicCardProofs": 2
+  }
+}
