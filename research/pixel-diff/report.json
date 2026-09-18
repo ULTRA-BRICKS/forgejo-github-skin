@@ -5,10 +5,10 @@
       1440,
       1000
     ],
-    "mae255": 10.467,
-    "pixelsDeltaGt8": 12.255,
-    "pixelsDeltaGt24": 10.672,
-    "exactMatch": 79.96
+    "mae255": 10.147,
+    "pixelsDeltaGt8": 11.933,
+    "pixelsDeltaGt24": 10.432,
+    "exactMatch": 80.354
   },
   {
     "name": "repository-mobile",
@@ -16,10 +16,10 @@
       390,
       844
     ],
-    "mae255": 8.71,
-    "pixelsDeltaGt8": 10.499,
-    "pixelsDeltaGt24": 9.079,
-    "exactMatch": 81.868
+    "mae255": 7.4,
+    "pixelsDeltaGt8": 9.46,
+    "pixelsDeltaGt24": 8.188,
+    "exactMatch": 82.982
   },
   {
     "name": "file-desktop",
@@ -27,10 +27,10 @@
       1440,
       1000
     ],
-    "mae255": 9.813,
-    "pixelsDeltaGt8": 10.392,
-    "pixelsDeltaGt24": 8.498,
-    "exactMatch": 80.402
+    "mae255": 9.819,
+    "pixelsDeltaGt8": 10.322,
+    "pixelsDeltaGt24": 8.477,
+    "exactMatch": 80.483
   },
   {
     "name": "blame-desktop",
@@ -38,10 +38,10 @@
       1440,
       1000
     ],
-    "mae255": 11.549,
-    "pixelsDeltaGt8": 13.013,
-    "pixelsDeltaGt24": 10.822,
-    "exactMatch": 77.64
+    "mae255": 11.557,
+    "pixelsDeltaGt8": 12.945,
+    "pixelsDeltaGt24": 10.801,
+    "exactMatch": 77.718
   },
   {
     "name": "issues-desktop",
@@ -49,10 +49,10 @@
       1440,
       1000
     ],
-    "mae255": 10.346,
-    "pixelsDeltaGt8": 10.694,
-    "pixelsDeltaGt24": 8.579,
-    "exactMatch": 81.346
+    "mae255": 10.428,
+    "pixelsDeltaGt8": 10.622,
+    "pixelsDeltaGt24": 8.559,
+    "exactMatch": 81.429
   },
   {
     "name": "pulls-desktop",
@@ -60,10 +60,10 @@
       1440,
       1000
     ],
-    "mae255": 13.329,
-    "pixelsDeltaGt8": 13.092,
-    "pixelsDeltaGt24": 11.862,
-    "exactMatch": 79.229
+    "mae255": 13.378,
+    "pixelsDeltaGt8": 13.08,
+    "pixelsDeltaGt24": 11.895,
+    "exactMatch": 79.244
   },
   {
     "name": "commits-desktop",
@@ -71,9 +71,9 @@
       1440,
       1000
     ],
-    "mae255": 8.331,
-    "pixelsDeltaGt8": 8.99,
-    "pixelsDeltaGt24": 7.134,
-    "exactMatch": 83.372
+    "mae255": 8.279,
+    "pixelsDeltaGt8": 8.915,
+    "pixelsDeltaGt24": 7.09,
+    "exactMatch": 83.445
   }
 ]

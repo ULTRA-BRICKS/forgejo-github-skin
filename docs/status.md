@@ -1,3 +1,11 @@
+# Current release candidate: 0.1.1
+
+Native Forgejo 16.0.5 demo seeded and scoped separately from production. Storybook published to Vercel. Genuine Forgejo logo retained and monochrome in the skin. See docs/DANNY-INSTALL.md for tested commands and ops/handoff/ for the imported 80-test deployment/Slack policy package.
+
+The earlier Storybook pixel metrics below refer to reconstructions, not the actual native-instance screenshots now in research/screenshots/demo/. They must not be presented as native Forgejo fidelity scores. Full authenticated keyboard/review acceptance and a working Slack OAuth/events app remain open.
+
+## Previous checkpoint (historical)
+
 # Implementation status
 
 Updated: 2026-09-16. This file is the operational map; requirements live in `requirements.md` and behavioral rules in `interaction-spec.md`.

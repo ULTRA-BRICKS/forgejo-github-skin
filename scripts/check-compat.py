@@ -14,8 +14,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         manifest = json.loads((ROOT / 'skin.manifest.json').read_text())
-        audit = json.loads((ROOT / 'research/source-audit.json').read_text())
         version = require_tested_version(args.version, manifest)
+        audit = json.loads((ROOT / manifest.get('sourceAudits', {}).get(version, 'research/source-audit.json')).read_text())
         errors = []
         for name, expected in audit['sha256'].items():
             file = args.source_checkout / name

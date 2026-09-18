@@ -1,6 +1,6 @@
 {
   "name": "@ultrabricks/forgejo-github-skin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Opt-in, GitHub-familiar Forgejo skin with measured design references",
@@ -16,7 +16,6 @@
     "check:generated": "node scripts/check-generated.mjs"
   },
   "devDependencies": {
-    "@fontsource-variable/mona-sans": "^5.3.0",
     "@playwright/test": "1.63.0",
     "@primer/octicons": "^19.36.0",
     "@storybook/addon-a11y": "^10.6.0",

@@ -1,8 +1,9 @@
+import {forgejoMark} from "./brand.js";
 import octicons from '@primer/octicons';
 const I=(name,size=16)=>octicons[name]?.toSVG({width:size,height:size})||'';
 const repoTabs=[['code','Code'],['issue-opened','Issues','18'],['git-pull-request','Pull requests','46'],['comment-discussion','Discussions'],['play','Actions'],['project','Projects'],['shield','Security and quality'],['graph','Insights']];
 function shell(active,body){return `<div class="gh-canvas"><header class="gh-header">
-<b class="gh-mark">${I('mark-github',32)}</b><span>Platform⌄</span><span>Solutions⌄</span><span>Resources⌄</span><span>Open Source⌄</span><span>Enterprise⌄</span><span>Pricing</span>
+<b class="gh-mark">${forgejoMark(32)}</b><span>Platform⌄</span><span>Solutions⌄</span><span>Resources⌄</span><span>Open Source⌄</span><span>Enterprise⌄</span><span>Pricing</span>
 <span class="gh-search">Search　　/</span><button class="gh-auth">Sign in</button><button class="gh-auth">Sign up</button></header>
 <section class="repo-head"><div class="repo-title">${I('repo')}　<a>primer</a> / <b><a>react</a></b> <span class="counter">Public</span><span class="repo-actions">${I('bell')} Notifications　${I('repo-forked')} Fork <b class="counter">679</b>　${I('star')} Star <b class="counter">3.9k</b></span></div>
 <nav class="repo-tabs">${repoTabs.map(([icon,label,count])=>`<span class="repo-tab ${active===label.toLowerCase().split(' ')[0]?'active':''}">${I(icon)} ${label}${count?` <b class="counter">${count}</b>`:''}</span>`).join('')}</nav></section>${body}</div>`}

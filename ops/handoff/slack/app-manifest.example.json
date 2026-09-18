@@ -1,0 +1,26 @@
+{
+  "display_information": {
+    "name": "Forgejo Link Preview",
+    "description": "Forgejo links with privacy-first previews",
+    "background_color": "#24292f"
+  },
+  "features": {
+    "bot_user": {"display_name": "Forgejo", "always_online": false},
+    "unfurl_domains": ["git.hyperide.ai"]
+  },
+  "oauth_config": {
+    "scopes": {"bot": ["links:read", "links:write"]}
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://forgejo-preview.example.invalid/slack/events",
+      "bot_events": ["link_shared"]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://forgejo-preview.example.invalid/slack/interactions"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false
+  }
+}

@@ -1,0 +1,26 @@
+{
+    email {$ACME_EMAIL}
+}
+{$STORYBOOK_HOST} {
+    root * /srv/storybook
+    encode zstd gzip
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy same-origin
+        X-Robots-Tag "noindex, nofollow"
+        # HTML/index and version switches are revalidated. Do not cache auth HTML.
+        Cache-Control "no-cache"
+    }
+    # No directory browsing and no catch-all SPA fallback masking broken assets.
+    file_server
+}
+{$FORGEJO_DEMO_HOST} {
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy same-origin
+        X-Robots-Tag "noindex, nofollow"
+        Cache-Control "private, no-store"
+    }
+    reverse_proxy forgejo:3000
+}

@@ -1,0 +1,26 @@
+/* Palette-only enhancement: keep the original Forgejo vector and links.
+   Native behaviour is scoped to the existing skin's exact theme names.
+   The Storybook selector applies only to the separately staged demo. */
+:root:is([data-theme="hypergithub-light"],[data-theme="hypergithub-auto"]) [data-fj-brandmark],
+.fj-preview-brand {
+  filter: grayscale(1) brightness(.55) contrast(1.1);
+}
+:root[data-theme="hypergithub-dark"] [data-fj-brandmark] {
+  filter: grayscale(1) brightness(1.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="hypergithub-auto"] [data-fj-brandmark] {
+    filter: grayscale(1) brightness(1.6);
+  }
+}
+.fj-preview-brand {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+/* The current reference fixtures have a dark header, independent of OS theme. */
+.gh-header .fj-preview-brand { filter: grayscale(1) brightness(1.6); }
+/* Hide the old fixture mark before the module runs; never show an Octocat as our brand. */
+#storybook-root .gh-mark .octicon-mark-github { visibility: hidden; }

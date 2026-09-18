@@ -1,0 +1,35 @@
+{
+  "capturedAt": "2026-09-18T10:40:18.932Z",
+  "base": "https://forgejo-ui-demo.hyperide.ai",
+  "scope": "Real Forgejo, desktop Chromium; no review submitted; no production data.",
+  "results": [
+    {
+      "name": "Native repository ? opens and Escape closes help",
+      "pass": true
+    },
+    {
+      "name": "Native t opens file finder",
+      "pass": true
+    },
+    {
+      "name": "Native w opens branch selector",
+      "pass": true
+    },
+    {
+      "name": "Native l locates line 42 and preserves URL fragment",
+      "pass": true
+    },
+    {
+      "name": "Native b opens blame",
+      "pass": true
+    },
+    {
+      "name": "Native y opens immutable file permalink",
+      "pass": true
+    },
+    {
+      "name": "Authenticated ordinary demo user can open PR comment editor",
+      "pass": true
+    }
+  ]
+}

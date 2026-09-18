@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-09-18T10:46:21.269Z",
+  "overallStatus": "pass",
+  "expectedChecks": 5,
+  "checks": [
+    {
+      "name": "repository-desktop",
+      "status": "pass",
+      "kind": "deployed-gallery-smoke"
+    },
+    {
+      "name": "repository-mobile",
+      "status": "pass",
+      "kind": "deployed-gallery-smoke"
+    },
+    {
+      "name": "issues",
+      "status": "pass",
+      "kind": "deployed-gallery-smoke"
+    },
+    {
+      "name": "pull-requests",
+      "status": "pass",
+      "kind": "deployed-gallery-smoke"
+    },
+    {
+      "name": "forgejo-login",
+      "status": "pass",
+      "kind": "unauthenticated-server-smoke"
+    }
+  ],
+  "failureMessages": [],
+  "authenticatedWorkflowAcceptance": "not-run-by-this-script",
+  "slackWorkspaceAcceptance": "not-run-by-this-script"
+}

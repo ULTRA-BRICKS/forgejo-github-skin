@@ -1,0 +1,14 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'.vercel/output');
+await fs.rm(out,{recursive:true,force:true});await fs.mkdir(path.join(out,'static'),{recursive:true});
+await fs.cp(path.join(root,'storybook-static'),path.join(out,'static'),{recursive:true,filter:source=>!source.endsWith('.map')&&!/\.(woff2?|ttf|otf)$/i.test(source)});
+const meta={version:3,routes:[{src:'/(.*)',headers:{'X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'}},{handle:'filesystem'}]};
+await fs.writeFile(path.join(out,'config.json'),JSON.stringify(meta,null,2));
+await fs.cp(path.join(root,'research/screenshots/storybook'),path.join(out,'static/evidence'),{recursive:true});
+await fs.cp(path.join(root,'assets/forgejo-graphite.svg'),path.join(out,'static/forgejo-graphite.svg'));
+await fs.cp(path.join(root,'research/screenshots/demo'),path.join(out,'static/demo-evidence'),{recursive:true});
+await fs.cp(path.join(root,'docs/DANNY-INSTALL.md'),path.join(out,'static/DANNY-INSTALL.md'));
+console.log('Staged static gallery only; no repository, .env, credentials, maps or font binaries.');
+if(process.argv.includes('--deploy')) execFileSync('vercel',['deploy','--prebuilt','--prod','--yes','--scope','inventorems-projects'],{cwd:root,stdio:'inherit'});
