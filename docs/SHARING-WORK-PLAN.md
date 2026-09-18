@@ -38,3 +38,11 @@ Request: rich chat snippets and real Slack previews of Forgejo content behind lo
 ## Preview v2 checkpoint
 
 Origin:null rejection reproduced and fixed with CSRF retained. Progressive setup now keeps input on failure. Compact token-driven facts layouts and native-URL Open Graph adapter tested on the isolated demo. Direct git.hyperide.ai source parsing and OAuth namespaces are separate from demo credentials. Actual Slack manifest domains/endpoints saved and reinstall consent completed; bot runtime still has no signing secret/token. Do not close private app acceptance until real signed event delivery, private account linking and revocation pass.
+
+## Final visual acceptance checkpoint
+
+- PR #13 already contains the compact per-object renderer, 3x exports, native Open Graph adapter, direct URL routing, shared Storybook renderer and setup recovery.
+- Reran 14 responsive variants, five exact runtime/Storybook pixel comparisons, four native metadata checks and setup failure/retry checks.
+- Captured the compact PR in the real Slack client via an explicitly manual Block Kit visual sample; this is not automatic or private delivery. Evidence: research/slack-visual-acceptance.json.
+- Unified configuration-readiness checks so a missing signing secret can never be reported as ready merely because a bot token exists. Missing credentials are reported by npm run sharing:doctor without their values.
+- Both runtime Slack credentials remain absent; the existing app is installed and joined the private test channel. Do not create another app or repeat blocked browser-secret retrieval. Production OAuth is still a separate missing prerequisite.

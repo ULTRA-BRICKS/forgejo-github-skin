@@ -64,7 +64,7 @@ test("private HTML metadata stays generic and safely escapes original URLs", () 
     "https://forge.example/owner/repo",
     "https://links.example",
   );
-  assert.ok(html.includes("Forgejo link — sign in to view"));
+  assert.ok(html.includes("Protected link — sign in to view"));
   assert.ok(!html.includes("Authorized secret"));
   assert.ok(
     !html.includes("og:image"),

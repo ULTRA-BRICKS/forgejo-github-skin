@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-09-18T16:29:21.269Z",
+  "message": "https://glide-vc.slack.com/archives/C0C2X21ECTB/p1789748491037249",
+  "scope": "Actual Slack client visual acceptance of a manually attached public demo card. NOT automatic/private app delivery.",
+  "results": [
+    {
+      "pass": true,
+      "nativeTitleLink": "https://forgejo-ui-demo.hyperide.ai/demo-author/keyboard-lab/pulls/3",
+      "text": "Ultra\n  6:21 PM\n\nHyperide · demo · Визуальная приёмка. Ручной образец, не проверка автоматической доставки.\nPR #3: Preserve keyboard focus and repository context\nSynthetic pull request for evaluating conversation, commits, diff and review interactions.\n(57 kB)\n(edited)",
+      "screenshot": "research/screenshots/preview-v2/slack-visual-acceptance.png"
+    }
+  ],
+  "image": {
+    "width": 1440,
+    "height": 672
+  }
+}

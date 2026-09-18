@@ -51,3 +51,11 @@ Protected metadata is never put in a public image URL. Per-viewer modals recheck
 ## Supported routes and honest limits
 
 Repository, issue, PR (including files/commits tabs), full-SHA commit and immutable file links are supported. Mutable branch file URLs, list screens and unrecognized routes are not guessed. Their expansion requires explicit tested ref resolution. The activity graph is a bounded fetched sample, not a repository-wide analytics API. The demo service is Mac-hosted; persistent DNS and a supervised tunnel do not provide uptime while the Mac sleeps.
+
+## Closing verification
+
+The compact PR design is now captured in the actual Slack client at `research/screenshots/preview-v2/slack-visual-acceptance.png`. It is explicitly a **manually attached public Block Kit sample**, not an automated app unfurl. Its title opens the original native PR and its statistics image has 1440 × 672 source pixels without a repeated title/body.
+
+Configuration readiness is now checked identically by health, demo UI and event handler. A bot token without a signing secret cannot produce a misleading configured state. `npm run sharing:doctor` reports only missing field names and source OAuth readiness, never secret values; exit 2 means configuration is incomplete.
+
+At this checkpoint both Slack runtime credentials remain absent and production OAuth remains unconfigured. Do not infer private Slack success from the visual sample, developer settings, generic health HTTP 200, or the separate successful web OAuth test.
