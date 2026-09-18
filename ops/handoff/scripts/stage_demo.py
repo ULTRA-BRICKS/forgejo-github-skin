@@ -25,6 +25,12 @@ ALLOWED_EXTENSIONS = {
     ".css", ".mjs", ".js", ".json", ".html", ".txt", ".svg", ".png", ".webp",
     ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".map", ".wasm",
 }
+FONT_EXTENSIONS = {".woff", ".woff2", ".ttf", ".otf", ".eot", ".ttc", ".otc"}
+
+def omit_font_binaries(directory, names):
+    """Keep generated-font dependencies in the source build, not in the handoff."""
+    return [name for name in names if Path(name).suffix.lower() in FONT_EXTENSIONS]
+
 FORBIDDEN_NAMES = {"node_modules", "credentials", "secrets", "app.ini"}
 
 
@@ -126,9 +132,9 @@ def stage(repo: Path, output: Path, logo: Path, expected_sha: str,
     output.parent.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix=".forgejo-stage-", dir=output.parent))
     try:
-        shutil.copytree(public, tmp / "custom/public")
+        shutil.copytree(public, tmp / "custom/public", ignore=omit_font_binaries)
         shutil.copytree(templates, tmp / "custom/templates")
-        shutil.copytree(storybook, tmp / "storybook")
+        shutil.copytree(storybook, tmp / "storybook", ignore=omit_font_binaries)
         native_assets = tmp / "custom/public" / ASSET_PREFIX
         preview_assets = tmp / "storybook" / ASSET_PREFIX
         if native_assets.exists() or preview_assets.exists():

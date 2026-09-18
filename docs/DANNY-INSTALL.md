@@ -64,7 +64,7 @@ Verify login/logout; public and private repository permissions; branches; file a
 
 ## 5. Always-on demo deployment
 
-`ops/handoff/` contains the detailed Compose/Caddy staging guide and strict file validators. Use a new persistent volume, separate DNS names and synthetic data only. The initial Compose config requires login and disables registration, mail and Actions; enable public browsing only after reviewing fixtures.
+`ops/handoff/` contains the detailed Compose/Caddy staging guide and strict file validators. Copy that folder to a new deployment directory outside the Git checkout before staging; keep Compose, `.env` and `staging/` together there. The stager intentionally refuses output inside its source repository. Use a new persistent volume, separate DNS names and synthetic data only. The initial Compose config requires login and disables registration, mail and Actions; enable public browsing only after reviewing fixtures.
 
 **Verified image-layout correction:** keep configuration writable at `/data/gitea/conf/app.ini` and set CustomPath to `/data/gitea`. Bind the staged `public/` and `templates/` directories individually read-only. Mounting the whole custom directory at another location without synchronizing the config path can accidentally start the installation wizard; the Compose example has been corrected accordingly.
 

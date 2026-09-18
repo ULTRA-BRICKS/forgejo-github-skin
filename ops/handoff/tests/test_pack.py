@@ -58,6 +58,18 @@ class StageTests(unittest.TestCase):
         self.assertEqual(check.check_files(self.out), len(manifest["files"]))
         self.assertEqual(manifest["privateSlackIntegration"], "not-installed")
 
+    def test_generated_font_binaries_are_not_exported(self):
+        originals = []
+        for folder in ("storybook-static", "dist/public/assets"):
+            for name in ("fixture.woff2", "fixture.TTF"):
+                p = self.repo / folder / name
+                p.write_bytes(b"synthetic-font-fixture")
+                originals.append(p)
+        manifest = self.run_stage()
+        self.assertTrue(all(p.exists() for p in originals))
+        self.assertFalse(any(p.suffix.lower() in stage.FONT_EXTENSIONS for p in self.out.rglob("*")))
+        self.assertEqual(check.check_files(self.out), len(manifest["files"]))
+
     def test_repository_is_untouched(self):
         before = self.git("status", "--porcelain")
         self.run_stage()

@@ -93,7 +93,11 @@ validator deliberately rejects SVG style blocks, XML processing instructions and
 external resources; do not pass the raw upstream `logo.svg` without reviewing and
 normalizing it. The bundled graphite SVG has a regression test against this validator.
 
-Run from `/srv/forgejo-skin-source/ops/handoff` (or a separately copied handoff folder):
+Copy `ops/handoff/` into a new deployment directory **outside** the source checkout,
+for example `/srv/forgejo-ui-deploy-0.1.1`, then run the commands below from that
+deployment directory. Do not run them inside `/srv/forgejo-skin-source`: the stager
+deliberately refuses in-repository output. Keep Compose, `.env` and `staging/`
+together in the external deployment directory so relative bind mounts resolve.
 
 ```sh
 python3 scripts/stage_demo.py \
