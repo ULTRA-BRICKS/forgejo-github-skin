@@ -93,3 +93,24 @@ body{font-family:"Mona Sans Variable","Mona Sans VF",-apple-system,BlinkMacSyste
 
 /* GitHub shortcut parity fixture. */
 .hotkey-sheet{max-width:860px;margin:32px auto;padding:0 24px;color:#1f2328}.hotkey-sheet>header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding-bottom:20px;border-bottom:1px solid #d1d9e0}.hotkey-sheet h2{margin:0 0 6px;font-size:24px}.hotkey-sheet p{margin:0;color:#59636e}.hotkey-sheet section{margin-top:24px}.hotkey-sheet h3{margin:0 0 8px;font-size:16px}.hotkey-chip{padding:3px 10px;border-radius:999px;background:#ddf4ff;color:#0969da;white-space:nowrap}.hotkey-row{display:grid;grid-template-columns:180px minmax(0,1fr) 120px;align-items:center;min-height:46px;border-top:1px solid #d8dee4;gap:16px}.hotkey-row:last-child{border-bottom:1px solid #d8dee4}.hotkey-row kbd{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:26px;padding:0 7px;border:1px solid #afb8c1;border-bottom-width:2px;border-radius:6px;background:#f6f8fa;font:12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;box-shadow:inset 0 -1px #d8dee4}.hotkey-plus{margin:0 7px;color:#818b98;font-size:11px}.hotkey-status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600}.hotkey-status.ready{color:#1a7f37}.hotkey-status.native{color:#0969da}.hotkey-status.gap{color:#59636e}@media(max-width:700px){.hotkey-sheet{margin:16px auto;padding:0 16px}.hotkey-sheet>header{display:block}.hotkey-chip{display:inline-block;margin-top:12px}.hotkey-row{grid-template-columns:130px minmax(0,1fr);gap:10px;padding:8px 0}.hotkey-status{grid-column:2}}
+/* Mobile workflow fixtures must fit the viewport; desktop navigation is never squeezed into phone layouts. */
+@media(max-width:700px){
+  .gh-header>span:not(.gh-search){display:none}
+  .gh-header{height:64px;padding:12px 16px}
+  .repo-head{padding-top:12px}
+  .repo-tabs{position:relative;gap:0;padding-right:42px}
+  .repo-tab{padding-inline:10px}
+  .repo-tab:nth-child(n+3){display:none}
+  .pull-toolbar{gap:8px}
+  .pull-toolbar .issue-search{margin:0;min-width:100%}
+  .pull-toolbar .btn:nth-of-type(1),.pull-toolbar .btn:nth-of-type(2){width:auto;flex:1;border-radius:6px}
+  .pull-toolbar .btn.green{width:auto;flex:1.1;margin-left:0}
+  .issue-filters .filter-spacer,.issue-filters .filter-spacer~span{display:none}
+  .issue-filters{justify-content:flex-start;gap:20px}
+  .github-issue-row{padding:10px 12px}
+  .github-issue-row b{font-size:15px;line-height:1.35}
+  .github-issue-row .row-end{font-size:12px}
+  .code-toolbar>.muted{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .code-actions{display:none}
+  .commit-card{min-width:0;overflow:hidden}.commit-card>b{white-space:nowrap}.commit-summary{display:none}
+}

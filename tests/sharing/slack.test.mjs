@@ -196,7 +196,7 @@ test('unconfigured account linking still provides a validated original URL', asy
   } finally { f.store.close(); }
 });
 
-for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, false], [true, false, true], [true, undefined, false]]) {
+for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, true], [true, false, true], [true, undefined, false]]) {
   test(`shared PNG requires actual anonymous source access (${anonymousReadable}, ${privateFlag})`, async () => {
     const f = fixture();
     f.slack.config = { ...f.slack.config, origin: 'https://links.example' };
@@ -207,7 +207,8 @@ for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, fa
         throw error;
       }
       return { link: parseForgejoLink(url, source), private: privateFlag,
-        repositoryId: '2', title: 'Public object', description: 'Verified public metadata' };
+        repositoryId: '2', title: 'Public object', description: 'Verified public metadata',
+        summary: { kind: 'pull', metrics: [{ label: 'State', value: 'Open' }] } };
     };
     try {
       await f.slack.unfurl(event());
@@ -217,3 +218,19 @@ for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, fa
     } finally { f.store.close(); }
   });
 }
+
+test('image snapshots require meaningful facts and strip protected code/prose', () => {
+  const f = fixture();
+  f.slack.config = { ...f.slack.config, origin: 'https://links.example' };
+  try {
+    assert.equal(f.slack.imageSnapshot({ private: false, summary: { kind: 'repository', metrics: [{ label: 'Stars', value: null }] } }), null);
+    const url = f.slack.imageSnapshot({ private: true, title: 'SECRET TITLE', description: 'SECRET BODY',
+      summary: { kind: 'file', code: ['SECRET CODE'], metrics: [{ label: 'Bytes', value: 12 }] } });
+    assert.match(url, /^https:\/\/links\.example\/image\/s\/[a-f0-9]{48}$/);
+    const id = url.split('/').at(-1), stored = f.store.get('image:' + id);
+    assert.equal(stored.title, 'Private repository preview');
+    assert.equal(stored.description, '');
+    assert.equal(stored.summary.code, null);
+    assert.ok(!JSON.stringify(stored).includes('SECRET'));
+  } finally { f.store.close(); }
+});

@@ -75,13 +75,22 @@ test("activity uses real timestamps and labels truncated sampling", () => {
     true,
   );
 });
+test("file snippets syntax-highlight code without changing the source text", () => {
+  const f = structuredClone(previewFixtures.file);
+  f.summary.code = ['const answer = "yes"; // note'];
+  const svg = graphic(f, tokens, sizes);
+  assert.ok(svg.includes('fill="#0969da"'));
+  assert.ok(svg.includes('fill="#1f883d"'));
+  assert.ok(svg.includes('fill="#59636e"'));
+  assert.ok(svg.includes('>const</text>'));
+});
 test("literal code is XML-escaped, whitespace-preserving, and at most five lines", () => {
   const f = structuredClone(previewFixtures.file);
   f.summary.code = ["<script>&  exact code", ...Array(8).fill("const x = 1;")];
   const svg = graphic(f, tokens, sizes);
   assert.ok(svg.includes("&lt;script&gt;&amp;"));
   assert.ok(svg.includes('xml:space="preserve"'));
-  assert.equal((svg.match(/const x = 1;/g) || []).length, 4);
+  assert.equal((svg.match(/>const<\/text>/g) || []).length, 4);
 });
 test("direct qa-cli URL resolves only to the exact production source; demo credentials cannot cross origins", async () => {
   const store = new Store(":memory:", randomBytes(32));

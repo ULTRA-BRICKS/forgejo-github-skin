@@ -116,6 +116,14 @@ const server = http.createServer(async (request, response) => {
   const { config, sources, forgejo, oauth, slack } = runtime;
   try {
     const url = new URL(request.url, config.origin);
+    const snapshotMatch = url.pathname.match(/^\/image\/s\/([a-f0-9]{48})$/);
+    if (snapshotMatch && request.method === "GET") {
+      if (!publicBudget.allow()) return send(response, 429, "Retry shortly", "text/plain");
+      const snapshot = store.get("image:" + snapshotMatch[1]);
+      if (!snapshot?.summary) return send(response, 404, "Preview expired", "text/plain");
+      metrics.publicImages++;
+      return send(response, 200, await renderCache.get(snapshot), "image/png");
+    }
     const isPublicRead =
       [
         "/health",

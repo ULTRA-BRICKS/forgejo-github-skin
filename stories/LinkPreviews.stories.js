@@ -17,6 +17,11 @@ export default {
 };
 function render(kind, { width = 480, dark = false } = {}) {
   const wrapper = document.createElement("div");
+  if (kind === "missing" || kind === "protectedUnavailable") {
+    wrapper.style.cssText = "width:" + width + "px;max-width:100%;padding:16px;border:1px dashed #d1d9e0;border-radius:8px;color:#59636e;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;";
+    wrapper.textContent = "No image emitted — Slack keeps the text link/card without a meaningless placeholder graphic.";
+    return wrapper;
+  }
   wrapper.style.cssText = `width:${width}px;max-width:100%;padding:0;margin:0;`;
   const fixture = structuredClone(previewFixtures[kind]);
   fixture.brand = { ...fixture.brand, logoData: instanceMark };
