@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-09-18T19:34:17.221Z",
+  "origin": "https://forgejo-links.hyperide.ai",
+  "expectedChecks": 5,
+  "results": [
+    {
+      "check": "Live release and production configuration",
+      "pass": true
+    },
+    {
+      "check": "HTTP source navigation upgrades to the exact HTTPS original",
+      "pass": true
+    },
+    {
+      "check": "Unsigned Slack requests are rejected",
+      "pass": true
+    },
+    {
+      "check": "Unconfigured origins receive a neutral page without external navigation",
+      "pass": true
+    },
+    {
+      "check": "Public image endpoint returns a valid PNG without viewer credentials",
+      "pass": true
+    }
+  ],
+  "health": {
+    "service": "forgejo-link-preview",
+    "build": "4138d6e591632167cea3d84d6f7358d8c27e0531",
+    "slackConfigured": true,
+    "oauthConfigured": true,
+    "configurationReloadRejected": false,
+    "sources": [
+      {
+        "id": "production",
+        "origin": "https://git.hyperide.ai",
+        "oauthConfigured": true
+      }
+    ]
+  },
+  "allPassed": true,
+  "notRun": 0
+}
