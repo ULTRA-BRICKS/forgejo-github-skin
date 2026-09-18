@@ -30,3 +30,17 @@ Legend: ✅ automated/pass · 🟡 fixture/prototype only · 🔴 not yet covere
 - Pixel-diff report is regenerated for each screen under active tuning.
 - Exact Forgejo source compatibility check passes for the deployment version.
 - Canary smoke test succeeds before production-wide default-theme changes.
+
+## Keyboard parity coverage
+
+| Group | Desktop | Mobile | Notes |
+|---|---:|---:|---|
+| Repository `G C/I/P/A/N` | ✅ | ✅ | Existing same-origin destinations only |
+| Search `S` / `/` | ✅ | ✅ | Best visible native search |
+| File `T/L/W/Y/B/E` | ✅ | ✅ | Permission-rendered controls; line dialog is skin-owned |
+| Issue-list `Cmd/Ctrl+/`, `C`, `U/L/M/A` | ✅ | ✅ | Native search/filter/create controls |
+| Issue/PR detail `Q/M/L/A` | ✅ | ✅ | Native reviewer/milestone/label/assignee controls |
+| Actions `G F`, `T`, `F` | ✅ | ✅ | Native workflow source and gear-menu commands |
+| Notifications `Shift+I/U` | ✅ | ✅ | Native read/unread buttons; focused/hovered item only |
+| Native Markdown `Cmd/Ctrl+B/I/K`, quick submit | ↪ | ↪ | Supplied by Forgejo editor, deliberately not intercepted |
+| GitHub-only / excluded features | — | — | Explicit in `docs/hotkeys.md`; no fake mutations |

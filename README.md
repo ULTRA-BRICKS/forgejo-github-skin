@@ -50,3 +50,13 @@ Feedback states (success/info/warning/error) are captured in `research/screensho
 ![Feedback states](research/screenshots/storybook/feedback-messages.png)
 
 Loading and empty-state references are checked in as `feedback-loading.png` and `feedback-empty.png`. These fixtures are paired with `docs/interaction-spec.md` so hover/focus/pressed/loading/error behavior is reviewed as a product requirement rather than cosmetic polish.
+
+### Keyboard parity
+
+The skin keeps GitHub's familiar key chords where Forgejo exposes the same safe action. The live `?` dialog is page-aware and only advertises commands whose native destination/control exists for the current page and permissions. The complete compatibility matrix is in [`docs/hotkeys.md`](docs/hotkeys.md).
+
+![GitHub-compatible repository shortcuts](research/screenshots/storybook/hotkeys-repository.png)
+
+![Intentional shortcut gaps](research/screenshots/storybook/hotkeys-gaps.png)
+
+The gaps are deliberate rather than placeholders: GitHub-only features (for example github.dev and repository Discussions) and product-excluded Wiki/Projects are not redirected to misleading substitutes.

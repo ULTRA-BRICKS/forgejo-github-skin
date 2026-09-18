@@ -94,3 +94,16 @@ Status: living specification. Every visual or behavioral change must map to a re
 - Storybook stories serve as reproducible component/screen fixtures; screenshots are generated from them automatically.
 - Each mergeable change requires tests, browser smoke checks and the repository review gate.
 - Production installation must have an explicit canary and rollback procedure and must not leak `app.ini` secrets into skin-owned backups.
+
+## GitHub keyboard parity
+
+- `docs/hotkeys.md` is the normative parity matrix against current GitHub keyboard documentation.
+- Every GitHub shortcut whose intent has a safe Forgejo equivalent should use the same key chord and activate an existing native same-origin link/control.
+- Page-specific `?` help must be generated from controls actually available on that page and under the current permissions; unavailable commands are not advertised as working.
+- `S` and `/` focus the best visible native search; `Cmd/Ctrl+/` focuses issue/PR list search where that GitHub shortcut applies.
+- Repository `G` sequences include Code, Issues, Pull requests, Actions, Notifications and Actions workflow source where Forgejo exposes the destination.
+- File shortcuts include finder, line, ref selector, permalink, blame and edit when the server renders permission for the action.
+- Issue/PR filter and detail shortcuts must open the existing author/label/milestone/assignee/reviewer controls instead of reimplementing their logic.
+- Actions shortcuts must reuse the native workflow link and log settings menu; notification shortcuts must reuse native read/unread actions.
+- Editor formatting and quick-submit shortcuts already supplied by Forgejo remain native and must not be shadowed by the skin.
+- GitHub commands without equivalent Forgejo semantics remain explicit gaps rather than dangerous approximations: github.dev, Discussions/Security tabs in Forgejo 16.0.3, notification Done/unsubscribe, and product-excluded Wiki/Projects.
