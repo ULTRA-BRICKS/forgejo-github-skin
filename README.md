@@ -8,7 +8,7 @@ GitHub-familiar, opt-in UI/UX layer for Forgejo without maintaining a Forgejo fo
 
 ## What is here
 
-- `design.md` — measured desktop/mobile reference and interaction specification.
+- `DESIGN.md` — measured desktop/mobile reference and interaction specification.
 - `tokens.json` — DTCG 2025.10 design tokens derived from live GitHub CSS values.
 - `src/` — scoped theme and progressive UX enhancements.
 - `stories/` — Storybook screens/components used for visual convergence.
@@ -29,7 +29,7 @@ npm run storybook
 
 Build Storybook with `npm run storybook:build`. `npm run storybook:screenshots` expects the static Storybook on loopback port 6007. Pixel comparison is `python3 scripts/pixel-diff.py`.
 
-The checked-in screenshots are evidence, not a claim of pixel-perfect completion. Raw diff includes unavoidable changing content, glyph and icon differences. See `research/pixel-diff/report.json` and `design.md` for scope.
+The checked-in screenshots are evidence, not a claim of pixel-perfect completion. Raw diff includes unavoidable changing content, glyph and icon differences. See `research/pixel-diff/report.json` and `DESIGN.md` for scope.
 
 ## Current visual baseline
 

@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-09-18T15:44:24.572Z",
+  "scope": "Literal pixel comparison: Storybook SVG screenshot versus server PNG renderer with identical synthetic facts, fonts, DPR and viewport. Not a GitHub similarity percentage.",
+  "results": [
+    {
+      "kind": "repository",
+      "dimensions": [
+        1440,
+        672
+      ],
+      "mae": 0,
+      "pixelIdentical": true
+    },
+    {
+      "kind": "issue",
+      "dimensions": [
+        1440,
+        672
+      ],
+      "mae": 0,
+      "pixelIdentical": true
+    },
+    {
+      "kind": "pull",
+      "dimensions": [
+        1440,
+        672
+      ],
+      "mae": 0,
+      "pixelIdentical": true
+    },
+    {
+      "kind": "commit",
+      "dimensions": [
+        1440,
+        672
+      ],
+      "mae": 0,
+      "pixelIdentical": true
+    },
+    {
+      "kind": "file",
+      "dimensions": [
+        1440,
+        672
+      ],
+      "mae": 0,
+      "pixelIdentical": true
+    }
+  ]
+}

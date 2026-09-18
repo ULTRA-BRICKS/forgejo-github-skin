@@ -1,3 +1,4 @@
+import { unfurlLayout } from "./unfurl-layout.mjs";
 import { isAccessDenied } from "./forgejo.mjs";
 import { randomBytes } from "node:crypto";
 import {
@@ -84,7 +85,11 @@ export class SlackIntegration {
         event.user === this.config.slack.disclosureUser &&
         event.channel === this.config.slack.demoChannel
       ) {
-        const token = await this.oauth.access(envelope.team_id, event.user);
+        const token = await this.oauth.access(
+          envelope.team_id,
+          event.user,
+          raw.url,
+        );
         if (token) {
           try {
             meta = await this.forgejo.metadata(raw.url, token);
@@ -101,7 +106,7 @@ export class SlackIntegration {
               source: event.source,
               workspaceId: envelope.team_id,
               repositoryId: meta?.repositoryId,
-              instanceOrigin: this.config.forgejo,
+              instanceOrigin: new URL(raw.url).origin,
               resourceUrl: meta?.link.resourceUrl,
               channel: {
                 id: channel.id,
@@ -126,17 +131,15 @@ export class SlackIntegration {
       let card = protectedCard(this.reference(envelope.team_id, raw.url));
       if (meta && facts) {
         try {
-          card = richCard({
+          card = unfurlLayout(
+            meta,
             facts,
-            policy: {
+            {
               privateMode: "explicit-channel-disclosure",
               destinations: this.config.privateDestinations,
             },
-            link: meta.link,
-            title: meta.title,
-            description: meta.description,
-            status: meta.status,
-          });
+            this.config.origin,
+          );
         } catch {
           /* Fail closed to a neutral, personal-view card. */
         }
@@ -183,10 +186,25 @@ export class SlackIntegration {
     });
     const user = payload.user.id,
       team = payload.team.id,
-      token = await this.oauth.access(team, user);
+      token = await this.oauth.access(team, user, ref.url);
     let blocks;
     if (!token) {
-      const url = this.oauth.ticket(team, user);
+      const url = this.oauth.ticket(team, user, ref.url);
+      if (!url) {
+        await this.call("views.update", {
+          view_id: opened.view.id,
+          view: this.modal([
+            {
+              type: "section",
+              text: {
+                type: "plain_text",
+                text: "Account linking for this exact instance is not configured yet. No credentials from another instance were used. Open the original link to view it.",
+              },
+            },
+          ]),
+        });
+        return;
+      }
       blocks = [
         {
           type: "section",

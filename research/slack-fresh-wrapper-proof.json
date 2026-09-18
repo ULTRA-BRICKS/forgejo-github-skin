@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-09-18T15:27:51.437Z",
+  "results": [
+    {
+      "pass": false,
+      "target": "https://forgejo-links.hyperide.ai/s/demo-author/keyboard-lab/issues/4",
+      "error": "locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-qa=\"message_attachment_title_link\"]').filter({ hasText: 'Compact previews: keep text readable and open the original URL' }).last() to be visible\u001b[22m\n"
+    }
+  ]
+}

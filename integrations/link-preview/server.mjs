@@ -1,9 +1,10 @@
+import { renderGraphic, closeRenderer } from "./raster.mjs";
+import { Sources } from "./sources.mjs";
 import { RenderCache } from "./render-cache.mjs";
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { randomBytes, createHash } from "node:crypto";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { validEnvelope, validInteraction, Budget } from "./protocol.mjs";
 import { Store } from "./store.mjs";
@@ -47,7 +48,8 @@ const config = readConfig(),
   );
 const forgejo = new Forgejo(config.forgejo),
   oauth = new OAuth(config, store, forgejo),
-  slack = new SlackIntegration(config, store, forgejo, oauth);
+  sources = new Sources(config, store),
+  slack = new SlackIntegration(config, store, sources, sources);
 const metrics = {
   events: 0,
   completed: 0,
@@ -87,10 +89,10 @@ async function body(request) {
   return Buffer.concat(chunks);
 }
 async function anonymous(raw) {
-  const link = forgejo.parse(raw);
+  const link = sources.parse(raw);
   if (!link) return null;
   try {
-    return await forgejo.metadata(raw);
+    return await sources.metadata(raw, undefined, { enrich: true });
   } catch (e) {
     if (isAccessDenied(e.status)) return null;
     throw e;
@@ -100,30 +102,7 @@ async function renderImage(meta) {
   if (activeRenders >= 2) throw new Error("Image renderer busy");
   activeRenders++;
   try {
-    return await new Promise((resolve, reject) => {
-      const child = spawn(
-          "python3",
-          [path.join(root, "scripts/sharing/render_card.py")],
-          { stdio: ["pipe", "pipe", "pipe"] },
-        ),
-        chunks = [];
-      let size = 0;
-      const timer = setTimeout(() => child.kill("SIGKILL"), 8000);
-      child.stdout.on("data", (data) => {
-        size += data.length;
-        if (size > 2 * 1024 * 1024) child.kill("SIGKILL");
-        else chunks.push(data);
-      });
-      child.stderr.resume();
-      child.stdin.on("error", () => {});
-      child.on("error", reject);
-      child.on("close", (code) => {
-        clearTimeout(timer);
-        if (code !== 0) reject(new Error("Image rendering failed"));
-        else resolve(Buffer.concat(chunks));
-      });
-      child.stdin.end(JSON.stringify(meta));
-    });
+    return await renderGraphic(meta);
   } finally {
     activeRenders--;
   }
@@ -145,6 +124,7 @@ const server = http.createServer(async (request, response) => {
         "/robots.txt",
         "/share",
         "/image",
+        "/inspect",
       ].includes(url.pathname) || url.pathname.startsWith("/s/");
     if (
       request.method === "GET" ||
@@ -181,6 +161,7 @@ const server = http.createServer(async (request, response) => {
       if (
         url.pathname === "/share" ||
         url.pathname === "/image" ||
+        url.pathname === "/inspect" ||
         url.pathname.startsWith("/s/")
       ) {
         if (!publicBudget.allow())
@@ -193,7 +174,18 @@ const server = http.createServer(async (request, response) => {
         const raw = url.pathname.startsWith("/s/")
           ? config.forgejo + url.pathname.slice(2)
           : url.searchParams.get("url") || "";
-        const link = forgejo.parse(raw);
+        const link = sources.parse(raw);
+        // Browser navigation goes straight to the validated original, before API lookup.
+        if (
+          link &&
+          url.pathname !== "/image" &&
+          url.pathname !== "/inspect" &&
+          request.headers["sec-fetch-mode"] === "navigate"
+        ) {
+          headers(response);
+          response.writeHead(302, { Location: link.originalUrl });
+          return response.end();
+        }
         const meta = link ? await anonymous(raw) : null;
         const safe = meta && !meta.private ? meta : generic;
         if (url.pathname === "/image") {
@@ -220,7 +212,22 @@ const server = http.createServer(async (request, response) => {
           user: randomBytes(32).toString("hex"),
         });
       }
-      if (url.pathname === "/connect") {
+      if (
+        url.pathname === "/connect" ||
+        /^\/connect\/[a-z][a-z0-9-]*$/.test(url.pathname)
+      ) {
+        const entry =
+          url.pathname === "/connect"
+            ? sources.primary
+            : sources.byId(url.pathname.split("/")[2]);
+        if (!entry?.auth)
+          return send(
+            response,
+            503,
+            "Account linking is not configured for this source",
+            "text/plain",
+          );
+        const selected = entry.auth;
         const id = url.searchParams.get("ticket") || "";
         if (!/^[a-f0-9]{64}$/.test(id))
           return send(
@@ -231,7 +238,7 @@ const server = http.createServer(async (request, response) => {
               "<h1>Open the connection from Slack again.</h1>",
             ),
           );
-        const identity = store.take("ticket:" + id);
+        const identity = store.take(selected.key("ticket", id));
         if (!identity)
           return send(
             response,
@@ -242,11 +249,25 @@ const server = http.createServer(async (request, response) => {
             ),
           );
         headers(response);
-        return oauth.begin(request, response, identity);
+        return selected.begin(request, response, identity);
       }
-      if (url.pathname === "/oauth/callback") {
+      if (
+        url.pathname === "/oauth/callback" ||
+        /^\/oauth\/[a-z][a-z0-9-]*\/callback$/.test(url.pathname)
+      ) {
+        const entry =
+          url.pathname === "/oauth/callback"
+            ? sources.primary
+            : sources.byId(url.pathname.split("/")[2]);
+        if (!entry?.auth)
+          return send(
+            response,
+            503,
+            "Account linking unavailable",
+            "text/plain",
+          );
         headers(response);
-        const identity = await oauth.complete(request, response, url);
+        const identity = await entry.auth.complete(request, response, url);
         if (identity.team === "demo") {
           response.writeHead(303, { Location: "/demo" });
           return response.end();
@@ -454,7 +475,8 @@ fs.watchFile(
   },
 );
 process.on("SIGTERM", () => {
-  server.close(() => {
+  server.close(async () => {
+    await closeRenderer();
     store.close();
     process.exit(0);
   });

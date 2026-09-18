@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-09-18T15:15:49.729Z",
+  "scope": "Actual native HTTP/DOM/PNG, distinct from Slack client rendering and private app unfurls",
+  "results": [
+    {
+      "route": "/demo-author/keyboard-lab",
+      "pass": true,
+      "canonical": "https://forgejo-ui-demo.hyperide.ai/demo-author/keyboard-lab",
+      "imageSize": [
+        1440,
+        672
+      ]
+    },
+    {
+      "route": "/demo-author/keyboard-lab/issues/1",
+      "pass": true,
+      "canonical": "https://forgejo-ui-demo.hyperide.ai/demo-author/keyboard-lab/issues/1",
+      "imageSize": [
+        1440,
+        672
+      ]
+    },
+    {
+      "route": "/demo-author/keyboard-lab/pulls/3",
+      "pass": true,
+      "canonical": "https://forgejo-ui-demo.hyperide.ai/demo-author/keyboard-lab/pulls/3",
+      "imageSize": [
+        1440,
+        672
+      ]
+    },
+    {
+      "name": "Private native URL retains Forgejo authentication gate",
+      "pass": true
+    }
+  ]
+}

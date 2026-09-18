@@ -1,0 +1,7 @@
+{
+  "version": "16.0.5",
+  "commit": "8d24b7d52df327118cd776cf461d34e52e0ec1ce",
+  "path": "templates/base/head_opengraph.tmpl",
+  "sha256": "40d44ad7948664c8066e35b170b4fc8f7e0a9df0dfecfe937c44cfd702bf907f",
+  "source": "https://codeberg.org/forgejo/forgejo"
+}

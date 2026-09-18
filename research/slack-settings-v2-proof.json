@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-09-18T15:16:32.506Z",
+  "appId": "A0C2QBRV3NH",
+  "domains": [
+    "git.hyperide.ai",
+    "forgejo-ui-demo.hyperide.ai"
+  ],
+  "events": {
+    "request_url": "https://forgejo-links.hyperide.ai/slack/events",
+    "bot_events": [
+      "link_shared"
+    ]
+  },
+  "interactivity": {
+    "is_enabled": true,
+    "request_url": "https://forgejo-links.hyperide.ai/slack/interactions"
+  },
+  "socketMode": false,
+  "scope": "Developer settings read back after save and normal reinstall consent completed. No signed event/private unfurl success claim.",
+  "reinstallConsent": {
+    "completed": true,
+    "workspace": "Glide",
+    "appName": "Hyperide Links",
+    "returnPath": "https://app.slack.com/app-settings/T09LDGG3DJB/A0C2QBRV3NH/oauth"
+  }
+}

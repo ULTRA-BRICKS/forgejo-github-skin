@@ -1,0 +1,99 @@
+{
+  "$description": "DTCG preview geometry. Logical pixels; raster export uses 3x resolution. Product decisions, not GitHub measurements.",
+  "preview": {
+    "width": {
+      "$type": "dimension",
+      "$value": {
+        "value": 480,
+        "unit": "px"
+      }
+    },
+    "height": {
+      "$type": "dimension",
+      "$value": {
+        "value": 224,
+        "unit": "px"
+      }
+    },
+    "scale": {
+      "$type": "number",
+      "$value": 3
+    },
+    "gutter": {
+      "$type": "dimension",
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      }
+    },
+    "logoSize": {
+      "$type": "dimension",
+      "$value": {
+        "value": 22,
+        "unit": "px"
+      }
+    },
+    "labelSize": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "numberSize": {
+      "$type": "dimension",
+      "$value": {
+        "value": 30,
+        "unit": "px"
+      }
+    },
+    "codeSize": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "lineWidth": {
+      "$type": "dimension",
+      "$value": {
+        "value": 1.5,
+        "unit": "px"
+      }
+    },
+    "lineHeight": {
+      "$type": "dimension",
+      "$value": {
+        "value": 22,
+        "unit": "px"
+      }
+    },
+    "chartHeight": {
+      "$type": "dimension",
+      "$value": {
+        "value": 42,
+        "unit": "px"
+      }
+    },
+    "chartDays": {
+      "$type": "number",
+      "$value": 28
+    },
+    "textValueSize": {
+      "$type": "dimension",
+      "$value": {
+        "value": 22,
+        "unit": "px"
+      },
+      "$description": "Compact text status: avoids collisions with adjacent numerical metrics"
+    },
+    "metricGap": {
+      "$type": "dimension",
+      "$value": {
+        "value": 14,
+        "unit": "px"
+      },
+      "$description": "Minimum horizontal space reserved per metric cell"
+    }
+  }
+}
