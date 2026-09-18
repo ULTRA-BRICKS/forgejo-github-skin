@@ -82,10 +82,14 @@ def main():
         data['EnvironmentVariables'].pop('FORGEJO_PREVIEW_PORT', None)
         data['EnvironmentVariables'].pop('FORGEJO_PREVIEW_STATE_DIR', None)
         domain = f'gui/{os.getuid()}'
-        subprocess.run(['launchctl', 'bootout', f'{domain}/{LABEL}'], check=True)
+        subprocess.run(['launchctl', 'bootout', f'{domain}/{LABEL}'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         target.write_bytes(plistlib.dumps(data))
         target.chmod(0o600)
-        subprocess.run(['launchctl', 'bootstrap', domain, str(target)], check=True)
+        bootstrap = subprocess.run(['launchctl', 'bootstrap', domain, str(target)], capture_output=True, text=True, check=False)
+        if bootstrap.returncode != 0:
+            retry = subprocess.run(['launchctl', 'bootstrap', domain, str(target)], capture_output=True, text=True, check=False)
+            if retry.returncode != 0:
+                raise RuntimeError('Unable to activate launchd release: ' + (retry.stderr or bootstrap.stderr).strip())
         proof = health(3190)
         if proof.get('build') != revision:
             raise RuntimeError('Supervisor did not activate the staged revision')
