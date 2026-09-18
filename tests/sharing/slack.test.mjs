@@ -195,3 +195,25 @@ test('unconfigured account linking still provides a validated original URL', asy
     assert.ok(!JSON.stringify(f.calls).includes('PRIVATE SENTINEL'));
   } finally { f.store.close(); }
 });
+
+for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, false], [true, false, true], [true, undefined, false]]) {
+  test(`shared PNG requires actual anonymous source access (${anonymousReadable}, ${privateFlag})`, async () => {
+    const f = fixture();
+    f.slack.config = { ...f.slack.config, origin: 'https://links.example' };
+    f.slack.forgejo.metadata = async (url, token) => {
+      if (!anonymousReadable && !token) {
+        const error = new Error('Instance requires login');
+        error.status = 403;
+        throw error;
+      }
+      return { link: parseForgejoLink(url, source), private: privateFlag,
+        repositoryId: '2', title: 'Public object', description: 'Verified public metadata' };
+    };
+    try {
+      await f.slack.unfurl(event());
+      const blocks = f.calls.find(call => call.method === 'chat.unfurl').payload.unfurls[raw].blocks;
+      assert.match(JSON.stringify(blocks), /Public object/);
+      assert.equal(blocks.some(block => block.type === 'image'), expectedImage);
+    } finally { f.store.close(); }
+  });
+}
