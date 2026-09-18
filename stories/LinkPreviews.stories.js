@@ -30,6 +30,9 @@ export const Issue = { render: () => render("issue") };
 export const PullRequest = { render: () => render("pull") };
 export const Commit = { render: () => render("commit") };
 export const File = { render: () => render("file") };
+export const PrivateRepository = { render: () => render("privateRepository") };
+export const PrivatePullRequest = { render: () => render("privatePull") };
+export const ProtectedUnavailable = { render: () => render("protectedUnavailable") };
 export const MissingData = { render: () => render("missing") };
 export const RepositoryMobile = {
   render: () => render("repository", { width: 360 }),

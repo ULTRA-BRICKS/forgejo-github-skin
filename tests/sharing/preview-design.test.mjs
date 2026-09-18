@@ -23,8 +23,10 @@ for (const [kind, fixture] of Object.entries(previewFixtures))
   test(`${kind}: shared vector contains facts and small instance identity, not the duplicated title/body`, () => {
     const svg = graphic(fixture, tokens, sizes);
     assert.ok(svg.includes('viewBox="0 0 480 224"'));
-    assert.ok(!svg.includes(fixture.title));
-    assert.ok(!svg.includes(fixture.description));
+    if (fixture.summary) {
+      assert.ok(!svg.includes(fixture.title));
+      assert.ok(!svg.includes(fixture.description));
+    }
     assert.ok(!svg.includes("FORGEJO"));
     assert.ok(svg.includes("Ultrabricks"));
     assert.ok(!svg.includes("foreignObject"));

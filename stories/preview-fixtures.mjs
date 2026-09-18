@@ -95,6 +95,35 @@ export const previewFixtures = {
       ],
     },
   },
+  privateRepository: {
+    ...common,
+    private: true,
+    title: "Private repository",
+    description: "Repository-level facts are safe to share in the internal workspace; code and protected object bodies stay out of the image.",
+    summary: {
+      kind: "repository",
+      metrics: [metric("Visibility", "Private"), metric("Open issues", 7), metric("Open PRs", 2)],
+      activity: null,
+    },
+  },
+  privatePull: {
+    ...common,
+    private: true,
+    title: "Private pull request",
+    description: "Sensitive title and body remain native/authenticated; the shared image contains only non-code status facts.",
+    summary: {
+      kind: "pull", number: 17,
+      metrics: [metric("State", "Open", "success"), metric("Files", 5), metric("Added", 84, "success"), metric("Removed", 12, "danger")],
+      base: "main", head: "feature/internal", author: "teammate", created: "2026-09-18",
+    },
+  },
+  protectedUnavailable: {
+    private: true,
+    brand,
+    title: "Protected link",
+    description: "Details require access.",
+    summary: null,
+  },
   missing: {
     ...common,
     summary: {
