@@ -111,9 +111,9 @@ export function protectedCard(opaqueReference, link) {
   }
   return {blocks: [
     {type: 'section', text: {type: 'plain_text', emoji: false,
-      text: 'Forgejo link — view privately. Access is checked when you open it.'}},
-    {type: 'actions', elements: [{type: 'button', action_id: 'forgejo_view_private',
-      text: {type: 'plain_text', text: 'View privately', emoji: false}, value: opaqueReference},
+      text: 'Forgejo preview. Public details are shown in Slack; protected details use your connected Forgejo account.'}},
+    {type: 'actions', elements: [{type: 'button', action_id: 'forgejo_preview',
+      text: {type: 'plain_text', text: 'Preview', emoji: false}, value: opaqueReference},
       ...(link ? [{type: 'button', action_id: 'forgejo_open_original',
         text: {type: 'plain_text', text: 'Open in Forgejo', emoji: false}, url: link.originalUrl}] : [])]},
   ]};
