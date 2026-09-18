@@ -107,7 +107,10 @@ export class OAuth {
     if (typeof token.access_token !== "string" || !token.access_token)
       throw new Error("No access token");
     const account = await this.forgejo.api("/user", token.access_token);
-    if (!Number.isSafeInteger(account.id) || account.is_admin === true)
+    // Admin is an account attribute, not a different authentication identity.
+    // The token remains bound to this Slack viewer and every resource is still
+    // fetched through the ordinary user API; never substitute a service/admin token.
+    if (!Number.isSafeInteger(account.id))
       throw new Error("Invalid source identity");
     this.store.put(
       this.key("account", context.team + ":" + context.user),

@@ -224,7 +224,7 @@ export class SlackIntegration {
           type: "section",
           text: {
             type: "plain_text",
-            text: "Connect your own Forgejo account. Protected details are shown only in your personal view. This Forgejo version grants broad OAuth access; the integration uses read-only requests. Use an ordinary account, never an administrator.",
+            text: "Connect your own Forgejo account. Protected details are shown only in your personal view. This Forgejo version grants broad OAuth access; the integration uses read-only requests. The integration uses your own Forgejo account and read-only requests.",
           },
         },
         {

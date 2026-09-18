@@ -85,6 +85,21 @@ test("callback rejects another browser and accepts a valid single-use state", as
     store.close();
   }
 });
+test("callback accepts an administrator as the same viewer identity and still stores only that viewer token", async () => {
+  const store = new Store(":memory:", randomBytes(32));
+  const oauth = new OAuth(cfg, store, { api: async () => ({ id: 42, is_admin: true }) }, async () => ({ access_token: "admin-viewer-token", expires_in: 3600 }));
+  try {
+    const start = response();
+    oauth.begin({ headers: {} }, start, { team: "T123", user: "UADMIN" });
+    const state = new URL(start.headers.Location).searchParams.get("state");
+    const callback = new URL(cfg.origin + "/oauth/callback?state=" + state + "&code=fixture-code");
+    const request = { headers: { cookie: start.headers["Set-Cookie"].split(";")[0] } };
+    await oauth.complete(request, response(), callback);
+    assert.equal(await oauth.access("T123", "UADMIN"), "admin-viewer-token");
+    assert.equal(await oauth.access("T123", "UOTHER"), null);
+  } finally { store.close(); }
+});
+
 test("refresh is single-flight per viewer and never shared between viewers", async () => {
   let calls = 0;
   const { store, oauth } = fixture(async () => {
