@@ -6,7 +6,7 @@ export class Sources {
     const ids = new Set();
     for (const input of [
       {
-        id: "demo",
+        id: config.primaryId || "demo",
         base: config.forgejo,
         oauth: config.oauth,
         brand: config.brand,
@@ -51,15 +51,28 @@ export class Sources {
     }
     this.primary = this.entries.get(new URL(config.forgejo).origin);
   }
+  canonical(raw) {
+    // Upgrade a posted HTTP spelling without ever fetching over HTTP. Keep the
+    // raw path so the strict parser can still reject encoded/dot traversal.
+    if (typeof raw !== "string") return raw;
+    try {
+      const url = new URL(raw);
+      if (url.protocol === "http:" && !url.port && !url.username && !url.password) {
+        const secure = raw.replace(/^http:/i, "https:");
+        if (this.entries.has(new URL(secure).origin)) return secure;
+      }
+    } catch { /* The strict parser returns null for malformed URLs. */ }
+    return raw;
+  }
   source(raw) {
     try {
-      return this.entries.get(new URL(raw).origin) || null;
+      return this.entries.get(new URL(this.canonical(raw)).origin) || null;
     } catch {
       return null;
     }
   }
   parse(raw) {
-    return this.source(raw)?.client.parse(raw) || null;
+    return this.source(raw)?.client.parse(this.canonical(raw)) || null;
   }
   async metadata(raw, credential, options) {
     const entry = this.source(raw);
@@ -69,7 +82,7 @@ export class Sources {
         throw new Error("Source credential mismatch");
     }
     const result = await entry.client.metadata(
-      raw,
+      this.canonical(raw),
       credential?.accessToken,
       options,
     );

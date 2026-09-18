@@ -106,7 +106,7 @@ export class SlackIntegration {
               source: event.source,
               workspaceId: envelope.team_id,
               repositoryId: meta?.repositoryId,
-              instanceOrigin: new URL(raw.url).origin,
+              instanceOrigin: new URL(parsed.originalUrl).origin,
               resourceUrl: meta?.link.resourceUrl,
               channel: {
                 id: channel.id,
@@ -128,7 +128,7 @@ export class SlackIntegration {
           }
         }
       }
-      let card = protectedCard(this.reference(envelope.team_id, raw.url));
+      let card = protectedCard(this.reference(envelope.team_id, parsed.originalUrl), parsed);
       if (meta && facts) {
         try {
           card = unfurlLayout(
@@ -174,7 +174,20 @@ export class SlackIntegration {
     )
       return;
     const ref = this.store.get("ref:" + action.value);
-    if (!ref || ref.team !== payload.team.id) return;
+    if (!ref) {
+      await this.call("views.open", {
+        trigger_id: payload.trigger_id,
+        view: this.modal([{ type: "section", text: { type: "plain_text",
+          text: "This preview has expired. Use Open in Forgejo on the message, or share the original link again to refresh the personal preview." } }]),
+      });
+      return;
+    }
+    if (ref.team !== payload.team.id) return;
+    const original = this.forgejo.parse(ref.url);
+    if (!original) return;
+    const openOriginal = { type: "actions", elements: [{ type: "button",
+      action_id: "forgejo_open_original", text: { type: "plain_text", text: "Open in Forgejo" },
+      url: original.originalUrl }] };
     const opened = await this.call("views.open", {
       trigger_id: payload.trigger_id,
       view: this.modal([
@@ -194,11 +207,12 @@ export class SlackIntegration {
         await this.call("views.update", {
           view_id: opened.view.id,
           view: this.modal([
+            openOriginal,
             {
               type: "section",
               text: {
                 type: "plain_text",
-                text: "Account linking for this exact instance is not configured yet. No credentials from another instance were used. Open the original link to view it.",
+                text: "Account linking for this Forgejo server is not configured. Open the original below and sign in with your normal account.",
               },
             },
           ]),
@@ -271,6 +285,8 @@ export class SlackIntegration {
         ];
       }
     }
+    if (!blocks.some(block => block.type === "actions" && block.elements?.some(element => element.action_id === "forgejo_open_original")))
+      blocks.push(openOriginal);
     await this.call("views.update", {
       view_id: opened.view.id,
       view: this.modal(blocks),

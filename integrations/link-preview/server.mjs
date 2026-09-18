@@ -1,6 +1,6 @@
+import { createRuntime, reloadRuntime } from "./runtime.mjs";
 import { slackReadiness } from "./readiness.mjs";
 import { renderGraphic, closeRenderer } from "./raster.mjs";
-import { Sources } from "./sources.mjs";
 import { RenderCache } from "./render-cache.mjs";
 import http from "node:http";
 import fs from "node:fs";
@@ -9,9 +9,8 @@ import { randomBytes, createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { validEnvelope, validInteraction, Budget } from "./protocol.mjs";
 import { Store } from "./store.mjs";
-import { Forgejo, isAccessDenied } from "./forgejo.mjs";
-import { OAuth, cookie } from "./oauth.mjs";
-import { SlackIntegration } from "./slack.mjs";
+import { isAccessDenied } from "./forgejo.mjs";
+import { cookie } from "./oauth.mjs";
 import { verifySlackRequest } from "../../ops/handoff/slack/preview-core.mjs";
 import { generic, shell, sharePage, demoPage, css, ui } from "./views.mjs";
 const root = path.resolve(
@@ -23,7 +22,7 @@ const configPath = path.resolve(
 );
 function readConfig() {
   const st = fs.lstatSync(configPath);
-  if (st.isSymbolicLink() || st.mode & 0o077)
+  if (!st.isFile() || st.isSymbolicLink() || st.mode & 0o077)
     throw new Error("Config must be a private regular file");
   const c = JSON.parse(fs.readFileSync(configPath, "utf8"));
   for (const field of ["origin", "forgejo"]) {
@@ -42,15 +41,14 @@ function readConfig() {
     throw new Error("Encryption key is required");
   return c;
 }
-const config = readConfig(),
-  store = new Store(
-    path.join(path.dirname(configPath), "state.sqlite"),
+const config = readConfig();
+const stateDirectory = path.resolve(process.env.FORGEJO_PREVIEW_STATE_DIR || path.dirname(configPath));
+const store = new Store(
+    path.join(stateDirectory, "state.sqlite"),
     Buffer.from(config.encryptionKey, "hex"),
   );
-const forgejo = new Forgejo(config.forgejo),
-  oauth = new OAuth(config, store, forgejo),
-  sources = new Sources(config, store),
-  slack = new SlackIntegration(config, store, sources, sources);
+let runtime = createRuntime(config, store);
+let configurationReloadRejected = false;
 const metrics = {
   events: 0,
   completed: 0,
@@ -90,6 +88,7 @@ async function body(request) {
   return Buffer.concat(chunks);
 }
 async function anonymous(raw) {
+  const { sources } = runtime;
   const link = sources.parse(raw);
   if (!link) return null;
   try {
@@ -114,6 +113,7 @@ const publicBudget = new Budget(120, 60000),
 const renderCache = new RenderCache(renderImage);
 const logo = fs.readFileSync(path.join(root, "assets/forgejo-graphite.svg"));
 const server = http.createServer(async (request, response) => {
+  const { config, sources, forgejo, oauth, slack } = runtime;
   try {
     const url = new URL(request.url, config.origin);
     const isPublicRead =
@@ -139,8 +139,11 @@ const server = http.createServer(async (request, response) => {
           200,
           JSON.stringify({
             service: "forgejo-link-preview",
+            build: process.env.FORGEJO_PREVIEW_BUILD || "development",
             slackConfigured: slackReadiness(config).configured,
-            oauthConfigured: !!config.oauth.clientId,
+            oauthConfigured: !!oauth,
+            configurationReloadRejected,
+            sources: [...sources.entries.values()].map(source => ({ id: source.id, origin: source.base, oauthConfigured: !!source.auth })),
           }),
           "application/json",
         );
@@ -205,6 +208,7 @@ const server = http.createServer(async (request, response) => {
         );
       }
       if (url.pathname === "/demo/login") {
+        if (!oauth) return send(response, 503, "Account linking unavailable", "text/plain");
         if (!loginBudget.allow())
           return send(response, 429, "Retry shortly", "text/plain");
         headers(response);
@@ -284,7 +288,7 @@ const server = http.createServer(async (request, response) => {
       }
       if (url.pathname === "/demo/private") {
         const id = cookie(request, "fj_demo");
-        const token = id && (await oauth.access("demo", id));
+        const token = id && (await oauth?.access("demo", id));
         if (!token)
           return send(
             response,
@@ -413,12 +417,15 @@ const server = http.createServer(async (request, response) => {
 });
 server.requestTimeout = 15000;
 server.headersTimeout = 10000;
-server.listen(config.port, "127.0.0.1", () =>
+const listenPort = Number(process.env.FORGEJO_PREVIEW_PORT || config.port);
+if (!Number.isInteger(listenPort) || listenPort < 1 || listenPort > 65535) throw new Error("Invalid listening port");
+server.listen(listenPort, "127.0.0.1", () =>
   console.log(
-    `Preview service listening on loopback:${config.port}; Slack configured=${!!config.slack.botToken}`,
+    `Preview service listening on loopback:${listenPort}; Slack configured=${slackReadiness(config).configured}`,
   ),
 );
 setInterval(async () => {
+  const { config, slack } = runtime;
   if (workerBusy || !config.slack.botToken) return;
   workerBusy = true;
   let job;
@@ -440,7 +447,7 @@ setInterval(async () => {
 setInterval(() => {
   store.cleanup();
   fs.writeFileSync(
-    path.join(path.dirname(configPath), "metrics.json"),
+    path.join(stateDirectory, "metrics.json"),
     JSON.stringify(metrics),
     { mode: 0o600 },
   );
@@ -448,18 +455,13 @@ setInterval(() => {
 function reloadConfig() {
   try {
     const next = readConfig();
-    if (
-      next.origin !== config.origin ||
-      next.forgejo !== config.forgejo ||
-      next.encryptionKey !== config.encryptionKey ||
-      next.port !== config.port
-    )
-      throw new Error("Identity changes require restart");
-    Object.assign(config, next);
+    runtime = reloadRuntime(runtime, next, store);
+    configurationReloadRejected = false;
     console.log(
-      "Configuration reloaded; Slack configured=" + !!config.slack.botToken,
+      "Configuration reloaded; Slack configured=" + slackReadiness(runtime.config).configured,
     );
   } catch {
+    configurationReloadRejected = true;
     console.error("Configuration update rejected; previous settings retained");
   }
 }

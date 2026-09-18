@@ -171,3 +171,27 @@ test("protocol refuses missing destinations, invalid identities and unbounded li
   assert.equal(budget.allow(), true);
   assert.equal(budget.allow(), false);
 });
+
+test('an expired personal-view reference opens an actionable message instead of silently ignoring the click', async () => {
+  const f = fixture();
+  try {
+    await f.slack.interact({ team: { id: 'T123' }, api_app_id: 'A123', user: { id: 'U123' },
+      trigger_id: 'fixture-trigger', actions: [{ action_id: 'forgejo_view_private', value: 'a'.repeat(48) }] });
+    assert.equal(f.calls[0]?.method, 'views.open');
+    assert.match(JSON.stringify(f.calls[0]), /expired/i);
+    assert.ok(!JSON.stringify(f.calls).includes('PRIVATE SENTINEL'));
+  } finally { f.store.close(); }
+});
+test('unconfigured account linking still provides a validated original URL', async () => {
+  const f = fixture({ connected: false });
+  f.slack.oauth.ticket = () => null;
+  try {
+    const value = f.slack.reference('T123', raw);
+    await f.slack.interact({ team: { id: 'T123' }, api_app_id: 'A123', user: { id: 'U123' },
+      trigger_id: 'fixture-trigger', actions: [{ action_id: 'forgejo_view_private', value }] });
+    const update = f.calls.find(call => call.method === 'views.update');
+    const buttons = update.payload.view.blocks.flatMap(block => block.elements || []);
+    assert.equal(buttons.find(button => button.action_id === 'forgejo_open_original')?.url, raw);
+    assert.ok(!JSON.stringify(f.calls).includes('PRIVATE SENTINEL'));
+  } finally { f.store.close(); }
+});

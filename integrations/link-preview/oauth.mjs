@@ -11,7 +11,13 @@ export const cookie = (request, name) => {
 };
 export class OAuth {
   constructor(config, store, forgejo, request = jsonRequest) {
-    this.config = config;
+    this.config = structuredClone(config);
+    // An OAuth namespace label is not an identity. Bind persisted credentials,
+    // state and tickets to the exact issuer/client so a config edit cannot
+    // send a previous instance's token to a new server. Legacy records expire.
+    this.identity = createHash("sha256")
+      .update(JSON.stringify([new URL(config.forgejo).origin, config.oauth?.clientId || ""]))
+      .digest("hex");
     this.store = store;
     this.forgejo = forgejo;
     this.request = request;
@@ -22,7 +28,7 @@ export class OAuth {
       type +
       ":" +
       (this.config.namespace ? this.config.namespace + ":" : "") +
-      value
+      this.identity + ":" + value
     );
   }
   ticket(team, user) {

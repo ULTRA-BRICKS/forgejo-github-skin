@@ -104,7 +104,8 @@ function plain(value, limit) {
 }
 
 /** Does not take metadata on purpose: denied/private/unknown must be indistinguishable. */
-export function protectedCard(opaqueReference) {
+export function protectedCard(opaqueReference, link) {
+  if (link && !parsedLinks.has(link)) throw new TypeError("A freshly validated original link is required");
   if (typeof opaqueReference !== 'string' || !/^[a-f0-9]{32,64}$/i.test(opaqueReference)) {
     throw new TypeError('Use an opaque server-held reference, never a token or title');
   }
@@ -112,7 +113,9 @@ export function protectedCard(opaqueReference) {
     {type: 'section', text: {type: 'plain_text', emoji: false,
       text: 'Forgejo link — view privately. Access is checked when you open it.'}},
     {type: 'actions', elements: [{type: 'button', action_id: 'forgejo_view_private',
-      text: {type: 'plain_text', text: 'View privately', emoji: false}, value: opaqueReference}]},
+      text: {type: 'plain_text', text: 'View privately', emoji: false}, value: opaqueReference},
+      ...(link ? [{type: 'button', action_id: 'forgejo_open_original',
+        text: {type: 'plain_text', text: 'Open in Forgejo', emoji: false}, url: link.originalUrl}] : [])]},
   ]};
 }
 

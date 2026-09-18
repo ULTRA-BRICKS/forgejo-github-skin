@@ -1,3 +1,4 @@
+import { Sources } from "../../integrations/link-preview/sources.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { slackReadiness } from "../../integrations/link-preview/readiness.mjs";
@@ -12,8 +13,10 @@ try {
     throw new Error("Private regular config required");
   const config = JSON.parse(fs.readFileSync(file, "utf8"));
   const readiness = slackReadiness(config);
+  // Reject duplicate origins and stale namespace assumptions before reporting readiness.
+  new Sources(config, {});
   const sources = [
-    { id: "demo", base: config.forgejo, oauth: config.oauth },
+    { id: config.primaryId || "demo", base: config.forgejo, oauth: config.oauth },
     ...(config.instances || []),
   ].map((source) => ({
     id: source.id,

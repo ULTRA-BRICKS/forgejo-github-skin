@@ -73,7 +73,7 @@ test("callback rejects another browser and accepts a valid single-use state", as
         ),
       /binding/,
     );
-    assert.ok(store.get("state:" + state));
+    assert.ok(store.get(oauth.key("state", state)));
     const request = {
       headers: { cookie: start.headers["Set-Cookie"].split(";")[0] },
     };
@@ -97,7 +97,7 @@ test("refresh is single-flight per viewer and never shared between viewers", asy
     };
   });
   try {
-    store.put("account:T1:U1", {
+    store.put(oauth.key("account", "T1:U1"), {
       accessToken: "old",
       expires: 0,
       refreshToken: "old-refresh",
@@ -119,11 +119,11 @@ test("connection tickets are short-lived opaque identities, never raw tokens", (
     assert.equal(u.origin, cfg.origin);
     const ticket = u.searchParams.get("ticket");
     assert.match(ticket, /^[a-f0-9]{64}$/);
-    assert.deepEqual(store.take("ticket:" + ticket), {
+    assert.deepEqual(store.take(oauth.key("ticket", ticket)), {
       team: "T123",
       user: "U123",
     });
-    assert.equal(store.take("ticket:" + ticket), null);
+    assert.equal(store.take(oauth.key("ticket", ticket)), null);
     assert.throws(() => oauth.ticket("evil", "U123"));
   } finally {
     store.close();
