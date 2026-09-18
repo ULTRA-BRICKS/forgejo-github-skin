@@ -11,9 +11,6 @@ __pycache__/
 .hypergithub-state/
 storybook-static/
 research/observations/*
-!research/observations/README.md
-!research/observations/github-desktop-repository.json
-!research/observations/github-desktop-dark.json
 research/browser-test-results.json
 research/storybook-screenshots.json
 research/preview-report.json
