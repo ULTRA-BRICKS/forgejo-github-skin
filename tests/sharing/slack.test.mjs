@@ -95,7 +95,7 @@ test("unlinked private link only produces a neutral card", async () => {
   try {
     await f.slack.unfurl(event());
     assert.ok(!JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
-    assert.match(JSON.stringify(f.calls), /View privately/);
+    assert.match(JSON.stringify(f.calls), /Preview/);
     assert.ok(f.reads.every((x) => !x.token));
   } finally {
     f.store.close();
@@ -123,7 +123,7 @@ for (const [name, options, extra] of [
     try {
       await f.slack.unfurl(event(extra));
       assert.ok(!JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
-      assert.match(JSON.stringify(f.calls), /View privately/);
+      assert.match(JSON.stringify(f.calls), /Preview/);
     } finally {
       f.store.close();
     }

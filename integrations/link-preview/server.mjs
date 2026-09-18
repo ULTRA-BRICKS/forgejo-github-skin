@@ -282,7 +282,7 @@ const server = http.createServer(async (request, response) => {
           200,
           shell(
             "Forgejo connected",
-            "<h1>Forgejo connected.</h1><p>Return to Slack and select View privately again. Your account’s access is checked before showing content.</p>",
+            "<h1>Forgejo connected.</h1><p>Return to Slack and select Preview again. Your account’s access is checked before showing protected details.</p>",
           ),
         );
       }

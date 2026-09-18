@@ -72,6 +72,16 @@ export class SlackIntegration {
       if (!parsed) continue;
       let meta = await this.publicMetadata(raw.url),
         facts;
+      if (!meta) {
+        const viewerToken = await this.oauth.access(envelope.team_id, event.user, raw.url);
+        if (viewerToken) {
+          try {
+            meta = await this.forgejo.metadata(raw.url, viewerToken);
+          } catch (error) {
+            if (!isAccessDenied(error.status)) throw error;
+          }
+        }
+      }
       if (meta && !meta.private)
         facts = {
           resourceVerified: true,
@@ -129,6 +139,12 @@ export class SlackIntegration {
         }
       }
       let card = protectedCard(this.reference(envelope.team_id, parsed.originalUrl), parsed);
+      if (meta?.private && !facts) {
+        card.blocks.splice(1, 0, {
+          type: "section",
+          text: { type: "plain_text", text: meta.repository + " · Private repository", emoji: false },
+        });
+      }
       if (meta && facts) {
         try {
           card = unfurlLayout(
@@ -155,7 +171,7 @@ export class SlackIntegration {
   modal(blocks) {
     return {
       type: "modal",
-      title: { type: "plain_text", text: "Forgejo private view" },
+      title: { type: "plain_text", text: "Forgejo preview" },
       close: { type: "plain_text", text: "Close" },
       blocks,
     };
@@ -167,7 +183,7 @@ export class SlackIntegration {
     )
       return;
     const action = payload.actions?.[0];
-    if (action?.action_id !== "forgejo_view_private") return;
+    if (!["forgejo_preview", "forgejo_view_private"].includes(action?.action_id)) return;
     if (
       !/^[a-f0-9]{48}$/.test(action.value || "") ||
       !/^U[A-Z0-9]+$/.test(payload.user?.id || "")
