@@ -25,3 +25,12 @@ Request: rich chat snippets and real Slack previews of Forgejo content behind lo
 ## Stable continuation commands
 
 `npm run test:sharing`; `npm test`; `PLAYWRIGHT_MODULE=/absolute/playwright/index.mjs npm run sharing:verify`. Real OAuth proof: `scripts/sharing/verify-oauth-live.mjs`, synthetic fixture only. Do not create duplicate Slack apps or regenerate secrets. Current desired app manifest is a template, not proof of applied settings.
+
+## Checkpoint after PR #11
+
+- Core integration, tests and actual screenshots merged to main at 63d5710.
+- 32 sharing unit/HTTP checks, 15 base Node + 16 Python + 59 browser regressions; 5 live anonymous and 4 live OAuth checks passed.
+- Actual Slack classic public AND protected-generic cards are verified; no authenticated app event delivery claim.
+- Awaiting the two app credentials in the local form; do not recreate apps or repeat blocked secret access.
+- Review performance/correctness spot-checks passed after indexes and safe rendered-byte cache fixes. A dedicated correctness reviewer repeatedly produced no output and timed out; future reviews should use an available alternative instead of restarting that same failing slot.
+- Publish curated synthetic proof PNGs with `node scripts/sharing/publish-evidence.mjs /absolute/gallery-worktree --deploy`; this is optional static evidence publication, not live sidecar deployment.
