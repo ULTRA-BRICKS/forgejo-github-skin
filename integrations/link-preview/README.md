@@ -92,3 +92,7 @@ against the same store without adding renewed leases/coordination.
 Supports repository, issue/PR, full-SHA commit and immutable file links (up to 50 lines). Mutable branch URLs and other unrecognized routes fail closed rather than guessing refs. Clean public share URLs use `/s/owner/repository/issues/number`; direct Forgejo links require the separately completed Slack domain/event integration.
 
 Every public HTML/image request still rechecks anonymous source access. Only the final rendered PNG bytes are cached (bounded 32 entries / 8 MiB / 60 seconds), keyed by the newly verified metadata, never by URL or an old permission result. An access change resolves to generic metadata before that lookup; private-card metadata is rejected by the public render cache. Queue claim and expiry lookups are indexed.
+
+## Compact preview v2
+
+See [the current acceptance and deployment guide](../../docs/PREVIEW-V2-ACCEPTANCE.md) for the native Open Graph adapter, direct original URLs, exact-origin multi-instance authorization, corrected local setup form, token-based shared renderer and explicit live verification limits. The new HTTP app settings have been saved and reinstallation consent completed, but runtime credentials and production OAuth are not configured yet.

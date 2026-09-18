@@ -1,3 +1,4 @@
+import { baseFacts, activityFacts } from "./facts.mjs";
 import { parseForgejoLink } from "../../ops/handoff/slack/preview-core.mjs";
 export function bounded(value, n = 400) {
   if (typeof value !== "string") return "";
@@ -70,7 +71,7 @@ export class Forgejo {
       throw new Error("Invalid API route");
     return this.request(this.base + "/api/v1" + route, { token });
   }
-  async metadata(raw, token) {
+  async metadata(raw, token, { enrich = false } = {}) {
     const link = this.parse(raw);
     if (!link) return null;
     const route =
@@ -132,7 +133,20 @@ export class Forgejo {
         ? `Lines ${link.lines.start}–${link.lines.end}`
         : "File";
     }
+    const summary = baseFacts(repo, obj, link);
+    if (enrich && link.kind === "repository") {
+      try {
+        summary.activity = activityFacts(
+          await this.api(route + "/commits?limit=100&page=1", token),
+        );
+      } catch {
+        summary.activity = null;
+      }
+    }
+    if (link.kind === "file")
+      description = `${Number.isSafeInteger(obj.size) && obj.size >= 0 ? obj.size + " bytes" : "Size unknown"} · immutable revision ${link.sha.slice(0, 8)}`;
     return {
+      summary,
       link,
       repositoryId: String(repo.id),
       repository: repo.full_name,

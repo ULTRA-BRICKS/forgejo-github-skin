@@ -1,15 +1,16 @@
 {
   "display_information": {
-    "name": "Forgejo Link Preview",
+    "name": "Hyperide Links",
     "description": "Private-aware Forgejo link cards and personal authorized views",
     "background_color": "#24292f"
   },
   "features": {
     "bot_user": {
-      "display_name": "Forgejo Links",
+      "display_name": "Hyperide Links",
       "always_online": false
     },
     "unfurl_domains": [
+      "git.hyperide.ai",
       "forgejo-ui-demo.hyperide.ai"
     ]
   },

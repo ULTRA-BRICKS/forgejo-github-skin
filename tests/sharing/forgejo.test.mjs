@@ -66,7 +66,10 @@ test("private HTML metadata stays generic and safely escapes original URLs", () 
   );
   assert.ok(html.includes("Forgejo link — sign in to view"));
   assert.ok(!html.includes("Authorized secret"));
-  assert.ok(html.includes("summary_large_image"));
+  assert.ok(
+    !html.includes("og:image"),
+    "protected previews have no redundant public raster card",
+  );
   const hostile = sharePage(
     { ...generic, title: "<script>alert(1)</script>" },
     "https://forge.example/a/b",
@@ -87,4 +90,18 @@ test("malformed repository visibility never becomes a public authorization fact"
     () => f.metadata("https://forge.example/a/b", "synthetic-token"),
     /metadata/,
   );
+});
+
+test("an unknown immutable file size is not fabricated as undefined bytes", async () => {
+  const sha = "a".repeat(40);
+  const client = new Forgejo("https://forge.example", async (url) =>
+    url.includes("/contents/")
+      ? { type: "file", name: "example.ts" }
+      : { id: 2, private: false, full_name: "owner/repo" },
+  );
+  const meta = await client.metadata(
+    "https://forge.example/owner/repo/src/commit/" + sha + "/example.ts",
+  );
+  assert.match(meta.description, /Size unknown/);
+  assert.ok(!meta.description.includes("undefined"));
 });

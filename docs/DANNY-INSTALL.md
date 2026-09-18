@@ -81,3 +81,7 @@ For each Forgejo upgrade: source audit → staging → real smoke tests → them
 The imported `ops/handoff/slack/preview-core.mjs` is a tested policy/signature/card core, NOT an installed Slack app. Event receiver, OAuth account linking, protected credential storage, queue and worker still need integration. Private content must not appear in public Open Graph endpoints. Channel-rich previews require explicit channel/repository disclosure rules; anyone in the channel may see retained copies. Default to a neutral card plus a personal authorized view.
 
 See `ops/handoff/slack/SECURITY-AND-INTEGRATION.md` and `ops/handoff/UX-ACCEPTANCE.md`. Do not mark Slack integration, all GitHub hotkeys or pixel-perfect UI as complete from the current gallery.
+
+## Compact preview v2
+
+See [PREVIEW-V2-ACCEPTANCE.md](PREVIEW-V2-ACCEPTANCE.md) for the native Open Graph adapter, direct original URLs, exact-origin multi-instance authorization, corrected local setup form, token-based shared renderer and explicit live verification limits. The new HTTP app settings have been saved and reinstallation consent completed, but runtime credentials and production OAuth are not configured yet.

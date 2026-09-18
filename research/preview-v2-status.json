@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-09-18T15:32:50.257690+00:00",
+  "branch": "fix/preview-design-and-local-setup",
+  "unitSharing": 50,
+  "visualVariantsAtTwoWidths": 14,
+  "liveRedirectAndPng": 2,
+  "pixelIdenticalRendererPairs": 5,
+  "nativeSourceMetadataChecks": 4,
+  "nativeFormRegressionCases": 3,
+  "formRetryFeedbackVerified": true,
+  "slackDeveloperDomainsSaved": [
+    "git.hyperide.ai",
+    "forgejo-ui-demo.hyperide.ai"
+  ],
+  "slackReinstallConsentCompleted": true,
+  "privateSlackRuntimeConnected": false,
+  "productionOAuthConfigured": false,
+  "productionForgejoTemplatesChanged": false,
+  "nativeDemoTemplateInstalled": true,
+  "limitations": [
+    "Actual new Slack card rendering has not yet passed; unsuccessful attempts are retained separately.",
+    "No successful signed private Slack unfurl until runtime credentials are supplied.",
+    "Production qa-cli is recognized by exact origin but its access requires its own authorization.",
+    "Mutable-ref file links and arbitrary list pages remain unsupported.",
+    "Pixel identity is runtime-versus-Storybook on identical synthetic inputs, not GitHub fidelity."
+  ]
+}

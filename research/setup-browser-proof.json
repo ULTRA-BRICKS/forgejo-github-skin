@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-09-18T14:57:04.335Z",
+  "scope": "Real Chromium form navigation; synthetic credentials and stub Slack auth only.",
+  "results": [
+    {
+      "name": "reproduce original bug",
+      "pass": true,
+      "status": 403,
+      "received": {
+        "origin": "null",
+        "site": "same-origin"
+      }
+    },
+    {
+      "name": "fixed native form",
+      "pass": true,
+      "status": 200,
+      "received": {
+        "origin": "http://127.0.0.1:65220",
+        "site": "same-origin"
+      }
+    },
+    {
+      "name": "legacy form with bound CSRF",
+      "pass": true,
+      "status": 200,
+      "received": {
+        "origin": "null",
+        "site": "same-origin"
+      }
+    }
+  ]
+}

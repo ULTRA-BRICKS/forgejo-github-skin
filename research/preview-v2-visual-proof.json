@@ -1,0 +1,158 @@
+{
+  "checkedAt": "2026-09-18T15:15:45.782Z",
+  "scope": "Shared production renderer in Storybook at two widths; synthetic fixtures explicitly labelled. Live redirect and live anonymous PNG checked separately.",
+  "results": [
+    {
+      "name": "repository",
+      "width": 480,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "issue",
+      "width": 480,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "pull-request",
+      "width": 480,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "commit",
+      "width": 480,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "file",
+      "width": 480,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "missing-data",
+      "width": 480,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "dark-repository",
+      "width": 480,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "repository",
+      "width": 360,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "issue",
+      "width": 360,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "pull-request",
+      "width": 360,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "commit",
+      "width": 360,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "file",
+      "width": 360,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "missing-data",
+      "width": 360,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "dark-repository",
+      "width": 360,
+      "pass": true,
+      "svgSize": [
+        480,
+        224
+      ],
+      "minimumLabel": 16
+    },
+    {
+      "name": "actual mobile click redirects to original without a gate page",
+      "pass": true
+    },
+    {
+      "name": "actual anonymous image is native 3x PNG",
+      "pass": true,
+      "size": [
+        1440,
+        672
+      ]
+    }
+  ]
+}

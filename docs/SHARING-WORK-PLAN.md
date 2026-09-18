@@ -34,3 +34,7 @@ Request: rich chat snippets and real Slack previews of Forgejo content behind lo
 - Awaiting the two app credentials in the local form; do not recreate apps or repeat blocked secret access.
 - Review performance/correctness spot-checks passed after indexes and safe rendered-byte cache fixes. A dedicated correctness reviewer repeatedly produced no output and timed out; future reviews should use an available alternative instead of restarting that same failing slot.
 - Publish curated synthetic proof PNGs with `node scripts/sharing/publish-evidence.mjs /absolute/gallery-worktree --deploy`; this is optional static evidence publication, not live sidecar deployment.
+
+## Preview v2 checkpoint
+
+Origin:null rejection reproduced and fixed with CSRF retained. Progressive setup now keeps input on failure. Compact token-driven facts layouts and native-URL Open Graph adapter tested on the isolated demo. Direct git.hyperide.ai source parsing and OAuth namespaces are separate from demo credentials. Actual Slack manifest domains/endpoints saved and reinstall consent completed; bot runtime still has no signing secret/token. Do not close private app acceptance until real signed event delivery, private account linking and revocation pass.

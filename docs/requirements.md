@@ -88,7 +88,7 @@ Status: living specification. Every visual or behavioral change must map to a re
 
 ## Delivery requirements
 
-- `design.md` is the visual rationale; this file is the normative requirement index.
+- `DESIGN.md` is the visual rationale; this file is the normative requirement index.
 - `docs/interaction-spec.md` defines interaction state machines and feedback.
 - `docs/qa-matrix.md` records coverage and remaining gaps.
 - Storybook stories serve as reproducible component/screen fixtures; screenshots are generated from them automatically.

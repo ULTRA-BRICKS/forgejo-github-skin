@@ -29,6 +29,10 @@ export class RenderCache {
       repository: safe.repository,
       status: safe.status,
       private: safe.private,
+      ...(safe.private === false
+        ? { summary: safe.summary, brand: safe.brand }
+        : {}),
+      rendererVersion: 2,
     };
     const key = createHash("sha256")
       .update(JSON.stringify(metadata))

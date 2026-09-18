@@ -17,5 +17,22 @@
   },
   "privateDestinations": [],
   "demoPrivateUrl": "https://forgejo.example.invalid/demo-owner/synthetic-private/issues/1",
-  "demoPublicUrl": "https://forgejo.example.invalid/demo-owner/synthetic-public/issues/1"
+  "demoPublicUrl": "https://forgejo.example.invalid/demo-owner/synthetic-public/issues/1",
+  "instances": [
+    {
+      "id": "production",
+      "base": "https://git.hyperide.ai",
+      "oauth": null,
+      "brand": {
+        "name": "Hyperide Git",
+        "initials": "HI"
+      },
+      "organizationBrands": {
+        "ultrabricks": {
+          "name": "Ultrabricks",
+          "initials": "UB"
+        }
+      }
+    }
+  ]
 }

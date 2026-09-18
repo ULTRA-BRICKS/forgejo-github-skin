@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-09-18T15:21:33.371Z",
+  "results": [
+    {
+      "pass": false,
+      "transport": "wrapper",
+      "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-qa=\"message_attachment_title_link\"]').filter({ hasText: 'Preserve keyboard focus and repository context' }).last() to be visible\u001b[22m\n"
+    }
+  ]
+}
