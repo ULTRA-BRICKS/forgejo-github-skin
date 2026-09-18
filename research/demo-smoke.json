@@ -1,0 +1,172 @@
+{
+  "url": "https://forgejo-ui-demo.hyperide.ai",
+  "capturedAt": "2026-09-18T10:40:14.203Z",
+  "scope": "Real Forgejo 16.0.5 server-rendered public routes. Keyboard assertion: g i only. Not full authenticated workflow acceptance.",
+  "results": [
+    {
+      "device": "desktop",
+      "name": "repository",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "desktop",
+      "name": "file",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": "pre"
+    },
+    {
+      "device": "desktop",
+      "name": "blame",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": "pre"
+    },
+    {
+      "device": "desktop",
+      "name": "issues",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "desktop",
+      "name": "issue",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "desktop",
+      "name": "pull",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "desktop",
+      "name": "pull-files",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": "pre-wrap"
+    },
+    {
+      "device": "desktop",
+      "test": "native g i navigation",
+      "pass": true
+    },
+    {
+      "device": "mobile",
+      "name": "repository",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "mobile",
+      "name": "file",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": "pre"
+    },
+    {
+      "device": "mobile",
+      "name": "blame",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": "pre"
+    },
+    {
+      "device": "mobile",
+      "name": "issues",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "mobile",
+      "name": "issue",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "mobile",
+      "name": "pull",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": null
+    },
+    {
+      "device": "mobile",
+      "name": "pull-files",
+      "http": 200,
+      "theme": "hypergithub-auto",
+      "width": 390,
+      "scrollWidth": 390,
+      "logo": "https://forgejo-ui-demo.hyperide.ai/assets/img/logo.svg",
+      "logoFilter": "grayscale(1)",
+      "codeWhiteSpace": "pre-wrap"
+    },
+    {
+      "device": "mobile",
+      "test": "native g i navigation",
+      "pass": true
+    }
+  ],
+  "errors": []
+}

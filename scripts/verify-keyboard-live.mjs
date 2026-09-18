@@ -1,0 +1,15 @@
+import {chromium} from '@playwright/test';import fs from 'node:fs/promises';import assert from 'node:assert/strict';import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..'),base='https://forgejo-ui-demo.hyperide.ai',repo=base+'/demo-author/keyboard-lab';
+const b=await chromium.launch(),p=await b.newPage({viewport:{width:1440,height:1000}}),results=[];p.setDefaultTimeout(6000);p.setDefaultNavigationTimeout(20000);
+async function check(name,fn){try{await fn();results.push({name,pass:true});}catch(e){results.push({name,pass:false,error:e.message});}}
+async function go(url=repo){await p.goto(url,{waitUntil:'domcontentloaded'});await p.locator('html[data-hgh-ready]').waitFor();}
+try{
+ await check('Native repository ? opens and Escape closes help',async()=>{await go();await p.keyboard.press('?');assert.equal(await p.locator('#hgh-help').evaluate(x=>x.open),true);await p.screenshot({path:root+'/research/screenshots/demo/desktop-keyboard-help.png'});await p.keyboard.press('Escape');assert.equal(await p.locator('#hgh-help').evaluate(x=>x.open),false);});
+ await check('Native t opens file finder',async()=>{await go();await p.keyboard.press('t');await p.waitForURL('**/find/**');});
+ await check('Native w opens branch selector',async()=>{await go();await p.keyboard.press('w');await p.locator('.js-branch-tag-selector input:visible').first().waitFor();});
+ await check('Native l locates line 42 and preserves URL fragment',async()=>{await go(repo+'/src/branch/main/src/navigation.ts');await p.keyboard.press('l');await p.getByRole('textbox',{name:'Line number',exact:true}).fill('42');await p.getByRole('button',{name:'Go',exact:true}).click();assert.equal(new URL(p.url()).hash,'#L42');});
+ await check('Native b opens blame',async()=>{await go(repo+'/src/branch/main/src/navigation.ts');await p.keyboard.press('b');await p.waitForURL('**/blame/**');});
+ await check('Native y opens immutable file permalink',async()=>{await go(repo+'/src/branch/main/src/navigation.ts');await p.keyboard.press('y');await p.waitForURL('**/src/commit/**');});
+ await check('Authenticated ordinary demo user can open PR comment editor',async()=>{const users=JSON.parse(await fs.readFile(root+'/.demo/users.json','utf8'));await p.goto(base+'/user/login');await p.locator('input[name="user_name"]').fill('demo-reviewer');await p.locator('input[name="password"]').fill(users['demo-reviewer']);await p.locator('form').filter({has:p.locator('input[name="password"]')}).getByRole('button',{name:/sign in/i}).click();await p.waitForURL(url=>!url.pathname.endsWith('/login'));await go(repo+'/pulls/3');await p.locator('textarea').first().waitFor();await p.screenshot({path:root+'/research/screenshots/demo/desktop-authenticated-pr.png'});});
+}finally{await b.close();await fs.writeFile(root+'/research/keyboard-live.json',JSON.stringify({capturedAt:new Date().toISOString(),base,scope:'Real Forgejo, desktop Chromium; no review submitted; no production data.',results},null,2));console.log(JSON.stringify(results,null,2));}
+if(results.some(x=>!x.pass))process.exitCode=1;

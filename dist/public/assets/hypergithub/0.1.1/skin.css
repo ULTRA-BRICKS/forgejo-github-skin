@@ -291,3 +291,24 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
   html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button,.hgh-clone > summary):active { transform: none; }
   html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toastify { transition: none; }
 }
+
+/* Genuine Forgejo geometry; only its palette changes, never user avatars. */
+
+
+/* Native-instance corrections: validated against Forgejo 16.0.5, not just stories. */
+html[data-theme^="hypergithub-"] #navbar-logo img,html[data-theme^="hypergithub-"] .home img[src$="/logo.svg"] { filter: grayscale(1); }
+html[data-theme="hypergithub-dark"] :is(#navbar-logo img,.home img[src$="/logo.svg"]) { filter: grayscale(1) invert(.8); }
+@media (prefers-color-scheme:dark) { html[data-theme="hypergithub-auto"] :is(#navbar-logo img,.home img[src$="/logo.svg"]) {filter:grayscale(1) invert(.8);} }
+html[data-theme^="hypergithub-"] .repository > .ui.container:not(.fluid) {max-width:1216px;}
+html[data-theme^="hypergithub-"] .file-view.code-view {overflow-x:auto;max-width:100%;}
+html[data-theme^="hypergithub-"] .file-view.code-view .code-inner {white-space:pre;overflow-wrap:normal;word-break:normal;}
+html[data-theme^="hypergithub-"] .repo-button-row {justify-content:flex-start;gap:8px;}
+html[data-theme^="hypergithub-"] .repo-button-row > :has(> .hgh-clone) {margin-left:auto;}
+html[data-theme^="hypergithub-"] .hgh-help-button {flex:0 0 auto;}
+
+/* Forgejo's global dialog[open] flex layout must not rearrange our dialog. */
+html[data-theme^="hypergithub-"] dialog.hgh-dialog[open] {display:block;}
+html[data-theme^="hypergithub-"] dialog.hgh-dialog:not([open]) {display:none;}
+html[data-theme^="hypergithub-"] .hgh-dialog dl {margin-block:0;}
+/* The native container cap is !important; override only the desktop repository body. */
+@media(min-width:1024px){html[data-theme^="hypergithub-"] .repository > .ui.container:not(.fluid){max-width:min(1216px,calc(100% - 64px)) !important;}}

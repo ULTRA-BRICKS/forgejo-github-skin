@@ -1,5 +1,9 @@
 # Hypergithub for Forgejo
 
+**[Live Storybook](https://forgejo-ui.vercel.app/)** · **[Real Forgejo demo](https://forgejo-ui-demo.hyperide.ai/demo-author/keyboard-lab)** · **[Danny: English installation guide](docs/DANNY-INSTALL.md)**
+
+Storybook is hosted independently on Vercel. The real synthetic demo is Mac-hosted through a dedicated supervised tunnel and requires the Mac to remain online. Production is unchanged.
+
 GitHub-familiar, opt-in UI/UX layer for Forgejo without maintaining a Forgejo fork. The target instance currently runs Forgejo 16.0.3; compatibility is gated against the reviewed upstream source fingerprints.
 
 ## What is here

@@ -14,3 +14,8 @@ research/observations/*
 research/browser-test-results.json
 research/storybook-screenshots.json
 research/preview-report.json
+
+.transfer/
+.demo/
+ops/handoff/staging/
+.vercel

@@ -1,0 +1,73 @@
+# Supplemental deployment candidate. Not executed against a real Docker daemon in this turn.
+# Standard (non-rootless) official Forgejo image only; supply reviewed digest pins.
+name: forgejo-ui-demo
+services:
+  forgejo:
+    image: ${FORGEJO_IMAGE:?Set a reviewed standard Forgejo image digest}
+    restart: unless-stopped
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      FORGEJO_CUSTOM: /data/gitea
+      FORGEJO____APP_NAME: Forgejo UI Demo
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__server__ROOT_URL: https://${FORGEJO_DEMO_HOST:?Set demo DNS host}/
+      FORGEJO__server__DOMAIN: ${FORGEJO_DEMO_HOST}
+      FORGEJO__server__DISABLE_SSH: "true"
+      FORGEJO__session__COOKIE_SECURE: "true"
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+      FORGEJO__mailer__ENABLED: "false"
+      FORGEJO__actions__ENABLED: "false"
+      FORGEJO__ui__THEMES: forgejo-auto,forgejo-light,forgejo-dark,hypergithub-auto,hypergithub-light,hypergithub-dark
+      FORGEJO__ui__DEFAULT_THEME: hypergithub-auto
+    volumes:
+      - demo-data:/data
+      - type: bind
+        source: ./staging/custom/public
+        target: /data/gitea/public
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./staging/custom/templates
+        target: /data/gitea/templates
+        read_only: true
+        bind:
+          create_host_path: false
+    # No directly published HTTP/SSH ports; only Caddy fronts this service.
+    networks: [demo]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  caddy:
+    image: ${CADDY_IMAGE:?Set a reviewed Caddy image digest}
+    restart: unless-stopped
+    environment:
+      FORGEJO_DEMO_HOST: ${FORGEJO_DEMO_HOST}
+      STORYBOOK_HOST: ${STORYBOOK_HOST:?Set Storybook DNS host}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME contact email}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - type: bind
+        source: ./staging/storybook
+        target: /srv/storybook
+        read_only: true
+        bind:
+          create_host_path: false
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [demo]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  demo: {}
+volumes:
+  demo-data: {}
+  caddy-data: {}
+  caddy-config: {}

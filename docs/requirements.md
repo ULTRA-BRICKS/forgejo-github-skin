@@ -107,3 +107,14 @@ Status: living specification. Every visual or behavioral change must map to a re
 - Actions shortcuts must reuse the native workflow link and log settings menu; notification shortcuts must reuse native read/unread actions.
 - Editor formatting and quick-submit shortcuts already supplied by Forgejo remain native and must not be shadowed by the skin.
 - GitHub commands without equivalent Forgejo semantics remain explicit gaps rather than dangerous approximations: github.dev, Discussions/Security tabs in Forgejo 16.0.3, notification Done/unsubscribe, and product-excluded Wiki/Projects.
+
+## 2026-09-18 delivery requirements
+
+- Retain the genuine Forgejo mark; graphite/gray palette only, no GitHub logo in candidate screens. Historical GitHub references stay unchanged.
+- Static Storybook must not depend on a temporary laptop tunnel. Native demo is a separate synthetic instance, not Storybook pretending to be a server.
+- Publish actual native desktop/mobile screenshots and distinguish them from reference reconstructions and synthetic contract tests.
+- Provide Danny an English, pinned-source, dry-run-first installation and rollback guide.
+- Do not send font binaries in handoff bundles. Use installed/system fallbacks; disclose impact on pixel matching.
+- Native demo must use a current security-patched release, isolated data, no mail, registration or production runner.
+- Private Slack previews are not safe merely because the sender can read the repository. Channel disclosure needs explicit policy; default to a personal authorized view.
+- A real Slack app and full keyboard-operated review workflows remain required and are not certified by passing policy/DOM tests.

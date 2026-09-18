@@ -1,0 +1,26 @@
+{
+  "createdAt": "2026-09-18T10:40:50.358549+00:00",
+  "skin": "0.1.1",
+  "nativeVersion": "16.0.5",
+  "gallery": "https://forgejo-ui.vercel.app/",
+  "nativeDemo": "https://forgejo-ui-demo.hyperide.ai/demo-author/keyboard-lab",
+  "hosting": "Static gallery: Vercel. Native demo: dedicated Mac container/tunnel, requires Mac online.",
+  "productionChanged": false,
+  "checks": {
+    "nodeUnit": 15,
+    "pythonUnit": 16,
+    "syntheticBrowserContracts": 59,
+    "handoffPython": 32,
+    "slackPolicyUnit": 48,
+    "nativePublicRouteAndNavigation": 16,
+    "nativeDesktopKeyboardAndLogin": 7,
+    "dannyExternalGalleryAndLogin": 5
+  },
+  "limitations": [
+    "No full authenticated review workflow certification",
+    "No installed Slack OAuth/event receiver",
+    "Native UI is not pixel-identical to Storybook reconstruction",
+    "No physical iOS Safari test",
+    "No font binaries shipped"
+  ]
+}

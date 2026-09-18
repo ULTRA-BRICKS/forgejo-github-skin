@@ -1,0 +1,6 @@
+.env
+staging/
+credentials/
+artifacts/
+__pycache__/
+*.pyc
