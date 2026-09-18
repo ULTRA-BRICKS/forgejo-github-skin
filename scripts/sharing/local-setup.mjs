@@ -67,7 +67,7 @@ export function createSetupServer({
         return res.end(
           shell(
             "Connect the demo Slack app",
-            `<h1>Connect Forgejo Links to Slack</h1><p>This setup page is available only on this Mac. Paste the two credentials from the app you just installed. They are written to a private configuration file, never displayed or logged.</p><p>App ID: <code>A0C2QBRV3NH</code> · Workspace: Glide</p><p><a href="https://api.slack.com/apps/A0C2QBRV3NH/general" target="_blank" rel="noreferrer">Open Signing Secret</a> · <a href="https://api.slack.com/apps/A0C2QBRV3NH/oauth" target="_blank" rel="noreferrer">Open Bot User OAuth Token</a></p><form method="post" action="/configure"><input type="hidden" name="csrf" value="${csrf}"><p><label>Signing Secret<br><input type="password" name="signing" autocomplete="off" required minlength="32" maxlength="32"></label></p><p><label>Bot User OAuth Token (xoxb-)<br><input type="password" name="bot" autocomplete="off" required minlength="20" maxlength="512"></label></p><button class="button" type="submit">Save local connection</button></form><p id="setup-feedback" role="status" aria-live="polite"></p>${progressive ? '<script src="/setup.js" defer></script>' : ""}`,
+            `<h1>Connect Hyperide Links to Slack</h1><p>This setup page is available only on this Mac. Paste the two credentials from the app you just installed. They are written to a private configuration file, never displayed or logged.</p><p>App ID: <code>A0C2QBRV3NH</code> · Workspace: Glide</p><p><a href="https://api.slack.com/apps/A0C2QBRV3NH/general" target="_blank" rel="noreferrer">Open Signing Secret</a> · <a href="https://api.slack.com/apps/A0C2QBRV3NH/oauth" target="_blank" rel="noreferrer">Open Bot User OAuth Token</a></p><form method="post" action="/configure"><input type="hidden" name="csrf" value="${csrf}"><p><label>Signing Secret<br><input type="password" name="signing" autocomplete="off" required minlength="32" maxlength="32"></label></p><p><label>Bot User OAuth Token (xoxb-)<br><input type="password" name="bot" autocomplete="off" required minlength="20" maxlength="512"></label></p><button class="button" type="submit">Save local connection</button></form><p id="setup-feedback" role="status" aria-live="polite"></p>${progressive ? '<script src="/setup.js" defer></script>' : ""}`,
           ),
         );
       }
@@ -134,6 +134,7 @@ export function createSetupServer({
           const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
           config.slack = {
             ...config.slack,
+            teamId: check.team_id,
             appId: "A0C2QBRV3NH",
             signingSecret: signing,
             botToken: bot,

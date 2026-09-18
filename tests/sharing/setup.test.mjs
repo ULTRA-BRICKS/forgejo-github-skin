@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { slackReadiness } from "../../integrations/link-preview/readiness.mjs";
 import { createSetupServer } from "../../scripts/sharing/local-setup.mjs";
 const valid = {
   signing: "a".repeat(32),
@@ -68,6 +69,8 @@ test("setup form has same-origin referrer policy, CSRF binding and no cross-orig
     assert.equal((await post(url, "same-origin")).status, 200);
     assert.equal(calls(), 1);
     assert.equal(JSON.parse(fs.readFileSync(file)).slack.botUserId, "U1");
+    assert.equal(JSON.parse(fs.readFileSync(file)).slack.teamId, "T09LDGG3DJB");
+    assert.equal(slackReadiness(JSON.parse(fs.readFileSync(file))).configured, true);
     assert.equal(fs.statSync(file).mode & 0o777, 0o600);
     assert.equal((await post(url, "same-origin")).status, 403);
   }));

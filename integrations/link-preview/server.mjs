@@ -1,3 +1,4 @@
+import { slackReadiness } from "./readiness.mjs";
 import { renderGraphic, closeRenderer } from "./raster.mjs";
 import { Sources } from "./sources.mjs";
 import { RenderCache } from "./render-cache.mjs";
@@ -138,7 +139,7 @@ const server = http.createServer(async (request, response) => {
           200,
           JSON.stringify({
             service: "forgejo-link-preview",
-            slackConfigured: !!config.slack.appId && !!config.slack.botToken,
+            slackConfigured: slackReadiness(config).configured,
             oauthConfigured: !!config.oauth.clientId,
           }),
           "application/json",
@@ -326,11 +327,7 @@ const server = http.createServer(async (request, response) => {
       request.method === "POST" &&
       ["/slack/events", "/slack/interactions"].includes(url.pathname)
     ) {
-      if (
-        !config.slack.appId ||
-        !config.slack.signingSecret ||
-        !config.slack.botToken
-      )
+      if (!slackReadiness(config).configured)
         return send(response, 503, "Slack installation required", "text/plain");
       const raw = await body(request);
       if (

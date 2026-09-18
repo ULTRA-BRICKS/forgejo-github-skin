@@ -16,7 +16,8 @@
     "check:generated": "node scripts/check-generated.mjs",
     "test:sharing": "node --test tests/sharing/*.test.mjs",
     "sharing:serve": "node integrations/link-preview/server.mjs",
-    "sharing:verify": "node scripts/sharing/verify-public.mjs"
+    "sharing:verify": "node scripts/sharing/verify-public.mjs",
+    "sharing:doctor": "node scripts/sharing/doctor.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

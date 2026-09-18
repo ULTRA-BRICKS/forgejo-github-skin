@@ -1,7 +1,7 @@
 {
-  "checkedAt": "2026-09-18T15:32:50.257690+00:00",
+  "checkedAt": "2026-09-18T16:31:34.579806+00:00",
   "branch": "fix/preview-design-and-local-setup",
-  "unitSharing": 50,
+  "unitSharing": 55,
   "visualVariantsAtTwoWidths": 14,
   "liveRedirectAndPng": 2,
   "pixelIdenticalRendererPairs": 5,
@@ -18,10 +18,11 @@
   "productionForgejoTemplatesChanged": false,
   "nativeDemoTemplateInstalled": true,
   "limitations": [
-    "Actual new Slack card rendering has not yet passed; unsuccessful attempts are retained separately.",
+    "Actual Slack visual acceptance passed for an explicitly manually attached public demo card; automatic app delivery remains unverified.",
     "No successful signed private Slack unfurl until runtime credentials are supplied.",
     "Production qa-cli is recognized by exact origin but its access requires its own authorization.",
     "Mutable-ref file links and arbitrary list pages remain unsupported.",
     "Pixel identity is runtime-versus-Storybook on identical synthetic inputs, not GitHub fidelity."
-  ]
+  ],
+  "slackVisualManuallyAttached": true
 }
