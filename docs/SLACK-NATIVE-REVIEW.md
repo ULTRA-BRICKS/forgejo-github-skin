@@ -11,3 +11,5 @@ Actual browser acceptance also found a native-skin defect: Forgejo renders a hid
 Public image locators preserve current-visibility checks. No private content is stored in a durable image snapshot. Old links are resolved through their source URL again before any cached bytes are returned.
 
 The follow-up review reproduced a Slack 429 and an overlapping request after the persisted processing lease expired. HTTP 429 now follows the bounded Retry-After policy, and an in-process single-flight set keeps the live operation exclusive until settlement. Regression tests cover both conditions without sleeping for a lease timeout.
+
+The final boundary checks cover malformed Retry-After values (negative, zero, non-numeric and non-finite), all mapped to a positive default backoff. Native footer selection is scoped to a direct body child; content fragments carrying a similarly named class cannot capture the logo.

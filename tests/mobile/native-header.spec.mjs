@@ -50,3 +50,11 @@ test('native logo moves to the page footer rather than an earlier hidden-dialog 
  await expect(page.locator('dialog .hgh-footer-brand')).toHaveCount(0);
  await expect(page.locator('#navbar-logo')).toBeHidden();
 });
+
+test('content with a page-footer class cannot capture the repository mark',async({page})=>{
+ await page.setContent('<html lang="en" data-theme="hypergithub-light"><body><nav id="navbar"><div class="navbar-left"><a id="navbar-logo" href="/">Forgejo</a></div></nav><div class="repo-header"><div class="flex-item-title"><a href="/a/b">repo</a></div></div><main><footer class="page-footer">Content footer</footer></main><footer class="page-footer">Global footer</footer></body></html>');
+ await page.addStyleTag({content:css});await page.addScriptTag({content:source.replaceAll('export ','')});
+ await page.evaluate(()=>enhanceNativeChrome());
+ await expect(page.locator('body > footer.page-footer .hgh-footer-brand')).toBeVisible();
+ await expect(page.locator('main .hgh-footer-brand')).toHaveCount(0);
+});

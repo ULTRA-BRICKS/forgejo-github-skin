@@ -39,3 +39,11 @@ test('a live in-process request stays single-flight after its persisted lease ex
   let retried=false;await dispatchEntityDetails(event,store,async()=>{retried=true;});assert.equal(retried,true);
  }finally{store.close();}
 });
+
+for(const retryAfter of [-5,0,NaN,Infinity,'invalid'])test('malformed Retry-After uses a positive bounded delay: '+retryAfter,async()=>{
+ const store=new Store(':memory:',randomBytes(32));let attempts=0;const delays=[];
+ try{
+  await dispatchEntityDetails(event,store,async()=>{if(++attempts===1)throw Object.assign(new Error('ratelimited'),{status:429,retryAfter});},{pause:async delay=>delays.push(delay)});
+  assert.equal(attempts,2);assert.deepEqual(delays,[200]);
+ }finally{store.close();}
+});

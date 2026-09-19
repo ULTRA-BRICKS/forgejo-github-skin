@@ -18,7 +18,8 @@ export function dispatchEntityDetails(envelope,store,respond,{pause=wait}={}) {
      if(store.get(key)?.attemptId===attemptId)store.put(key,{state:'completed'},600);
      return;
     }catch(error){
-     const delay=error.retryAfter?Number(error.retryAfter)*1000:200;
+     const seconds=Number(error.retryAfter);
+     const delay=Number.isFinite(seconds)&&seconds>0?seconds*1000:200;
      if(attempt||!transient(error)||delay>2000||Date.now()-started+delay>25000)throw error;
      await pause(delay);
     }
