@@ -47,13 +47,14 @@ export function graphic(
   meta,
   baseTokens,
   previewTokens,
-  { mode = "light" } = {},
+  { mode = "adaptive" } = {},
 ) {
   const spec = previewTokens.preview,
-    palette = baseTokens.color[mode],
+    palette = baseTokens.color[mode === "adaptive" ? "light" : mode],
     c = Object.fromEntries(
       Object.entries(palette).map(([k, v]) => [k, color(v)]),
     );
+  if (mode === "adaptive") { c.text = "#66707b"; c.muted = "#7d8590"; c.border = "#8c959f"; c.success = "#1a7f37"; c.danger = "#cf222e"; c.link = "#0969da"; }
   const dim = (name) => spec[name].$value.value,
     W = dim("width"),
     H = dim("height"),
@@ -65,6 +66,7 @@ export function graphic(
       activity: null,
     },
     brand = meta.brand || { name: "Code host", initials: "CH" };
+  const textStroke = mode === "adaptive" ? ' paint-order="stroke" stroke="white" stroke-opacity=".76" stroke-width="1.05" stroke-linejoin="round"' : "";
   const t = (
     x,
     y,
@@ -77,7 +79,7 @@ export function graphic(
       mono = false,
     } = {},
   ) =>
-    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${mono ? ' xml:space="preserve" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"' : ""}>${esc(text)}</text>`;
+    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${mono ? ' xml:space="preserve" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"' : ""}${textStroke}>${esc(text)}</text>`;
   const line = (x, y, x2, y2, tone = "border", width = 1) =>
     `<path d="M${x},${y}L${x2},${y2}" fill="none" stroke="${c[tone]}" stroke-width="${width}"/>`;
   const safeLogo =
@@ -230,5 +232,5 @@ export function graphic(
         });
     }
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(fact.kind + " facts; title and description are in the message text")}" style="display:block;width:100%;height:auto;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;font-variant-numeric:tabular-nums"><rect width="${W}" height="${H}" fill="${c.canvas}"/>${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(fact.kind + " facts; title and description are in the message text")}" style="display:block;width:100%;height:auto;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;font-variant-numeric:tabular-nums">${body}</svg>`;
 }

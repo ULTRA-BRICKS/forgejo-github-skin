@@ -22,7 +22,7 @@ const tokens = JSON.parse(
 for (const [kind, fixture] of Object.entries(previewFixtures))
   test(`${kind}: shared vector contains facts and small instance identity, not the duplicated title/body`, () => {
     const svg = graphic(fixture, tokens, sizes);
-    assert.ok(svg.includes('viewBox="0 0 480 224"'));
+    assert.ok(svg.includes('viewBox="0 0 480 136"'));
     if (fixture.summary) {
       assert.ok(!svg.includes(fixture.title));
       assert.ok(!svg.includes(fixture.description));
@@ -75,13 +75,21 @@ test("activity uses real timestamps and labels truncated sampling", () => {
     true,
   );
 });
+test("adaptive shared SVG is transparent, compact, and cross-surface neutral", () => {
+  const svg = graphic(previewFixtures.pull, tokens, sizes, { mode: "adaptive" });
+  assert.ok(svg.includes('viewBox="0 0 480 136"'));
+  assert.ok(!svg.includes('<rect width="480" height="136"'));
+  assert.ok(svg.includes('fill="#66707b"'));
+  assert.ok(svg.includes('fill="#1a7f37"'));
+  assert.ok(svg.includes('fill="#cf222e"'));
+});
 test("file snippets syntax-highlight code without changing the source text", () => {
   const f = structuredClone(previewFixtures.file);
   f.summary.code = ['const answer = "yes"; // note'];
   const svg = graphic(f, tokens, sizes);
   assert.ok(svg.includes('fill="#0969da"'));
-  assert.ok(svg.includes('fill="#1f883d"'));
-  assert.ok(svg.includes('fill="#59636e"'));
+  assert.ok(svg.includes('fill="#1a7f37"'));
+  assert.ok(svg.includes('fill="#7d8590"'));
   assert.ok(svg.includes('>const</text>'));
 });
 test("literal code is XML-escaped, whitespace-preserving, and at most five lines", () => {

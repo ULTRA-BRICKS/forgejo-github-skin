@@ -1,10 +1,13 @@
 {
-  "version": "0.1.1",
+  "version": "0.1.2",
   "tokenCount": 98,
   "files": [
     "skin.css",
     "skin.mjs",
-    "core.mjs"
+    "core.mjs",
+    "list-options.mjs",
+    "mobile-chrome.mjs",
+    "repository-ui.css"
   ],
   "format": "DTCG 2025.10",
   "fontFiles": 0
