@@ -1,3 +1,4 @@
+import {publicMetadata,publicImageMetadata} from './public-metadata.mjs';
 import { hasGraphicFacts } from "./graphic.mjs";
 import { createRuntime, reloadRuntime } from "./runtime.mjs";
 import { slackReadiness } from "./readiness.mjs";
@@ -89,15 +90,8 @@ async function body(request) {
   return Buffer.concat(chunks);
 }
 async function anonymous(raw) {
-  const { sources } = runtime;
-  const link = sources.parse(raw);
-  if (!link) return null;
-  try {
-    return await sources.metadata(raw, undefined, { enrich: true });
-  } catch (e) {
-    if (isAccessDenied(e.status)) return null;
-    throw e;
-  }
+  const {config,sources}=runtime;
+  return publicMetadata({config,forgejo:sources,oauth:sources},raw);
 }
 async function renderImage(meta) {
   if (activeRenders >= 2) throw new Error("Image renderer busy");
@@ -113,15 +107,21 @@ const publicBudget = new Budget(120, 60000),
 
 const renderCache = new RenderCache(renderImage);
 const logo = fs.readFileSync(path.join(root, "assets/forgejo-graphite.svg"));
+const slackIcons=new Map(['repository','pull','pull-merged','pull-draft','pull-closed','issue','issue-closed','commit','file'].map(kind=>[kind,fs.readFileSync(path.join(root,'assets/slack-icons',kind+'.png'))]));
 const server = http.createServer(async (request, response) => {
   const { config, sources, forgejo, oauth, slack } = runtime;
   try {
     const url = new URL(request.url, config.origin);
+    const iconMatch=url.pathname.match(/^\/icons\/(repository|pull(?:-merged|-draft|-closed)?|issue(?:-closed)?|commit|file)\.png$/);
+    if(iconMatch&&['GET','HEAD'].includes(request.method))return send(response,200,request.method==='HEAD'?'':slackIcons.get(iconMatch[1]),'image/png');
     const snapshotMatch = url.pathname.match(/^\/image\/s\/([a-f0-9]{48})$/);
-    if (snapshotMatch && request.method === "GET") {
+    if (snapshotMatch && ["GET","HEAD"].includes(request.method)) {
       if (!publicBudget.allow()) return send(response, 429, "Retry shortly", "text/plain");
-      const snapshot = store.get("image:" + snapshotMatch[1]);
+      const locator = store.get("image:" + snapshotMatch[1]);
+      if(!locator)return send(response,404,"Preview expired","text/plain");
+      const snapshot = await publicImageMetadata({config,forgejo:sources,oauth:sources},locator);
       if (!hasGraphicFacts(snapshot)) return send(response, 404, "Preview expired", "text/plain");
+      if(request.method==='HEAD')return send(response,200,'','image/png');
       metrics.publicImages++;
       return send(response, 200, await renderCache.get(snapshot), "image/png");
     }
@@ -150,6 +150,7 @@ const server = http.createServer(async (request, response) => {
             service: "forgejo-link-preview",
             build: process.env.FORGEJO_PREVIEW_BUILD || "development",
             slackConfigured: slackReadiness(config).configured,
+            workObjectsEnabled: config.slack.workObjectsEnabled===true,
             oauthConfigured: !!oauth,
             configurationReloadRejected,
             sources: [...sources.entries.values()].map(source => ({ id: source.id, origin: source.base, oauthConfigured: !!source.auth })),
@@ -369,6 +370,14 @@ const server = http.createServer(async (request, response) => {
           );
         if (!validEnvelope(payload, config))
           return send(response, 200, "Ignored", "text/plain");
+        if(payload.event.type==='entity_details_requested'){
+          const key='entity-event:'+payload.event_id;
+          if(store.get(key))return send(response,200,'Accepted','text/plain');
+          store.put(key,{handled:true},600);send(response,200,'Accepted','text/plain');
+          metrics.interactions++;
+          slack.presentDetails(payload).catch(()=>{metrics.failed++;console.error('Work Object details failed; sensitive content suppressed');});
+          return;
+        }
         if (Number(store.pendingCount()) >= 1000)
           return send(
             response,
@@ -398,6 +407,7 @@ const server = http.createServer(async (request, response) => {
         payload = JSON.parse(params.get("payload") || "null");
       if (!validInteraction(payload, config))
         return send(response, 403, "Invalid workspace", "text/plain");
+      if(payload.type==='view_submission')return send(response,200,JSON.stringify(slack.submitSettings(payload)||{}),'application/json');
       const replay =
         "interaction:" + createHash("sha256").update(raw).digest("hex");
       if (store.get(replay)) return send(response, 200, "", "text/plain");
@@ -406,7 +416,7 @@ const server = http.createServer(async (request, response) => {
       metrics.interactions++;
       slack.interact(payload).catch(() => {
         metrics.failed++;
-        console.error("Private view interaction failed; details suppressed");
+        console.error("Slack interaction failed; details suppressed");
       });
       return;
     }

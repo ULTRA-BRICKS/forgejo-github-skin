@@ -10,16 +10,24 @@
       "always_online": false
     },
     "unfurl_domains": [
-      "git.hyperide.ai",
-      "forgejo-ui-demo.hyperide.ai"
-    ]
+      "git.hyperide.ai"
+    ],
+    "rich_previews": {
+      "is_active": true,
+      "entity_types": [
+        "slack#/entities/task",
+        "slack#/entities/file",
+        "slack#/entities/item"
+      ]
+    }
   },
   "oauth_config": {
     "scopes": {
       "bot": [
         "links:read",
         "links:write",
-        "groups:read"
+        "groups:read",
+        "channels:read"
       ]
     }
   },
@@ -29,7 +37,8 @@
     "event_subscriptions": {
       "request_url": "https://forgejo-links.hyperide.ai/slack/events",
       "bot_events": [
-        "link_shared"
+        "link_shared",
+        "entity_details_requested"
       ]
     },
     "interactivity": {

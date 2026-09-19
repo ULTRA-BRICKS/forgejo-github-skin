@@ -5,11 +5,15 @@ export function validEnvelope(payload, config) {
     payload.team_id !== config.slack.teamId ||
     payload.api_app_id !== config.slack.appId ||
     !/^Ev[A-Za-z0-9]+$/.test(payload.event_id || "") ||
-    event?.type !== "link_shared"
+    !["link_shared","entity_details_requested"].includes(event?.type)
   )
     return false;
+  if(event.type==='entity_details_requested')return /^U[A-Z0-9]+$/.test(event.user||'') &&
+    typeof event.trigger_id==='string' && event.trigger_id.length>0 && event.trigger_id.length<=512 &&
+    typeof event.entity_url==='string' && event.entity_url.length<=4096 &&
+    (!event.channel || /^[CG][A-Z0-9]+$/.test(event.channel));
   if (
-    !["composer", "conversations_history"].includes(event.source) ||
+    ![undefined,"composer", "conversations_history"].includes(event.source) ||
     !/^U[A-Z0-9]+$/.test(event.user || "")
   )
     return false;
@@ -24,17 +28,20 @@ export function validEnvelope(payload, config) {
     return false;
   if (event.unfurl_id)
     return (
+      ["composer","conversations_history"].includes(event.source) &&
       typeof event.unfurl_id === "string" &&
       event.unfurl_id.length <= 512 &&
       /^[A-Za-z0-9._-]+$/.test(event.unfurl_id)
     );
   return (
-    event.source === "conversations_history" &&
+    [undefined,"conversations_history"].includes(event.source) &&
     /^[CDG][A-Z0-9]+$/.test(event.channel || "") &&
     /^\d{10,15}\.\d{1,10}$/.test(event.message_ts || "")
   );
 }
 export function validInteraction(payload, config) {
+  if(payload?.type==='view_submission')return payload.team?.id===config.slack.teamId && payload.api_app_id===config.slack.appId &&
+    /^U[A-Z0-9]+$/.test(payload.user?.id||'') && payload.view?.callback_id==='forgejo_preview_preferences';
   return (
     payload?.type === "block_actions" &&
     payload.team?.id === config.slack.teamId &&
