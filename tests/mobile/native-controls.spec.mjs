@@ -22,3 +22,18 @@ test('native grouping retains node identity, delegated handlers and desktop rest
  await page.evaluate(()=>restoreNativeListOptions());await expect(disclosure).toHaveCount(0);
  expect(await page.evaluate(()=>window.nativeSort===document.querySelector('[data-native=sort]'))).toBe(true);
 });
+
+test('native list teardown releases listeners after content replacement',async({page})=>{
+ await page.setContent(fixture);await page.addStyleTag({content:css});
+ await page.evaluate(()=>{const original=window.matchMedia;window.mqlBalance=0;window.matchMedia=q=>{const m=original(q),add=m.addEventListener.bind(m),remove=m.removeEventListener.bind(m);m.addEventListener=(type,fn,...args)=>{if(type==='change')window.mqlBalance++;return add(type,fn,...args);};m.removeEventListener=(type,fn,...args)=>{if(type==='change')window.mqlBalance--;return remove(type,fn,...args);};return m;};});
+ await page.addScriptTag({content:module.replaceAll('export ','')});
+ await page.evaluate(()=>window.cleanNative=document.querySelector('.page-content').outerHTML);
+ for(let i=0;i<5;i++){
+  await page.evaluate(()=>{const template=document.createElement('template');template.innerHTML=window.cleanNative;window.nextNative=template.content.firstElementChild;enhanceNativeListOptions();});
+  expect(await page.evaluate(()=>window.mqlBalance)).toBe(1);
+  await page.evaluate(()=>{document.querySelector('.page-content').replaceWith(window.nextNative);enhanceNativeListOptions();});
+  expect(await page.evaluate(()=>window.mqlBalance)).toBe(1);
+ }
+ await page.evaluate(()=>{document.querySelector('.page-content').remove();enhanceNativeListOptions();});
+ expect(await page.evaluate(()=>window.mqlBalance)).toBe(0);
+});
