@@ -1,0 +1,15 @@
+{
+  "source": "Published Storybook before this change; synthetic data",
+  "results": [
+    {
+      "name": "repository",
+      "id": "screens-repository--desktop",
+      "documentWidth": 440
+    },
+    {
+      "name": "pulls",
+      "id": "screens-workflows--pull-requests",
+      "documentWidth": 440
+    }
+  ]
+}

@@ -29,11 +29,11 @@ export async function renderGraphic(meta) {
     const page = await context.newPage();
     page.setDefaultTimeout(6000);
     await page.setContent(
-      '<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:"><body style="margin:0">' +
-        graphic(meta, tokens, sizes),
+      '<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:"><body style="margin:0;background:transparent">' +
+        graphic(meta, tokens, sizes, { mode: "adaptive" }),
     );
     await page.evaluate(() => document.fonts.ready);
-    return await page.screenshot({ type: "png", animations: "disabled" });
+    return await page.screenshot({ type: "png", animations: "disabled", omitBackground: true });
   } finally {
     await context.close();
   }

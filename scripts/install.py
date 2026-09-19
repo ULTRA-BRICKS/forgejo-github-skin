@@ -87,7 +87,7 @@ def plan(custom: Path, ini: Path, make_default: bool) -> list[tuple[Path, bytes,
     asset_root = ROOT/'dist/public/assets'
     version = json.loads((ROOT/'package.json').read_text())['version']
     expected = {Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
-    expected |= {Path(f'hypergithub/{version}/{name}') for name in ('core.mjs','skin.css','skin.mjs')}
+    expected |= {Path(f'hypergithub/{version}/{name}') for name in ('core.mjs','skin.css','skin.mjs','list-options.mjs','mobile-chrome.mjs','repository-ui.css')}
     actual = set()
     for source in sorted(asset_root.rglob('*')):
         rel = source.relative_to(asset_root)

@@ -21,3 +21,9 @@ ops/handoff/staging/
 .vercel
 
 .sharing/
+
+.qa/
+/node_modules
+
+/test-results/
+/playwright-report/

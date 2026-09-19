@@ -1,3 +1,4 @@
+@import url('./repository-ui.css');
 /* Native Forgejo DOM and semantics; every visual rule is scoped to an opt-in theme. */
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) {
   --fonts-regular: var(--hgh-font-sans);
@@ -312,3 +313,49 @@ html[data-theme^="hypergithub-"] dialog.hgh-dialog:not([open]) {display:none;}
 html[data-theme^="hypergithub-"] .hgh-dialog dl {margin-block:0;}
 /* The native container cap is !important; override only the desktop repository body. */
 @media(min-width:1024px){html[data-theme^="hypergithub-"] .repository > .ui.container:not(.fluid){max-width:min(1216px,calc(100% - 64px)) !important;}}
+
+/* Native mobile reference pass: do not inherit badge size or baseline-align button SVGs. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-header .ui.label {font-size:12px!important;line-height:18px!important;min-height:20px;max-height:24px;padding:0 7px!important;display:inline-flex;align-items:center;flex:0 0 auto}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button, .button-sequence>.button, .hgh-clone>summary) {align-items:center;gap:8px}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button, .button-sequence>.button, .hgh-clone>summary)>svg {flex-shrink:0;vertical-align:middle;margin-block:0;position:static}
+@media(max-width:767px) {
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar {min-height:64px;padding-inline:16px;background:var(--hgh-color-subtle)}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar-logo {position:static!important;transform:none!important;margin-right:8px!important;flex:0 0 32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar-logo img {width:32px;height:32px;object-fit:contain}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row {align-items:center;padding-inline:0;gap:8px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row :is(.ui.button,.button,.branch-dropdown-button) {display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:32px;max-width:100%;padding-inline:12px;margin:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row :is(.svg,svg) {position:static;flex:0 0 auto;margin-block:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters {align-items:center;gap:12px;position:relative;overflow:visible}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-right {flex:0 0 auto;margin-left:auto}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .issue-list-toolbar-left {min-width:0;flex-wrap:wrap}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-list-options {margin-left:auto}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .issue.list>.item {overflow-wrap:anywhere}
+}
+
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository > .ui.container:not(.fluid){width:calc(100% - 32px)!important;margin-inline:16px!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .primary.button{background:var(--hgh-color-primary);color:var(--hgh-color-onPrimary);border-color:#1f232826;display:inline-flex;gap:8px;align-items:center;min-height:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #navbar .navbar-left{width:100%;gap:12px;align-items:center;min-width:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #navbar .navbar-mobile-right{display:contents!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #navbar-logo{margin:0!important;padding:0!important;min-width:32px;max-width:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-toggle{width:32px!important;height:32px!important;min-height:32px!important;padding:0!important;border:1px solid var(--hgh-color-border);border-radius:6px;display:inline-flex!important;justify-content:center}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-context{display:flex!important;align-items:center;flex:1;min-width:0;margin:0;padding:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--hgh-color-text)}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-search{padding:0!important;display:inline-flex!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile{margin:0!important;flex:0 0 32px;width:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>summary{padding:0!important;width:32px;height:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>summary img{width:32px;height:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>summary>span{display:none!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>.content{position:fixed!important;inset:64px 16px auto auto!important;width:min(300px,calc(100vw - 32px));max-height:calc(100dvh - 90px);overflow:auto}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] .repository.issue-list .repo-header{display:none}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #mobile-notifications-icon{margin-left:auto!important}
+}
+@media(max-width:767px){
+ html[data-hgh-mobile-chrome] #navbar .hgh-native-profile{display:block!important}
+ html[data-hgh-mobile-chrome] #navbar .hgh-native-profile>summary img{display:block!important}
+ html[data-hgh-mobile-chrome] .repository.issue-list .secondary-nav{padding-top:0}
+ html[data-hgh-mobile-chrome] .secondary-nav .overflow-menu-items>a.item{min-height:36px;padding-block:8px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;width:100%;gap:12px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-left{order:0;min-width:0;flex:1}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-left>.switch{display:flex;flex-wrap:wrap;min-width:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-right{order:1;min-width:32px;width:auto!important;margin-left:auto!important;flex:0 0 32px!important}
+}

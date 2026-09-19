@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 const base=process.argv[2] || 'http://127.0.0.1:6007';
 const index=await (await fetch(base+'/index.json')).json();
-const ids=Object.keys(index.entries).filter(id=>id.startsWith('sharing-compact-previews--') || id.startsWith('screens-workflows--'));
+const ids=Object.keys(index.entries).filter(id=>id.startsWith('sharing-compact-previews--') || id.startsWith('screens-workflows--') || id.startsWith('screens-repository--'));
 assert.ok(ids.includes('sharing-compact-previews--gallery'));
 assert.ok(ids.includes('screens-workflows--issues'));
 assert.ok(ids.includes('screens-workflows--pull-requests'));

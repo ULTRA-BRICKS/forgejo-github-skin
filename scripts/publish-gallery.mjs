@@ -48,6 +48,7 @@ for (const [source, destination] of [
   ["demo", "demo-evidence"],
   ["sharing", "sharing-evidence"],
   ["preview-v2", "preview-v2"],
+  ["mobile-parity", "mobile-parity"],
 ]) {
   const directory = path.join(root, "research/screenshots", source);
   if (!(await fs.stat(directory).catch(() => null))?.isDirectory()) continue;

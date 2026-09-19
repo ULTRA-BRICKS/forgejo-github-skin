@@ -1,3 +1,5 @@
+import {enhanceNativeChrome, restoreNativeChrome} from './mobile-chrome.mjs';
+import {enhanceNativeListOptions, restoreNativeListOptions} from './list-options.mjs';
 /** Progressive enhancements only: existing Forgejo links/forms remain authoritative. */
 import {themeEnabled, acceptKey, safeHref, navigationAction, normalizeLine, isEditable} from './core.mjs';
 
@@ -353,6 +355,7 @@ function boot() {
   });
 
   function enhance() {
+    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); }
     queued = false;
     if (!enabled()) return;
 
@@ -528,6 +531,8 @@ function boot() {
   new MutationObserver(() => {
     syncBodyObserver();
     if (!enabled()) {
+      restoreNativeListOptions(document);
+      restoreNativeChrome(document);
       closeMenus();
       for (const menu of document.querySelectorAll('details.hgh-clone')) {
         const panel = menu.querySelector('.clone-panel');

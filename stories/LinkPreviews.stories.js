@@ -15,18 +15,18 @@ export default {
     },
   },
 };
-function render(kind, { width = 480, dark = false } = {}) {
+function render(kind, { width = 480, mode = "adaptive", surface = "light" } = {}) {
   const wrapper = document.createElement("div");
   if (kind === "missing" || kind === "protectedUnavailable") {
     wrapper.style.cssText = "width:" + width + "px;max-width:100%;padding:16px;border:1px dashed #d1d9e0;border-radius:8px;color:#59636e;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;";
     wrapper.textContent = "No image emitted — Slack keeps the text link/card without a meaningless placeholder graphic.";
     return wrapper;
   }
-  wrapper.style.cssText = `width:${width}px;max-width:100%;padding:0;margin:0;`;
+  wrapper.style.cssText = `width:${width}px;max-width:100%;padding:10px;margin:0;border-radius:8px;background:${surface === "dark" ? "#0d1117" : surface === "checker" ? "repeating-conic-gradient(#f6f8fa 0 25%,#fff 0 50%) 0/24px 24px" : "#fff"};`;
   const fixture = structuredClone(previewFixtures[kind]);
   fixture.brand = { ...fixture.brand, logoData: instanceMark };
   wrapper.innerHTML = graphic(fixture, baseTokens, previewTokens, {
-    mode: dark ? "dark" : "light",
+    mode,
   });
   return wrapper;
 }
@@ -47,9 +47,10 @@ export const PullRequestMobile = {
   render: () => render("pull", { width: 360 }),
 };
 export const FileMobile = { render: () => render("file", { width: 360 }) };
-export const DarkRepository = {
-  render: () => render("repository", { dark: true }),
-};
+export const AdaptiveOnLight = { render: () => render("repository", { surface: "light" }) };
+export const AdaptiveOnDark = { render: () => render("repository", { surface: "dark" }) };
+export const AdaptiveTransparency = { render: () => render("repository", { surface: "checker" }) };
+export const DarkRepository = { render: () => render("repository", { mode: "dark", surface: "dark" }) };
 export const Gallery = {
   render: () => {
     const wrap = document.createElement("main");

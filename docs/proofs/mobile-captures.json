@@ -1,0 +1,99 @@
+{
+  "source": "Synthetic Storybook states; no user private repository content",
+  "url": "http://127.0.0.1:6119",
+  "checkedAt": "2026-09-19T07:57:41.220Z",
+  "engine": "Chromium",
+  "deviceScaleFactor": 3,
+  "checks": [
+    {
+      "id": "screens-repository--desktop",
+      "file": "repository-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-repository--private",
+      "file": "private-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-repository--folder",
+      "file": "folder-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-repository--signed-out",
+      "file": "signed-out-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-workflows--pull-requests",
+      "file": "pulls-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-workflows--pull-request-options",
+      "file": "pull-options-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-workflows--pull-requests-compact",
+      "file": "compact-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-workflows--issues",
+      "file": "issues-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-workflows--branches",
+      "file": "branches-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    },
+    {
+      "id": "screens-workflows--pull-request-detail",
+      "file": "pull-detail-after.png",
+      "viewport": {
+        "width": 440,
+        "height": 956
+      },
+      "overflow": 0
+    }
+  ]
+}
