@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 const base=process.argv[2] || 'http://127.0.0.1:6007';
 const index=await (await fetch(base+'/index.json')).json();
-const ids=Object.keys(index.entries).filter(id=>id.startsWith('sharing-compact-previews--') || id.startsWith('screens-workflows--') || id.startsWith('screens-repository--') || id.startsWith('sharing-slack-native-unfurls--'));
+const ids=Object.keys(index.entries).filter(id=>id.startsWith('sharing-compact-previews--') || id.startsWith('screens-workflows--') || id.startsWith('screens-organization--') || id.startsWith('screens-issue-detail--') || id.startsWith('screens-repository--') || id.startsWith('sharing-slack-native-unfurls--'));
 assert.ok(ids.includes('sharing-compact-previews--gallery'));
 assert.ok(ids.includes('sharing-slack-native-unfurls--gallery'));
 assert.ok(ids.includes('sharing-slack-native-unfurls--settings'));

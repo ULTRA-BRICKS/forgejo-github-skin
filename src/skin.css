@@ -367,3 +367,25 @@ html[data-hgh-repository-chrome] #navbar .hgh-native-profile > summary {display:
 html[data-hgh-repository-chrome] #navbar .hgh-native-profile > summary img {width:24px!important;height:24px!important;border-radius:50%}
 html[data-hgh-repository-chrome] footer .hgh-footer-brand {display:inline-flex;align-items:center;justify-content:center;padding:8px;flex:none;margin:0 8px;color:inherit}
 html[data-hgh-repository-chrome] footer .hgh-footer-brand img {width:20px;height:20px;object-fit:contain}
+
+/* Native mobile layout corrections verified on the actual Forgejo DOM. */
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container{width:calc(100% - 32px)!important;margin-inline:16px!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.ui.mobile.reversed.stackable.grid{flex-direction:column!important;margin:0!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.eleven.column{padding:16px 0!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.five.column{display:contents!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.five.column>.center.aligned{order:-1;padding:8px 0 0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.five.column>.divider{display:none}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabs>.ui.pull.tabular.menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;overflow:visible}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item{width:auto;min-width:0;justify-content:center;flex-wrap:wrap;gap:4px;padding:9px 4px;font-size:12px;white-space:normal}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item>svg{display:none}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item>.label{margin:0 0 0 2px;font-size:11px;padding:1px 4px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>span{display:none!important}
+}
+@media(max-width:359px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item{flex-direction:column;gap:4px}
+}
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav .overflow-menu-items>.item:first-child{order:-2}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav .overflow-menu-items>.item.active{order:-1}
+}
