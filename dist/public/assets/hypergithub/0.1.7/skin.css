@@ -389,3 +389,9 @@ html[data-hgh-repository-chrome] footer .hgh-footer-brand img {width:20px;height
  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav .overflow-menu-items>.item:first-child{order:-2}
  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav .overflow-menu-items>.item.active{order:-1}
 }
+
+/* Forgejo reserves the complete Settings item width for overflow; keep that budget compact. */
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav #settings-btn.item{box-sizing:border-box;width:32px;min-width:32px;max-width:32px;padding-inline:8px!important;justify-content:center}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav #settings-btn.item>.resize-for-semibold{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}

@@ -56,7 +56,7 @@ export const Gallery = {
     const wrap = document.createElement("main");
     wrap.style.cssText = "padding:24px;max-width:1080px;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif";
     const title = document.createElement("h1"); title.textContent = "Forgejo snippet states"; wrap.append(title);
-    const grid = document.createElement("div"); grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px";
+    const grid = document.createElement("div"); grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px";
     for (const [label, kind] of [["Repository","repository"],["Issue","issue"],["Pull request","pull"],["Commit","commit"],["File","file"],["Private repository","privateRepository"],["Private pull request","privatePull"],["Unavailable protected resource","protectedUnavailable"],["Missing data","missing"]]) {
       const section=document.createElement("section"), h=document.createElement("h2"); h.textContent=label; section.append(h,render(kind)); grid.append(section);
     }
