@@ -19,6 +19,10 @@
         "slack#/entities/file",
         "slack#/entities/item"
       ]
+    },
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": false
     }
   },
   "oauth_config": {
@@ -38,7 +42,8 @@
       "request_url": "https://forgejo-links.hyperide.ai/slack/events",
       "bot_events": [
         "link_shared",
-        "entity_details_requested"
+        "entity_details_requested",
+        "app_home_opened"
       ]
     },
     "interactivity": {

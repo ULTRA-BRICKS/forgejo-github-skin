@@ -5,9 +5,10 @@ export function validEnvelope(payload, config) {
     payload.team_id !== config.slack.teamId ||
     payload.api_app_id !== config.slack.appId ||
     !/^Ev[A-Za-z0-9]+$/.test(payload.event_id || "") ||
-    !["link_shared","entity_details_requested"].includes(event?.type)
+    !["link_shared","entity_details_requested","app_home_opened"].includes(event?.type)
   )
     return false;
+  if(event.type==='app_home_opened')return /^U[A-Z0-9]+$/.test(event.user||'') && ['home','messages','about'].includes(event.tab) && (!event.channel || /^D[A-Z0-9]+$/.test(event.channel));
   if(event.type==='entity_details_requested')return /^U[A-Z0-9]+$/.test(event.user||'') &&
     typeof event.trigger_id==='string' && event.trigger_id.length>0 && event.trigger_id.length<=512 &&
     typeof event.entity_url==='string' && event.entity_url.length<=4096 &&

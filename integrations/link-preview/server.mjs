@@ -60,6 +60,8 @@ const metrics = {
   publicPages: 0,
   publicImages: 0,
   slackCrawlerRequests: 0,
+  homeUpdates: 0,
+  homeFailed: 0,
 };
 let activeRenders = 0,
   workerBusy = false;
@@ -376,6 +378,15 @@ const server = http.createServer(async (request, response) => {
           send(response,200,'Accepted','text/plain');
           if(task){metrics.interactions++;task.catch(()=>{metrics.failed++;console.error('Work Object details failed; delivery marker released');});}
           return;
+        }
+        if(payload.event.type==='app_home_opened'){
+          if(payload.event.tab!=='home')return send(response,200,'Ignored','text/plain');
+          const {user,tab,channel,type}=payload.event;
+          const event={type:'event_callback',team_id:payload.team_id,api_app_id:payload.api_app_id,event_id:payload.event_id,event:{type,user,tab,channel}};
+          const update=slack.queueHome(event);
+          if(!update)return send(response,503,'Home refresh busy; retry shortly','text/plain');
+          if(!update.coalesced){metrics.homeUpdates++;update.task.catch(()=>{metrics.homeFailed++;console.warn('App Home refresh failed; reopen Home to retry');});}
+          return send(response,200,'Accepted','text/plain');
         }
         if (Number(store.pendingCount()) >= 1000)
           return send(

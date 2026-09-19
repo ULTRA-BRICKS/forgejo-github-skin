@@ -1,3 +1,4 @@
+import {renderSlackHome} from './slack-home.mjs';
 import {renderSlackCard} from './slack-card.mjs';
 import {slackCases} from './slack-fixtures.mjs';
 import './slack-native.css';
@@ -30,3 +31,9 @@ export const Settings={render:()=>renderSlackCard(slackCases.Settings)};
 export const ActionsMenu={render:()=>renderSlackCard(slackCases.ActionsMenu)};
 export const DarkActions={render:()=>renderSlackCard(slackCases.DarkActions)};
 export const Gallery={render:()=>{const grid=document.createElement('div');grid.className='wo-gallery';for(const [name,options]of Object.entries(slackCases)){if(options.settings||options.actionsOpen)continue;const section=document.createElement('section'),h=document.createElement('h2');h.textContent=name.replace(/([a-z])([A-Z])/g,'$1 $2');section.append(h,renderSlackCard(options));grid.append(section);}return grid;}};
+
+export const AppHome={render:()=>renderSlackHome()};
+export const AppHomeDisconnected={render:()=>renderSlackHome({connected:false})};
+export const AppHomeConnectionError={render:()=>renderSlackHome({connected:false,connectionError:true})};
+export const AppHomeDark={render:()=>renderSlackHome({surface:"dark"})};
+export const AppHomeSettings={render:()=>renderSlackHome({settings:true})};
