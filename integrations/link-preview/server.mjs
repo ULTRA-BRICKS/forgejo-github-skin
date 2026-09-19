@@ -1,3 +1,4 @@
+import { hasGraphicFacts } from "./graphic.mjs";
 import { createRuntime, reloadRuntime } from "./runtime.mjs";
 import { slackReadiness } from "./readiness.mjs";
 import { renderGraphic, closeRenderer } from "./raster.mjs";
@@ -120,7 +121,7 @@ const server = http.createServer(async (request, response) => {
     if (snapshotMatch && request.method === "GET") {
       if (!publicBudget.allow()) return send(response, 429, "Retry shortly", "text/plain");
       const snapshot = store.get("image:" + snapshotMatch[1]);
-      if (!snapshot?.summary) return send(response, 404, "Preview expired", "text/plain");
+      if (!hasGraphicFacts(snapshot)) return send(response, 404, "Preview expired", "text/plain");
       metrics.publicImages++;
       return send(response, 200, await renderCache.get(snapshot), "image/png");
     }
@@ -201,6 +202,7 @@ const server = http.createServer(async (request, response) => {
         const meta = link ? await anonymous(raw) : null;
         const safe = meta && !meta.private ? meta : generic;
         if (url.pathname === "/image") {
+          if (!hasGraphicFacts(safe)) return send(response, 204, undefined, "text/plain");
           metrics.publicImages++;
           return send(response, 200, await renderCache.get(safe), "image/png");
         }

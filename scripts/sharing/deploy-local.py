@@ -52,6 +52,15 @@ def main():
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
     with tempfile.TemporaryDirectory(prefix='forgejo-preflight-') as state:
+        # Exercise actual SVG/PNG geometry before replacing the working service.
+        rendered = subprocess.run([node, str(release / 'scripts/sharing/check-preview-layout.mjs')],
+            cwd=release, env={**env, 'PREVIEW_PROOF_DIR': str(Path(state) / 'rendering')},
+            capture_output=True, text=True, timeout=60)
+        if rendered.returncode:
+            raise RuntimeError('Release rendering preflight failed: ' + rendered.stderr[-3000:])
+        render_proof = json.loads(rendered.stdout)
+        if render_proof.get('passed') != 7:
+            raise RuntimeError('Rendering preflight did not verify every preview type')
         candidate = subprocess.Popen([node, str(release / 'integrations/link-preview/server.mjs')],
             env={**env, 'FORGEJO_PREVIEW_PORT': str(port), 'FORGEJO_PREVIEW_STATE_DIR': state},
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -101,7 +110,7 @@ def main():
         proof = health(3190)
         if proof.get('build') != revision:
             raise RuntimeError('Supervisor did not activate the staged revision')
-    print(json.dumps({'applied': args.apply, 'revision': revision, 'health': proof}, indent=2))
+    print(json.dumps({'applied': args.apply, 'revision': revision, 'health': proof, 'renderedPreviews': render_proof['passed']}, indent=2))
 
 if __name__ == '__main__':
     main()

@@ -1,3 +1,5 @@
+import { graphicLayout, hasGraphicFacts } from "./graphic.mjs";
+import previewTokens from "../../tokens/preview.tokens.json" with { type: "json" };
 import { slackReadiness } from "./readiness.mjs";
 export const escapeHtml = (s) =>
   String(s ?? "").replace(
@@ -34,12 +36,14 @@ export function sharePage(meta, url, origin) {
   const brand = meta.private
     ? hostLabel(url)
     : meta.brand?.name || hostLabel(url);
-  const visual = meta.private
+  const visible = !meta.private && hasGraphicFacts(meta);
+  const dimensions = graphicLayout(meta, previewTokens);
+  const visual = !visible
     ? ""
-    : `<meta property="og:image" content="${e(image)}"><meta property="og:image:alt" content="Activity and facts, without duplicating the link title"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1440"><meta property="og:image:height" content="672"><meta name="twitter:card" content="summary_large_image">`;
+    : `<meta property="og:image" content="${e(image)}"><meta property="og:image:alt" content="Activity and facts, without duplicating the link title"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="${dimensions.width * previewTokens.preview.scale.$value}"><meta property="og:image:height" content="${dimensions.height * previewTokens.preview.scale.$value}"><meta name="twitter:card" content="summary_large_image">`;
   return shell(
     meta.title,
-    `<a class="button" href="${e(url)}">Open on ${e(brand)}</a><p class="muted">Preview inspection only. Normal link navigation opens the original directly.</p>${meta.private ? "" : `<img src="${e(image)}" class="preview-graphic" width="480" height="224" alt="${e(meta.summary?.kind || "Object")} statistics">`}`,
+    `<a class="button" href="${e(url)}">Open on ${e(brand)}</a><p class="muted">Preview inspection only. Normal link navigation opens the original directly.</p>${!visible ? "" : `<img src="${e(image)}" class="preview-graphic" width="${dimensions.width}" height="${dimensions.height}" alt="${e(meta.summary?.kind || "Object")} statistics">`}`,
     `<meta property="og:url" content="${e(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="${e(brand)}"><meta property="og:title" content="${e(meta.title)}"><meta property="og:description" content="${e(meta.description)}">${visual}`,
   );
 }

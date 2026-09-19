@@ -7,6 +7,10 @@ export function enhanceNativeChrome(doc=document){
  if(!repository){restoreNativeChrome(doc);return;}
  const prior=states.get(nav);
  if(prior){if(prior.context.textContent!==repository.textContent.trim())prior.context.textContent=repository.textContent.trim();prior.context.href=repository.href;return;}
+ const footer=doc.querySelector('footer');
+ const footerMark=footer?logo.cloneNode(true):null;
+ if(footerMark){footerMark.removeAttribute('id');footerMark.className='hgh-footer-brand';footerMark.setAttribute('aria-label','Forgejo home');for(const el of footerMark.querySelectorAll('[id]'))el.removeAttribute('id');const image=footerMark.querySelector('img');if(image){image.width=20;image.height=20;}footer.append(footerMark);}
+ if(footerMark)doc.documentElement.dataset.hghRepositoryChrome='true';
  const context=doc.createElement('a');context.className='hgh-native-context';context.textContent=repository.textContent.trim();context.href=repository.href;context.title=doc.querySelector('.repo-header .flex-item-title')?.textContent.trim()||context.textContent;context.setAttribute('aria-label','Repository: '+context.title);
  const toggle=nav.querySelector('#navbar-expand-toggle');
  const profile=[...nav.querySelectorAll('.navbar-right>details')].find(el=>el.querySelector('summary img.avatar'));
@@ -25,11 +29,11 @@ export function enhanceNativeChrome(doc=document){
    context.remove();search?.remove();delete doc.documentElement.dataset.hghMobileChrome;
   }
  };
- media.addEventListener('change',update);states.set(nav,{moving,media,update,context,search});update();
+ media.addEventListener('change',update);states.set(nav,{moving,media,update,context,search,footerMark});update();
 }
 export function restoreNativeChrome(doc=document){
  const nav=doc.querySelector('#navbar'),state=states.get(nav);if(!state)return;
  state.media.removeEventListener('change',state.update);
  for(const {node,marker} of state.moving){if(marker.isConnected)marker.replaceWith(node);node.classList.remove('hgh-native-toggle','hgh-native-profile');}
- state.context.remove();state.search?.remove();delete doc.documentElement.dataset.hghMobileChrome;states.delete(nav);
+ state.context.remove();state.search?.remove();state.footerMark?.remove();delete doc.documentElement.dataset.hghRepositoryChrome;delete doc.documentElement.dataset.hghMobileChrome;states.delete(nav);
 }

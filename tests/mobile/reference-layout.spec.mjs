@@ -1,10 +1,15 @@
 import {test,expect} from '@playwright/test';
 const story=(page,id)=>page.goto('/iframe.html?id='+id+'&viewMode=story');
 const checkBox=async(locator)=>locator.evaluate(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}});
-test('repository: real left mark, light signed-in context and separate compact visibility',async({page})=>{
+test('repository: footer-only brand, small header icons and separate compact visibility',async({page})=>{
  await story(page,'screens-repository--private');
  await expect(page.locator('.hgh-reference-shell')).toBeVisible();
- const mark=await checkBox(page.getByRole('link',{name:'Forgejo home'}));expect(mark.x).toBeLessThan(90);expect(mark.w).toBe(32);
+ await expect(page.locator('.hgh-app-header [aria-label="Forgejo home"]')).toHaveCount(0);
+ await expect(page.locator('.hgh-site-footer [aria-label="Forgejo home"]')).toHaveCount(1);
+ for(const name of ['Search repositories','Notifications']) {
+  const button=page.getByRole('button',{name,exact:true});
+  if(await button.isVisible()) { const box=await checkBox(button); expect(box.w).toBeGreaterThanOrEqual(32); const symbol=await checkBox(button.locator('svg'));expect(symbol.w).toBe(16);expect(symbol.h).toBe(16); }
+ }
  await expect(page.locator('.hgh-app-header')).toHaveCSS('background-color','rgb(246, 248, 250)');
  await expect(page.getByLabel('Repository context: primer/react')).toBeVisible();
  await expect(page.getByText('Private repository',{exact:true})).toBeVisible();

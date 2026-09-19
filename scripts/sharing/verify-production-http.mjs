@@ -30,7 +30,7 @@ function request(route, { method = 'GET', headers = {}, body } = {}) {
     req.end(body);
   });
 }
-const proof = { checkedAt: new Date().toISOString(), origin, expectedChecks: 5, results: [] };
+const proof = { checkedAt: new Date().toISOString(), origin, expectedChecks: 6, results: [] };
 try {
   const health = await request('/health');
   assert.equal(health.status, 200);
@@ -57,11 +57,22 @@ try {
   assert.ok(!invalid.body.toString('utf8').includes('example.invalid'));
   assert.match(invalid.body.toString('utf8'), /Protected link/);
   proof.results.push({ check: 'Unconfigured origins receive a neutral page without external navigation', pass: true });
-  const image = await request('/image?url=' + encodeURIComponent(canonical));
-  assert.equal(image.status, 200);
-  assert.match(image.headers['content-type'], /^image\/png/);
-  assert.equal(image.body.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
-  proof.results.push({ check: 'Public image endpoint returns a valid PNG without viewer credentials', pass: true });
+  const image = await request('/image?url=' + encodeURIComponent('https://unconfigured.invalid/a/b'));
+  assert.equal(image.status, 204);
+  assert.equal(image.body.length, 0);
+  proof.results.push({ check: 'Unavailable resource emits no placeholder image', pass: true });
+  const snapshot = process.env.FORGEJO_ACCEPTANCE_IMAGE_PATH;
+  assert.match(snapshot || '', /^\/image\/s\/[a-f0-9]{48}$/, 'Provide the image path from a fresh published test unfurl');
+  const png = await request(snapshot);
+  assert.equal(png.status, 200);
+  assert.match(png.headers['content-type'], /^image\/png/);
+  assert.equal(png.body.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  assert.equal(png.body.readUInt32BE(16), 1440);
+  assert.ok([408, 432, 480].includes(png.body.readUInt32BE(20)));
+  assert.equal(png.body[25], 6, 'PNG has an alpha channel');
+  proof.results.push({ check: 'Published snapshot returns a compact production PNG', pass: true,
+    width: png.body.readUInt32BE(16), height: png.body.readUInt32BE(20), bytes: png.body.length });
+
 } catch (error) {
   proof.results.push({ check: 'Public HTTP acceptance', pass: false, error: error.message });
   process.exitCode = 1;

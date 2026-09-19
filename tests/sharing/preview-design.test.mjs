@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { randomBytes } from "node:crypto";
-import { graphic } from "../../integrations/link-preview/graphic.mjs";
+import { graphic, graphicLayout, hasGraphicFacts } from "../../integrations/link-preview/graphic.mjs";
 import {
   baseFacts,
   activityFacts,
@@ -22,7 +22,9 @@ const tokens = JSON.parse(
 for (const [kind, fixture] of Object.entries(previewFixtures))
   test(`${kind}: shared vector contains facts and small instance identity, not the duplicated title/body`, () => {
     const svg = graphic(fixture, tokens, sizes);
-    assert.ok(svg.includes('viewBox="0 0 480 136"'));
+    if (!hasGraphicFacts(fixture)) { assert.equal(svg, ""); return; }
+    const layout = graphicLayout(fixture, sizes);
+    assert.ok(svg.includes(`viewBox="0 0 480 ${layout.height}"`));
     if (fixture.summary) {
       assert.ok(!svg.includes(fixture.title));
       assert.ok(!svg.includes(fixture.description));
@@ -32,10 +34,10 @@ for (const [kind, fixture] of Object.entries(previewFixtures))
     assert.ok(!svg.includes("foreignObject"));
     assert.ok(!svg.includes("<script"));
   });
-test("protected fallback is still a compact visual, while authorized private fixtures render real facts", () => {
+test("unavailable resources emit no placeholder, authorized private fixtures retain facts", () => {
   const unavailable = graphic(previewFixtures.protectedUnavailable, tokens, sizes);
-  assert.ok(unavailable.includes("Protected link"));
-  assert.ok(unavailable.includes("Ultrabricks"));
+  assert.equal(unavailable, "");
+  assert.equal(graphic(previewFixtures.missing, tokens, sizes), "");
   const privateRepo = graphic(previewFixtures.privateRepository, tokens, sizes);
   assert.ok(privateRepo.includes("Visibility"));
   assert.ok(privateRepo.includes("Private"));
@@ -89,8 +91,8 @@ test("file snippets syntax-highlight code without changing the source text", () 
   const svg = graphic(f, tokens, sizes);
   assert.ok(svg.includes('fill="#0969da"'));
   assert.ok(svg.includes('fill="#1a7f37"'));
-  assert.ok(svg.includes('fill="#7d8590"'));
-  assert.ok(svg.includes('>const</text>'));
+  assert.ok(svg.includes('fill="#6e7781"'));
+  assert.ok(svg.includes('>const</tspan>'));
 });
 test("literal code is XML-escaped, whitespace-preserving, and at most five lines", () => {
   const f = structuredClone(previewFixtures.file);
@@ -98,7 +100,7 @@ test("literal code is XML-escaped, whitespace-preserving, and at most five lines
   const svg = graphic(f, tokens, sizes);
   assert.ok(svg.includes("&lt;script&gt;&amp;"));
   assert.ok(svg.includes('xml:space="preserve"'));
-  assert.equal((svg.match(/>const<\/text>/g) || []).length, 4);
+  assert.equal((svg.match(/>const<\/tspan>/g) || []).length, 4);
 });
 test("direct qa-cli URL resolves only to the exact production source; demo credentials cannot cross origins", async () => {
   const store = new Store(":memory:", randomBytes(32));
@@ -158,4 +160,28 @@ test("source identifiers cannot alias different OAuth namespaces", () => {
   } finally {
     store.close();
   }
+});
+
+test('file layout reserves every source line and a separate footer without narrowing the image', () => {
+  for (let count = 1; count <= 8; count++) {
+    const meta = structuredClone(previewFixtures.file);
+    meta.summary.code = Array(count).fill('  return 42;');
+    const layout = graphicLayout(meta, sizes);
+    assert.equal(layout.width, 480);
+    assert.equal(layout.lines.length, Math.min(count, 5));
+    assert.ok(layout.codeFooter >= layout.codeStart + (layout.lines.length - 1) * layout.codeStep + 20);
+    assert.ok(layout.height >= layout.codeFooter + 12);
+    assert.ok(layout.height <= 160);
+  }
+});
+test('unknown facts remain absent while real zero values still get a preview', () => {
+  assert.equal(hasGraphicFacts({summary:{kind:'repository',metrics:[{value:NaN}]}}), false);
+  assert.equal(hasGraphicFacts({summary:{kind:'repository',metrics:[{value:0}]}}), true);
+});
+
+test('unknown palette is rejected and zero activity is real data', () => {
+  assert.throws(() => graphic(previewFixtures.file, tokens, sizes, { mode: 'night' }), TypeError);
+  const meta = { private: false, summary: { kind: 'repository', metrics: [], activity: { days: Array(28).fill(0), total: 0, authorCount: 0 } } };
+  assert.equal(hasGraphicFacts(meta), true);
+  assert.ok(graphic(meta, tokens, sizes).includes('0 commits'));
 });
