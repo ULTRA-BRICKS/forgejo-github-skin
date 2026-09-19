@@ -17,7 +17,7 @@ export function enhanceNativeChrome(doc=document){
  if(!repository){restoreNativeChrome(doc);return;}
  const prior=states.get(nav);
  if(prior){if(prior.context.textContent!==repository.textContent.trim())prior.context.textContent=repository.textContent.trim();prior.context.href=repository.href;return;}
- const footer=doc.querySelector('footer');
+ const footer=doc.querySelector('footer.page-footer')||doc.querySelector('body > footer');
  const footerMark=footer?logo.cloneNode(true):null;
  if(footerMark){footerMark.removeAttribute('id');footerMark.className='hgh-footer-brand';footerMark.setAttribute('aria-label',ru?'Главная Forgejo':'Forgejo home');for(const el of footerMark.querySelectorAll('[id]'))el.removeAttribute('id');const image=footerMark.querySelector('img');if(image){image.width=20;image.height=20;}footer.append(footerMark);}
  if(footerMark)doc.documentElement.dataset.hghRepositoryChrome='true';

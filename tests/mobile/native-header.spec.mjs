@@ -40,3 +40,13 @@ test('native chrome releases old navbar and avoids duplicated SVG ids',async({pa
  expect(await page.evaluate(()=>window.chromeBalance)).toBe(0);
  await expect(page.locator('.hgh-footer-brand')).toHaveCount(0);
 });
+
+test('native logo moves to the page footer rather than an earlier hidden-dialog footer',async({page})=>{
+ await page.setContent('<html lang="en" data-theme="hypergithub-light"><body><nav id="navbar"><div class="navbar-left"><a id="navbar-logo" href="/">Forgejo</a></div></nav><div class="repo-header"><div class="flex-item-title"><a href="/a/b">repo</a></div></div><dialog><footer class="actions">Dialog actions</footer></dialog><footer class="page-footer">Site footer</footer></body></html>');
+ await page.addStyleTag({content:css});await page.addScriptTag({content:source.replaceAll('export ','')});
+ await page.evaluate(()=>enhanceNativeChrome());
+ await expect(page.locator('footer.page-footer .hgh-footer-brand')).toHaveCount(1);
+ await expect(page.locator('footer.page-footer .hgh-footer-brand')).toBeVisible();
+ await expect(page.locator('dialog .hgh-footer-brand')).toHaveCount(0);
+ await expect(page.locator('#navbar-logo')).toBeHidden();
+});

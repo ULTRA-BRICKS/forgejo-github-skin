@@ -84,9 +84,9 @@ export function buildPresentation(meta,{settingsReference,iconOrigin,imageUrl,de
   const icon=iconOrigin?new URL('/icons/'+iconKey+'.png',iconOrigin).href:null;
   return {kind,reference,title,density,description:limited||kind==='file'?'':cleanText(meta.description,density==='detailed'?600:140),
     repository:cleanText(meta.repository,120),author:limited?'':cleanText(summary.author||meta.author,80),
-    created:epoch(summary.created),updated:epoch(meta.updatedAt||summary.updated),url:canonical,resourceUrl:link.resourceUrl,
+    created:limited?null:epoch(summary.created),updated:limited?null:epoch(meta.updatedAt||summary.updated),url:canonical,resourceUrl:link.resourceUrl,
     entityType:kind==='file'?'slack#/entities/file':['issue','pull'].includes(kind)?'slack#/entities/task':'slack#/entities/item',
-    fields:fields.slice(0,density==='detailed'?9:4),actions:linkActions(link,settingsReference),icon,
+    fields:(limited?fields.filter(field=>['status','repository','visibility'].includes(field.key)):fields).slice(0,density==='detailed'?9:4),actions:linkActions(link,settingsReference),icon,
     code:kind==='file'&&!limited? (summary.code||[]).slice(0,5).map(line=>String(line).slice(0,300).toWellFormed()):[],
     imageUrl:!limited&&visuals!=='off'&&visualAddsInformation(meta)&&imageUrl?imageUrl:null, limited,
   };

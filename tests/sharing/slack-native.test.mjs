@@ -210,3 +210,18 @@ test('a source-declared public repo behind instance login is not mislabeled anon
  assert.throws(()=>composeSlackCard({...m,private:true},facts,{}),/visibility/);
  assert.equal(previewDecision({...facts,sourceDeclaredPublic:false},{}),'personal');
 });
+
+test('private summary serialization contains identity and status, not counts or development activity',()=>{
+ const m=metadata('pull',{checks:{total:19,passed:3,state:'failure'},reviewers:['sensitive-reviewer'],created:'2026-09-01',metrics:[{label:'State',value:'Open'},{label:'Files',value:891},{label:'Added',value:9821},{label:'Removed',value:1837}]});m.private=true;m.updatedAt='2026-09-19T11:11:11Z';
+ const model=buildPresentation(m,{density:'detailed'});
+ assert.ok(model.fields.every(field=>['status','repository','visibility'].includes(field.key)));
+ assert.equal(model.updated,null);assert.equal(model.created,null);
+ const text=JSON.stringify(workObject(model,{externalId:'safe-summary',postedUrl:m.link.originalUrl}));
+ for(const secret of ['891','9821','1837','sensitive-reviewer','failure','2026-09-19'])assert.ok(!text.includes(secret),secret);
+});
+test('five links resolve concurrently within a cap rather than serially blocking the worker',async()=>{
+ const store=new Store(':memory:',randomBytes(32));let active=0,peak=0,reads=0;const calls=[];
+ const client={parse:u=>parseForgejoLink(u,origin),metadata:async u=>{active++;peak=Math.max(peak,active);reads++;await new Promise(r=>setTimeout(r,15));active--;const m=metadata();m.link=parseForgejoLink(u,origin);m.summary.number=m.link.number;return m;}};
+ const slack=new SlackIntegration(config,store,client,{access:async()=>null,ticket:()=>null});slack.call=async(method,payload)=>{calls.push(payload);return {ok:true};};
+ try{await slack.unfurl(envelope(repo+'/pulls/1',{links:Array.from({length:5},(_,i)=>({url:repo+'/pulls/'+(i+1)}))}));assert.equal(reads,5);assert.ok(peak>1&&peak<=3,'bounded source concurrency: '+peak);assert.equal(calls[0].metadata.entities.length,5);}finally{store.close();}
+});

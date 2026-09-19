@@ -1,3 +1,4 @@
+import {dispatchEntityDetails} from './entity-events.mjs';
 import {publicMetadata,publicImageMetadata} from './public-metadata.mjs';
 import { hasGraphicFacts } from "./graphic.mjs";
 import { createRuntime, reloadRuntime } from "./runtime.mjs";
@@ -371,11 +372,9 @@ const server = http.createServer(async (request, response) => {
         if (!validEnvelope(payload, config))
           return send(response, 200, "Ignored", "text/plain");
         if(payload.event.type==='entity_details_requested'){
-          const key='entity-event:'+payload.event_id;
-          if(store.get(key))return send(response,200,'Accepted','text/plain');
-          store.put(key,{handled:true},600);send(response,200,'Accepted','text/plain');
-          metrics.interactions++;
-          slack.presentDetails(payload).catch(()=>{metrics.failed++;console.error('Work Object details failed; sensitive content suppressed');});
+          const task=dispatchEntityDetails(payload,store,event=>slack.presentDetails(event));
+          send(response,200,'Accepted','text/plain');
+          if(task){metrics.interactions++;task.catch(()=>{metrics.failed++;console.error('Work Object details failed; delivery marker released');});}
           return;
         }
         if (Number(store.pendingCount()) >= 1000)

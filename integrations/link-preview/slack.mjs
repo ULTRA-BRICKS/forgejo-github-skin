@@ -7,6 +7,13 @@ import { randomBytes } from "node:crypto";
 import {
   protectedCard,
 } from "../../ops/handoff/slack/preview-core.mjs";
+async function resolveBatch(values,resolve) {
+  let next=0;const results=new Array(values.length);
+  await Promise.all(Array.from({length:Math.min(3,values.length)},async()=>{
+    while(next<values.length){const index=next++;results[index]=await resolve(values[index]);}
+  }));
+  return results;
+}
 export class SlackIntegration {
   constructor(config, store, forgejo, oauth) {
     Object.assign(this, { config, store, forgejo, oauth });
@@ -36,7 +43,8 @@ export class SlackIntegration {
     });
     if (!r.ok) {
       const e = new Error("Slack HTTP " + r.status);
-      e.retryAfter = Number(r.headers.get("retry-after")) || 10;
+      e.status = r.status;
+      e.retryAfter = Number(r.headers.get("retry-after")) || undefined;
       throw e;
     }
     const data = await r.json();
@@ -102,10 +110,13 @@ export class SlackIntegration {
     if(envelope.team_id!==this.config.slack.teamId||envelope.api_app_id!==this.config.slack.appId||event.type!=='link_shared')return;
     const fallback={},entities=[],blocksOnly={},prefs=this.preferences(envelope.team_id,event.user);
     let retryError;
-    for(const posted of event.links.slice(0,5)) {
-      let resolved;
-      try {resolved=await this.resolveShared(envelope,posted.url);}
-      catch(error){const link=this.forgejo.parse(posted.url);if(!link)continue;resolved={link,unavailable:true};retryError ||= error;}
+    const links=event.links.slice(0,5);
+    const resolutions=await resolveBatch(links,async posted=>{
+      try{return await this.resolveShared(envelope,posted.url);}
+      catch(error){const link=this.forgejo.parse(posted.url);return link?{link,unavailable:true,retryError:error}:null;}
+    });
+    for(const [index,posted] of links.entries()) {
+      const resolved=resolutions[index];retryError ||= resolved?.retryError;
       if(!resolved)continue;
       const {link,meta,facts,policy}=resolved,reference=this.reference(envelope.team_id,link.originalUrl);
       let card=protectedCard(reference,link);
