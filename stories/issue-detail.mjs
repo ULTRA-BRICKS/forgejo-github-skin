@@ -1,0 +1,24 @@
+import {shell,icon} from './repository-shell.mjs';
+import './issue-detail.css';
+const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
+export function issueDetail({closed=false,empty=false,longTitle=false,surface='light',loading=false,denied=false,error=false}={}){
+ const root=shell('',{active:'issues'});root.classList.add('issue-detail-root');root.dataset.surface=surface;
+ const page=root.querySelector('.hgh-page');page.classList.add('issue-detail-page');
+ if(loading){const status=el('p','','Loading issue…');status.setAttribute('role','status');page.append(status);const skeleton=el('div','issue-detail-skeleton');skeleton.setAttribute('aria-hidden','true');page.append(skeleton);return root;}
+ if(denied||error){const state=el('section','issue-detail-state');state.append(el('h1','',denied?'This issue is unavailable':'Could not load the issue'),el('p','',denied?'Sign in with an account that has access, or open the repository to request access.':'The source did not respond. Retry to load this example.'));if(error){const retry=el('button','hgh-control','Retry');retry.onclick=()=>root.replaceWith(issueDetail({surface}));state.append(retry);}page.append(state);return root;}
+ const title=longTitle?'Preserve keyboard focus and selected repository context when a deeply nested navigation menu closes after a branch change':'Preserve focus when closing a nested menu';
+ const heading=el('h1','issue-detail-title',title+' ');heading.append(el('span','issue-detail-number','#42'));page.append(heading);
+ const meta=el('div','issue-detail-meta'),status=el('span','issue-detail-status',closed?'Closed':'Open');status.dataset.state=closed?'closed':'open';const mark=el('span');mark.innerHTML=icon(closed?'issue-closed':'issue-opened');status.prepend(mark);meta.append(status,el('span','','alex opened this issue yesterday · '+(empty?'0':'2')+' comments'));page.append(meta);
+ const layout=el('div','issue-detail-layout'),conversation=el('section','issue-detail-conversation');conversation.setAttribute('aria-label','Issue conversation');
+ const original=el('article','issue-detail-comment'),header=el('header');header.append(el('span','hgh-avatar hgh-small-avatar','A'),el('strong','','alex'),el('span','issue-detail-muted','commented yesterday'));
+ const body=el('div','issue-detail-body');body.append(el('h2','','Expected behavior'),el('p','','When the menu closes, keyboard focus returns to the button that opened it. The selected repository and branch remain unchanged.'),el('h2','','Steps to reproduce'));
+ const steps=el('ol');for(const text of ['Open the branch selector with the keyboard.','Select a nested menu option.','Press Escape and continue with Tab.'])steps.append(el('li','',text));body.append(steps);original.append(header,body);conversation.append(original);
+ if(!empty){conversation.append(comment('Morgan','Confirmed on the mobile layout. Returning focus to the trigger also makes the control easier to find.'));conversation.append(comment('Casey','The regression test should cover Escape and clicking outside the menu.'));}
+ if(closed){const timeline=el('p','issue-detail-timeline','Closed after the focus restoration fix was merged.');conversation.append(timeline);}
+ const form=el('form','issue-detail-form'),label=el('label','','Leave a comment'),input=el('textarea');input.name='comment';input.rows=4;input.placeholder='Add to the discussion…';input.setAttribute('aria-label','Comment');label.append(input);const submit=el('button','hgh-control issue-detail-submit','Comment');submit.type='submit';submit.disabled=true;form.append(label,el('p','issue-detail-muted','Interactive example: comments stay in this page and are not sent to Forgejo.'),submit);conversation.append(form);
+ input.oninput=()=>submit.disabled=!input.value.trim();form.onsubmit=e=>{e.preventDefault();const text=input.value.trim().slice(0,4000);if(!text)return;form.before(comment('You',text));input.value='';submit.disabled=true;root.querySelector('[role=status]').textContent='Comment added to this preview.';};
+ const sidebar=el('aside','issue-detail-sidebar');sidebar.setAttribute('aria-label','Issue details');
+ for(const [name,value] of [['Assignees','No one assigned'],['Labels','accessibility · bug'],['Projects','Interface quality'],['Milestone','No milestone'],['Development','1 linked pull request']]){const block=el('section');block.append(el('h2','',name),el('p','',value));sidebar.append(block);}
+ layout.append(conversation,sidebar);page.append(layout);return root;
+}
+function comment(author,text){const c=el('article','issue-detail-comment'),h=el('header');h.append(el('span','hgh-avatar hgh-small-avatar',author[0]),el('strong','',author),el('span','issue-detail-muted','commented just now'));const b=el('div','issue-detail-body');b.append(el('p','',text));c.append(h,b);return c;}

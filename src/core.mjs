@@ -43,3 +43,17 @@ export function navigationAction(prefix, key) {
 export function normalizeLine(value) {
   return /^[1-9]\d{0,6}$/.test(String(value)) ? Number(value) : null;
 }
+
+/** A non-versioned theme URL may remain cached for six hours after a skin release. */
+export function currentThemeStylesheet(scriptUrl, theme) {
+  if (!themeEnabled(theme)) return null;
+  try {
+    const script = new URL(scriptUrl);
+    if (!['https:', 'http:'].includes(script.protocol) || script.username || script.password) return null;
+    const match = script.pathname.match(/\/assets\/hypergithub\/(\d+\.\d+\.\d+)\/skin\.mjs$/);
+    if (!match) return null;
+    const stylesheet = new URL('../../css/theme-' + theme + '.css', script);
+    stylesheet.searchParams.set('skin', match[1]);
+    return stylesheet.href;
+  } catch { return null; }
+}

@@ -1,7 +1,7 @@
 import {enhanceNativeChrome, restoreNativeChrome} from './mobile-chrome.mjs';
 import {enhanceNativeListOptions, restoreNativeListOptions} from './list-options.mjs';
 /** Progressive enhancements only: existing Forgejo links/forms remain authoritative. */
-import {themeEnabled, acceptKey, safeHref, navigationAction, normalizeLine, isEditable} from './core.mjs';
+import {themeEnabled, currentThemeStylesheet, acceptKey, safeHref, navigationAction, normalizeLine, isEditable} from './core.mjs';
 
 const BOOT = Symbol.for('hypergithub.bootstrap');
 if (!window[BOOT]) {
@@ -23,6 +23,20 @@ function boot() {
   } catch {}
 
   const enabled = () => themeEnabled(root.dataset.theme);
+  function syncReleaseStyles() {
+    const href=currentThemeStylesheet(import.meta.url,root.dataset.theme);
+    let link=document.head.querySelector('link[data-hgh-release-theme]');
+    if(!href){if(link)link.disabled=true;return;}
+    if(!link){
+      link=document.createElement('link');link.rel='stylesheet';link.dataset.hghReleaseTheme='';
+      link.addEventListener('load',()=>{for(const menu of document.querySelectorAll('overflow-menu'))menu.updateItems?.();});
+      link.addEventListener('error',()=>console.warn('Current skin stylesheet could not load; native theme remains available'));
+      document.head.append(link);
+    }
+    link.disabled=false;
+    if(link.href!==href)link.href=href;
+  }
+
   const visible = (element) => !!element && element.getClientRects().length > 0 && !element.closest('[hidden]');
   const usable = (element) => visible(element) && !element.matches('[disabled],[aria-disabled="true"],.disabled');
 
@@ -355,6 +369,7 @@ function boot() {
   });
 
   function enhance() {
+    syncReleaseStyles();
     if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); }
     queued = false;
     if (!enabled()) return;

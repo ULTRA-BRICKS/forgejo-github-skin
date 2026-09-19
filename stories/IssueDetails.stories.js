@@ -1,0 +1,10 @@
+import {issueDetail} from './issue-detail.mjs';
+export default {title:'Screens/Issue detail'};
+export const Open={render:()=>issueDetail()};
+export const Closed={render:()=>issueDetail({closed:true})};
+export const NoComments={render:()=>issueDetail({empty:true})};
+export const LongTitle={render:()=>issueDetail({longTitle:true})};
+export const Dark={render:()=>issueDetail({surface:'dark'})};
+export const Loading={render:()=>issueDetail({loading:true})};
+export const AccessUnavailable={render:()=>issueDetail({denied:true})};
+export const SourceError={render:()=>issueDetail({error:true})};
