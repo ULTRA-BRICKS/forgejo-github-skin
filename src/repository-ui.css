@@ -56,8 +56,8 @@
 .hgh-table-footer{display:block;padding:8px;text-align:center;border-top:1px solid var(--hgh-ui-border);color:var(--hgh-color-link,#0969da)}
 .hgh-path{display:flex;align-items:center;gap:12px;font-size:16px;margin:0 0 16px}.hgh-back{display:flex;align-items:center;gap:8px;color:var(--hgh-ui-muted)}
 .hgh-live-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-@media(max-width:767px){.hgh-desktop-title{display:none}.hgh-repo-nav>a:nth-of-type(3){display:none}.hgh-app-header{gap:12px}.hgh-repo-nav{gap:8px}.hgh-commit-author .hgh-collaborator{display:none}.hgh-repo-about{padding-bottom:18px}.hgh-latest-commit{gap:8px}.hgh-latest-commit>.hgh-plain-control{width:28px;min-width:28px}.hgh-context>span{max-width:calc(100vw - 266px)}.hgh-branch>summary{min-width:104px}}
-@media(max-width:359px){.hgh-app-actions>[aria-label=Notifications]{display:none}.hgh-context>span{max-width:calc(100vw - 226px)}.hgh-control{padding-inline:8px}.hgh-icon-control{padding:0}.hgh-repo-nav{gap:0}.hgh-latest-commit .hgh-commit-age{font-size:12px}}
+@media(max-width:767px){.hgh-desktop-title{display:none}.hgh-repo-nav>a:nth-of-type(3){display:none}.hgh-app-header{gap:12px}.hgh-repo-nav{gap:8px}.hgh-commit-author .hgh-collaborator{display:none}.hgh-repo-about{padding-bottom:18px}.hgh-latest-commit{gap:8px}.hgh-latest-commit>.hgh-plain-control{width:28px;min-width:28px}.hgh-branch>summary{min-width:104px}}
+@media(max-width:359px){.hgh-app-actions>[aria-label=Notifications]{display:none}.hgh-control{padding-inline:8px}.hgh-icon-control{padding:0}.hgh-repo-nav{gap:0}.hgh-latest-commit .hgh-commit-age{font-size:12px}}
 .hgh-sr-only{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
 .hgh-list-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px}.hgh-list-heading h1{font-size:20px;font-weight:600;margin:0}
 .hgh-new-pr{background:var(--hgh-color-primary,#1f883d);color:#fff;border-color:#1f232826}.hgh-new-pr:hover{background:#1a7f37}

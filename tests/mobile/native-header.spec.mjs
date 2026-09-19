@@ -18,3 +18,12 @@ test('native repository brand exists only in footer; restoration retains origina
   await expect(page.locator('footer .hgh-footer-brand')).toHaveCount(0);
   expect(await page.evaluate(() => window.originalToggle === document.querySelector('#navbar-expand-toggle'))).toBe(true);
 });
+
+test('a page without a footer retains its native brand link', async ({ page }) => {
+  await page.setContent('<html data-theme="hypergithub-light"><body><nav id="navbar"><div class="navbar-left"><a id="navbar-logo" href="/">Forgejo</a></div></nav><div class="repo-header"><div class="flex-item-title"><a href="/a/b">repo</a></div></div></body></html>');
+  await page.addStyleTag({content:css});
+  await page.addScriptTag({content:source.replaceAll('export ', '')});
+  await page.evaluate(()=>enhanceNativeChrome());
+  await expect(page.locator('#navbar-logo')).toBeVisible();
+  await expect(page.locator('.hgh-footer-brand')).toHaveCount(0);
+});

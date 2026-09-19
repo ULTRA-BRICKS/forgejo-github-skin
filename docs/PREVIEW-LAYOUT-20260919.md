@@ -21,3 +21,5 @@ The repository header has 16px icons inside 32px controls, without a brand mark.
 `npm run test:mobile` checks the header, footer, controls, native restoration, menus and pixel regressions in Chromium (320/390/440) and WebKit (440). `npm run storybook:test` checks the published story routes. PNG evidence is synthetic and safe for the public gallery.
 
 The native skin deployment uses the existing `packages/forgejo-skin` installer and `glide deploy bread --on-target --skip-edge`. DNS and tunnel state do not change in this release. The previous OMP deployment session confirmed that this is the operator-supported route.
+
+Post-deploy HTTP acceptance requires `FORGEJO_ACCEPTANCE_IMAGE_PATH` from a freshly published Slack test card. It checks the live PNG response, signature, dimensions and alpha channel in addition to the unavailable-resource 204 response. Zero recorded activity remains valid factual data.

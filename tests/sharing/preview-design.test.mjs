@@ -178,3 +178,10 @@ test('unknown facts remain absent while real zero values still get a preview', (
   assert.equal(hasGraphicFacts({summary:{kind:'repository',metrics:[{value:NaN}]}}), false);
   assert.equal(hasGraphicFacts({summary:{kind:'repository',metrics:[{value:0}]}}), true);
 });
+
+test('unknown palette is rejected and zero activity is real data', () => {
+  assert.throws(() => graphic(previewFixtures.file, tokens, sizes, { mode: 'night' }), TypeError);
+  const meta = { private: false, summary: { kind: 'repository', metrics: [], activity: { days: Array(28).fill(0), total: 0, authorCount: 0 } } };
+  assert.equal(hasGraphicFacts(meta), true);
+  assert.ok(graphic(meta, tokens, sizes).includes('0 commits'));
+});

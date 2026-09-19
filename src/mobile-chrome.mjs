@@ -10,7 +10,7 @@ export function enhanceNativeChrome(doc=document){
  const footer=doc.querySelector('footer');
  const footerMark=footer?logo.cloneNode(true):null;
  if(footerMark){footerMark.removeAttribute('id');footerMark.className='hgh-footer-brand';footerMark.setAttribute('aria-label','Forgejo home');for(const el of footerMark.querySelectorAll('[id]'))el.removeAttribute('id');const image=footerMark.querySelector('img');if(image){image.width=20;image.height=20;}footer.append(footerMark);}
- doc.documentElement.dataset.hghRepositoryChrome='true';
+ if(footerMark)doc.documentElement.dataset.hghRepositoryChrome='true';
  const context=doc.createElement('a');context.className='hgh-native-context';context.textContent=repository.textContent.trim();context.href=repository.href;context.title=doc.querySelector('.repo-header .flex-item-title')?.textContent.trim()||context.textContent;context.setAttribute('aria-label','Repository: '+context.title);
  const toggle=nav.querySelector('#navbar-expand-toggle');
  const profile=[...nav.querySelectorAll('.navbar-right>details')].find(el=>el.querySelector('summary img.avatar'));
