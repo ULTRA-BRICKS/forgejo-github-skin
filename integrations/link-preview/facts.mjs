@@ -57,6 +57,7 @@ export function baseFacts(repo, object, link) {
         Array.isArray(object.assignees) ? object.assignees.length : null,
       ),
     ];
+    facts.assignees = Array.isArray(object.assignees) ? object.assignees.slice(0,5).map(x=>short(x.login,40)).filter(Boolean) : [];
     facts.labels = Array.isArray(object.labels)
       ? object.labels.slice(0, 2).map((x) => short(x.name, 22))
       : [];

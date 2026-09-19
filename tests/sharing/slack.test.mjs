@@ -196,8 +196,8 @@ test('unconfigured account linking still provides a validated original URL', asy
   } finally { f.store.close(); }
 });
 
-for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, true], [true, false, true], [true, undefined, false]]) {
-  test(`shared PNG requires actual anonymous source access (${anonymousReadable}, ${privateFlag})`, async () => {
+for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, false], [true, false, false], [true, undefined, false]]) {
+  test(`native text cards require verified visibility and omit redundant PNG (${anonymousReadable}, ${privateFlag})`, async () => {
     const f = fixture();
     f.slack.config = { ...f.slack.config, origin: 'https://links.example' };
     f.slack.forgejo.metadata = async (url, token) => {
@@ -213,24 +213,20 @@ for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, tr
     try {
       await f.slack.unfurl(event());
       const blocks = f.calls.find(call => call.method === 'chat.unfurl').payload.unfurls[raw].blocks;
-      assert.match(JSON.stringify(blocks), /Public object/);
+      if(privateFlag===false)assert.match(JSON.stringify(blocks), /Public object/);
+      else assert.ok(!JSON.stringify(blocks).includes('Public object'));
       assert.equal(blocks.some(block => block.type === 'image'), expectedImage);
     } finally { f.store.close(); }
   });
 }
 
-test('image snapshots require meaningful facts and strip protected code/prose', () => {
-  const f = fixture();
-  f.slack.config = { ...f.slack.config, origin: 'https://links.example' };
+test('image snapshots require useful public facts and refuse protected metadata', () => {
+  const f=fixture();f.slack.config={...f.slack.config,origin:'https://links.example'};
   try {
-    assert.equal(f.slack.imageSnapshot({ private: false, summary: { kind: 'repository', metrics: [{ label: 'Stars', value: null }] } }), null);
-    const url = f.slack.imageSnapshot({ private: true, title: 'SECRET TITLE', description: 'SECRET BODY',
-      summary: { kind: 'file', code: ['SECRET CODE'], metrics: [{ label: 'Bytes', value: 12 }] } });
-    assert.match(url, /^https:\/\/links\.example\/image\/s\/[a-f0-9]{48}$/);
-    const id = url.split('/').at(-1), stored = f.store.get('image:' + id);
-    assert.equal(stored.title, 'Private repository preview');
-    assert.equal(stored.description, '');
-    assert.equal(stored.summary.code, null);
-    assert.ok(!JSON.stringify(stored).includes('SECRET'));
-  } finally { f.store.close(); }
+    assert.equal(f.slack.imageSnapshot({private:false,summary:{metrics:[{label:'Stars',value:null}]}}),null);
+    assert.equal(f.slack.imageSnapshot({private:true,title:'SECRET',summary:{code:['SECRET'],metrics:[{label:'Bytes',value:12}]}}),null);
+    const url=f.slack.imageSnapshot({link:parseForgejoLink(raw,source),private:false,title:'Public',summary:{metrics:[{label:'Stars',value:0}]}});
+    assert.match(url,/^https:\/\/links\.example\/image\/s\/[a-f0-9]{48}$/);
+    assert.deepEqual(f.store.get('image:'+url.split('/').at(-1)),{sourceUrl:raw,version:2});
+  } finally {f.store.close();}
 });

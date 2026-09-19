@@ -50,6 +50,7 @@ for (const [source, destination] of [
   ["preview-v2", "preview-v2"],
   ["mobile-parity", "mobile-parity"],
   ["layout-fixes", "layout-fixes"],
+  ["slack-native", "slack-native"],
 ]) {
   const directory = path.join(root, "research/screenshots", source);
   if (!(await fs.stat(directory).catch(() => null))?.isDirectory()) continue;

@@ -71,15 +71,23 @@ export function parseForgejoLink(raw, configuredBase) {
 }
 
 /** Policy modes:
- * public = verified anonymously readable resource.
+ * public = a fresh public resource declaration, with anonymous access or the configured public-only reader.
  * personal = generic channel card; protected details only after per-viewer auth.
  * disclosed = deliberate, separately authorized copy to a mapped private channel.
  * A disclosed copy is NOT per-viewer ACL protection and is not retroactively erasable.
  */
 export function previewDecision(facts = {}, policy = {}) {
   if (facts.resourceVerified !== true || facts.checkIsFresh !== true) return 'personal';
-  if (facts.visibility === 'public' && facts.anonymousReadable === true) return 'public';
+  if (facts.visibility === 'public' && (facts.anonymousReadable === true || facts.sourceDeclaredPublic === true)) return 'public';
   if (facts.visibility !== 'private') return 'personal';
+  if (policy.privateMode === 'internal-summary') {
+    const channel=facts.channel;
+    const audience=channel && typeof channel.id==='string' && /^[CG][A-Z0-9]+$/.test(channel.id) &&
+      typeof channel.isPrivate==='boolean' && channel.isExternalShared===false && channel.isPendingExternalShared===false &&
+      channel.isShared===false && channel.isOrgShared===false && channel.metadataFresh===true;
+    const approved=Array.isArray(policy.summaryOwners) && policy.summaryOwners.some(rule=>rule.workspaceId===facts.workspaceId && rule.instanceOrigin===facts.instanceOrigin && rule.owner===facts.owner);
+    return audience && approved && facts.source==='conversations_history' && facts.postingUserCanRead===true && facts.postingUserMayDisclose===true ? 'summary' : 'personal';
+  }
   if (policy.privateMode !== 'explicit-channel-disclosure' || facts.postingUserMayDisclose !== true ||
       facts.postingUserCanRead !== true || facts.source !== 'conversations_history') return 'personal';
   if (typeof facts.workspaceId !== 'string' || !/^T[A-Z0-9]+$/.test(facts.workspaceId) ||
@@ -112,10 +120,11 @@ export function protectedCard(opaqueReference, link) {
   return {blocks: [
     {type: 'section', text: {type: 'plain_text', emoji: false,
       text: 'Forgejo preview. Public details are shown in Slack; protected details use your connected Forgejo account.'}},
-    {type: 'actions', elements: [{type: 'button', action_id: 'forgejo_preview',
-      text: {type: 'plain_text', text: 'Preview', emoji: false}, value: opaqueReference},
+    {type: 'actions', elements: [
       ...(link ? [{type: 'button', action_id: 'forgejo_open_original',
-        text: {type: 'plain_text', text: 'Open in Forgejo', emoji: false}, url: link.originalUrl}] : [])]},
+        text: {type: 'plain_text', text: 'Open in Forgejo', emoji: false}, url: link.originalUrl}] : []),
+      {type: 'button', action_id: 'forgejo_settings',
+       text: {type: 'plain_text', text: 'Preview settings', emoji: false}, value: opaqueReference}]},
   ]};
 }
 
@@ -124,13 +133,13 @@ export function protectedCard(opaqueReference, link) {
  */
 export function richCard({facts, policy, link, title, description, status}) {
   const decision = previewDecision(facts, policy);
-  if (!['public', 'disclosed'].includes(decision)) throw new Error('Protected data cannot enter a channel card');
+  if (!['public', 'disclosed', 'summary'].includes(decision)) throw new Error('Protected data cannot enter a channel card');
   if (!link || !parsedLinks.has(link)) throw new TypeError('A link freshly validated by parseForgejoLink is required');
   if (facts?.resourceUrl !== link.resourceUrl) throw new Error('Authorization proof belongs to another resource');
   const name = plain(title, 150) || 'Forgejo';
-  const detail = plain(description, 400);
+  const detail = decision==='summary' ? '' : plain(description, 400);
   const summary = [plain(status, 80), `${link.owner}/${link.repo}`,
-    decision === 'disclosed' ? 'Shared copy • visible to this conversation' : 'Public'].filter(Boolean).join(' · ');
+    ['disclosed','summary'].includes(decision) ? 'Shared copy • visible to this conversation' : 'Public'].filter(Boolean).join(' · ');
   return {blocks: [
     {type: 'header', text: {type: 'plain_text', text: name, emoji: false}},
     {type: 'context', elements: [{type: 'plain_text', text: summary, emoji: false}]},

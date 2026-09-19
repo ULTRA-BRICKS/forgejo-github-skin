@@ -1,6 +1,6 @@
 {
   "name": "@ultrabricks/forgejo-github-skin",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "Opt-in, GitHub-familiar Forgejo skin with measured design references",
@@ -21,7 +21,9 @@
     "sharing:doctor": "node scripts/sharing/doctor.mjs",
     "test:mobile": "playwright test -c playwright.mobile.config.mjs",
     "test:mobile:update": "playwright test -c playwright.mobile.config.mjs --update-snapshots",
-    "test:preview-layout": "node scripts/sharing/check-preview-layout.mjs"
+    "test:preview-layout": "node scripts/sharing/check-preview-layout.mjs",
+    "test:slack-ui": "playwright test -c playwright.slack.config.mjs",
+    "slack:icons": "node scripts/sharing/build-slack-icons.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

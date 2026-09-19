@@ -105,3 +105,10 @@ test("an unknown immutable file size is not fabricated as undefined bytes", asyn
   assert.match(meta.description, /Size unknown/);
   assert.ok(!meta.description.includes("undefined"));
 });
+
+test('public-only service read never fetches private object content',async()=>{
+ const requests=[];
+ const client=new Forgejo('https://forge.example',async(url)=>{requests.push(url);return {id:42,private:true,full_name:'owner/secret'};});
+ const meta=await client.metadata('https://forge.example/owner/secret/issues/1','synthetic-reader',{publicOnly:true,enrich:true});
+ assert.equal(meta,null);assert.equal(requests.length,1);assert.ok(!requests[0].includes('/issues/'));
+});

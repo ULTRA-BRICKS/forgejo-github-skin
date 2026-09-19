@@ -71,7 +71,7 @@ export class Forgejo {
       throw new Error("Invalid API route");
     return this.request(this.base + "/api/v1" + route, { token });
   }
-  async metadata(raw, token, { enrich = false } = {}) {
+  async metadata(raw, token, { enrich = false, publicOnly = false } = {}) {
     const link = this.parse(raw);
     if (!link) return null;
     const route =
@@ -87,7 +87,7 @@ export class Forgejo {
       typeof repo.full_name !== "string"
     )
       throw new Error("Invalid repository metadata");
-    if (!token && repo.private !== false) return null;
+    if ((!token || publicOnly) && repo.private !== false) return null;
     let obj = repo,
       title = repo.full_name,
       description = repo.description,
@@ -143,10 +143,19 @@ export class Forgejo {
         summary.activity = null;
       }
     }
+    if(enrich && link.kind==='pull' && /^[a-f0-9]{40,64}$/i.test(obj.head?.sha||'')){
+      try{
+        const checks=await this.api(route+'/commits/'+obj.head.sha+'/status',token);
+        if(checks && Number.isSafeInteger(checks.total_count) && checks.total_count>=0 && Array.isArray(checks.statuses)){
+          summary.checks={state:['success','failure','error','pending','warning'].includes(checks.state)?checks.state:'unknown',total:checks.total_count,passed:checks.statuses.filter(x=>x.status==='success').length};
+        }
+      }catch{summary.checks=null;}
+    }
     if (link.kind === "file")
       description = `${Number.isSafeInteger(obj.size) && obj.size >= 0 ? obj.size + " bytes" : "Size unknown"} · immutable revision ${link.sha.slice(0, 8)}`;
     return {
       summary,
+      updatedAt: typeof (obj.updated_at||repo.updated_at)==='string' && Number.isFinite(Date.parse(obj.updated_at||repo.updated_at)) ? new Date(obj.updated_at||repo.updated_at).toISOString() : null,
       link,
       repositoryId: String(repo.id),
       repository: repo.full_name,
