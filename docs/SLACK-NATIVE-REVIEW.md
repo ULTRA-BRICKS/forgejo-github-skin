@@ -9,3 +9,5 @@ Tracking: issue #7. First reviewed source checkpoint: c5331e5. The staged source
 Actual browser acceptance also found a native-skin defect: Forgejo renders a hidden-dialog footer before its page footer. The logo enhancer now selects the page footer explicitly; the test reproduces both footers and asserts that the visible page footer receives the mark. The versioned skin is 0.1.5.
 
 Public image locators preserve current-visibility checks. No private content is stored in a durable image snapshot. Old links are resolved through their source URL again before any cached bytes are returned.
+
+The follow-up review reproduced a Slack 429 and an overlapping request after the persisted processing lease expired. HTTP 429 now follows the bounded Retry-After policy, and an in-process single-flight set keeps the live operation exclusive until settlement. Regression tests cover both conditions without sleeping for a lease timeout.

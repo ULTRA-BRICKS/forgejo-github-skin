@@ -1,13 +1,15 @@
 import {randomBytes} from 'node:crypto';
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const transient=error=>error.status>=500||['internal_error','service_unavailable','request_timeout'].includes(error.slackCode)||['AbortError','TimeoutError','TypeError'].includes(error.name);
+const activeByStore=new WeakMap();
+const transient=error=>error.status===429||error.slackCode==='ratelimited'||error.status>=500||['internal_error','service_unavailable','request_timeout'].includes(error.slackCode)||['AbortError','TimeoutError','TypeError'].includes(error.name);
 
 /** Claim before HTTP acknowledgement; complete the marker only after Slack accepts the response. */
 export function dispatchEntityDetails(envelope,store,respond,{pause=wait}={}) {
  const key='entity-event:'+envelope.event_id;
- if(store.get(key))return null;
+ let active=activeByStore.get(store);if(!active){active=new Set();activeByStore.set(store,active);}
+ if(active.has(key)||store.get(key))return null;
  const attemptId=randomBytes(12).toString('hex'),started=Date.now();
- store.put(key,{state:'processing',attemptId},45);
+ store.put(key,{state:'processing',attemptId},45);active.add(key);
  return (async()=>{
   try{
    for(let attempt=0;attempt<2;attempt++){
@@ -24,6 +26,6 @@ export function dispatchEntityDetails(envelope,store,respond,{pause=wait}={}) {
   }catch(error){
    if(store.get(key)?.attemptId===attemptId)store.take(key);
    throw error;
-  }
+  }finally{active.delete(key);}
  })();
 }
