@@ -1,0 +1,63 @@
+{
+  "results": [
+    {
+      "kind": "file",
+      "width": 480,
+      "height": 160,
+      "alpha": 0.9012152777777778,
+      "status": "passed"
+    },
+    {
+      "kind": "repository",
+      "width": 480,
+      "height": 136,
+      "alpha": 0.8913194444444444,
+      "status": "passed"
+    },
+    {
+      "kind": "pull",
+      "width": 480,
+      "height": 136,
+      "alpha": 0.8989123774509804,
+      "status": "passed"
+    },
+    {
+      "kind": "commit",
+      "width": 480,
+      "height": 136,
+      "alpha": 0.9060117102396514,
+      "status": "passed"
+    },
+    {
+      "kind": "issue",
+      "width": 480,
+      "height": 136,
+      "alpha": 0.9223839188453159,
+      "status": "passed"
+    },
+    {
+      "kind": "privateRepository",
+      "width": 480,
+      "height": 136,
+      "alpha": 0.9518569580610022,
+      "status": "passed"
+    },
+    {
+      "kind": "privatePull",
+      "width": 480,
+      "height": 136,
+      "alpha": 0.900265522875817,
+      "status": "passed"
+    }
+  ],
+  "baseline": "63d35b4",
+  "regression": "Original file lines 15\u201316 exceeded the viewBox; now all exported text stays inside it.",
+  "mobile": {
+    "startTime": "2026-09-19T08:49:10.228Z",
+    "duration": 7559.865000000001,
+    "expected": 56,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

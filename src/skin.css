@@ -359,3 +359,11 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-left>.switch{display:flex;flex-wrap:wrap;min-width:0}
  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-right{order:1;min-width:32px;width:auto!important;margin-left:auto!important;flex:0 0 32px!important}
 }
+
+/* Repository brand belongs to the footer; native controls keep their target size. */
+html[data-hgh-repository-chrome] #navbar #navbar-logo {display:none!important}
+html[data-hgh-repository-chrome] #navbar :is(.hgh-native-toggle,.hgh-native-search,#mobile-notifications-icon) svg {width:16px!important;height:16px!important}
+html[data-hgh-repository-chrome] #navbar .hgh-native-profile > summary {display:flex;align-items:center;justify-content:center}
+html[data-hgh-repository-chrome] #navbar .hgh-native-profile > summary img {width:24px!important;height:24px!important;border-radius:50%}
+html[data-hgh-repository-chrome] footer .hgh-footer-brand {display:inline-flex;align-items:center;justify-content:center;padding:8px;flex:none;margin:0 8px;color:inherit}
+html[data-hgh-repository-chrome] footer .hgh-footer-brand img {width:20px;height:20px;object-fit:contain}

@@ -1,236 +1,128 @@
-// One pure renderer for production PNGs and Storybook. No network or HTML injection.
-const esc = (s) =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
-const cut = (value, n) => {
-  const chars = [...String(value ?? "").toWellFormed()];
-  return chars.length > n
-    ? chars.slice(0, n - 1).join("") + "…"
-    : chars.join("");
+// Shared by the production PNG exporter and Storybook. Layout is in logical pixels.
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[c]));
+const cut = (value, limit) => {
+  const chars = [...String(value ?? '').slice(0, 4096).toWellFormed()];
+  return chars.length > limit ? chars.slice(0, limit - 1).join('') + '…' : chars.join('');
 };
-const num = (value) =>
-  value === null || value === undefined
-    ? "—"
-    : typeof value === "number" && value >= 10000
-      ? new Intl.NumberFormat("en", {
-          notation: "compact",
-          maximumFractionDigits: 1,
-        }).format(value)
-      : String(value);
-const syntaxSegments = (line) => {
-  const pattern = /(\b(?:const|let|var|function|return|if|else|for|while|async|await|import|export|from|true|false|null)\b|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b\d+(?:\.\d+)?\b|\/\/.*$)/g;
-  const out = []; let last = 0;
-  for (const match of String(line).matchAll(pattern)) {
-    if (match.index > last) out.push({ text: line.slice(last, match.index), tone: "text" });
+const num = value => value == null ? '—' : typeof value === 'number' && value >= 10000
+  ? new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+  : String(value);
+const color = token => '#' + token.$value.components.map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+const hasValue = value => typeof value === 'number' ? Number.isFinite(value) && value >= 0 : typeof value === 'string' && value.trim().length > 0;
+export function hasGraphicFacts(meta) {
+  const fact = meta?.summary;
+  return !!fact && ((fact.metrics || []).some(m => hasValue(m.value)) ||
+    (fact.code || []).some(line => typeof line === 'string' && line.length) ||
+    (fact.activity?.days || []).some(n => Number.isFinite(n) && n >= 0));
+}
+function codeLines(meta) {
+  return (meta.summary?.code || []).slice(0, 5).map(line => String(line).slice(0, 4096).replace(/\r/g, '').replace(/\t/g, '    ').toWellFormed());
+}
+/** One geometry source for SVG viewBox, PNG viewport and Open Graph dimensions. */
+export function graphicLayout(meta, tokens) {
+  const dim = name => tokens.preview[name].$value.value;
+  const width = dim('width'), baseHeight = dim('height'), gap = dim('gutter');
+  const lines = codeLines(meta), codeStart = 64, codeStep = dim('lineHeight');
+  const codeEnd = codeStart + Math.max(0, lines.length - 1) * codeStep;
+  const codeFooter = codeEnd + 20;
+  const height = meta.summary?.kind === 'file' && lines.length
+    ? Math.max(baseHeight, codeFooter + 12) : baseHeight;
+  return { width, height, gap, lines, codeStart, codeStep, codeFooter,
+    header: 22, rule: 32, metadata: 46, metricValue: 58, metricLabel: 75,
+    chartTop: 87, chartBottom: 109, detail: 106, footer: height - 12 };
+}
+function syntaxSegments(line) {
+  const pattern = /(\/\/.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:const|let|var|function|return|if|else|for|while|async|await|import|export|from|class|new|throw|true|false|null|undefined)\b|\b\d+(?:\.\d+)?\b)/g;
+  const result = []; let end = 0;
+  for (const match of line.matchAll(pattern)) {
+    if (match.index > end) result.push({ text: line.slice(end, match.index), tone: 'text' });
     const token = match[0];
-    const tone = token.startsWith("//") ? "muted" : /^["']/.test(token) ? "success" : /^\d/.test(token) ? "danger" : "link";
-    out.push({ text: token, tone }); last = match.index + token.length;
+    const tone = token.startsWith('//') ? 'muted' : /^["']/.test(token) ? 'success' : /^\d/.test(token) ? 'danger' : 'link';
+    result.push({ text: token, tone }); end = match.index + token.length;
   }
-  if (last < line.length) out.push({ text: line.slice(last), tone: "text" });
-  return out;
-};
-const color = (token) =>
-  "#" +
-  token.$value.components
-    .map((x) =>
-      Math.round(x * 255)
-        .toString(16)
-        .padStart(2, "0"),
-    )
-    .join("");
-export function graphic(
-  meta,
-  baseTokens,
-  previewTokens,
-  { mode = "adaptive" } = {},
-) {
-  const spec = previewTokens.preview,
-    palette = baseTokens.color[mode === "adaptive" ? "light" : mode],
-    c = Object.fromEntries(
-      Object.entries(palette).map(([k, v]) => [k, color(v)]),
-    );
-  if (mode === "adaptive") { c.text = "#66707b"; c.muted = "#7d8590"; c.border = "#8c959f"; c.success = "#1a7f37"; c.danger = "#cf222e"; c.link = "#0969da"; }
-  const dim = (name) => spec[name].$value.value,
-    W = dim("width"),
-    H = dim("height"),
-    G = dim("gutter"),
-    label = dim("labelSize");
-  const fact = meta.summary || {
-      kind: "repository",
-      metrics: [],
-      activity: null,
-    },
-    brand = meta.brand || { name: "Code host", initials: "CH" };
-  const textStroke = mode === "adaptive" ? ' paint-order="stroke" stroke="white" stroke-opacity=".76" stroke-width="1.05" stroke-linejoin="round"' : "";
-  const t = (
-    x,
-    y,
-    text,
-    {
-      size = label,
-      tone = "text",
-      weight = 400,
-      anchor = "start",
-      mono = false,
-    } = {},
-  ) =>
-    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${mono ? ' xml:space="preserve" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"' : ""}${textStroke}>${esc(text)}</text>`;
-  const line = (x, y, x2, y2, tone = "border", width = 1) =>
-    `<path d="M${x},${y}L${x2},${y2}" fill="none" stroke="${c[tone]}" stroke-width="${width}"/>`;
-  const safeLogo =
-    typeof brand.logoData === "string" &&
-    /^data:image\/(?:png|webp);base64,[A-Za-z0-9+/=]+$/.test(brand.logoData) &&
-    brand.logoData.length < 200000;
-  let mark = safeLogo
-    ? `<image x="${G}" y="16" width="${dim("logoSize")}" height="${dim("logoSize")}" preserveAspectRatio="xMidYMid meet" href="${brand.logoData}"/>`
-    : `<rect x="${G}" y="16" width="22" height="22" rx="4" fill="${c.text}"/>${t(G + 11, 32, cut(brand.initials || brand.name, 2).toUpperCase(), { size: 12, tone: "canvas", weight: 650, anchor: "middle" })}`;
-  if (safeLogo && mode === "dark")
-    mark =
-      `<rect x="${G - 2}" y="14" width="26" height="26" rx="4" fill="${color(baseTokens.color.light.subtle)}"/>` +
-      mark;
-  let body =
-    mark +
-    t(G + 32, 33, cut(brand.name, 24), { weight: 650 }) +
-    t(
-      W - G,
-      33,
-      `${fact.kind === "pull" ? "PR" : fact.kind === "repository" ? "REPO" : String(fact.kind).toUpperCase()}${fact.number ? " #" + fact.number : ""}`,
-      { tone: "muted", anchor: "end" },
-    );
-  body += line(G, 49, W - G, 49);
-  if (meta.private !== false && !meta.summary) {
-    body +=
-      t(G, 97, "Protected link", { size: 26, weight: 650 }) +
-      t(G, 134, "Details require your own access.", { tone: "muted" }) +
-      t(G, 188, "Open the original to continue.", { tone: "muted" });
-  } else if (fact.kind === "file") {
-    const code = (fact.code || []).slice(0, 5);
-    body += t(
-      G,
-      73,
-      `${num(fact.metrics?.[0]?.value)} bytes · ${fact.sha || "—"}`,
-      { tone: "muted" },
-    );
-    if (!code.length)
-      body += t(G, 121, "No text preview available", { tone: "muted" });
-    code.forEach((text, i) => {
-      body += t(
-        G,
-        99 + i * dim("lineHeight"),
-        String((fact.lineStart || 1) + i),
-        { tone: "muted", size: dim("codeSize"), mono: true },
-      );
-      let codeX = G + 40;
-      for (const segment of syntaxSegments(cut(text, 39))) {
-        body += t(codeX, 99 + i * dim("lineHeight"), segment.text, {
-          size: dim("codeSize"), tone: segment.tone, mono: true,
-        });
-        codeX += [...segment.text].length * dim("codeSize") * 0.61;
-      }
+  if (end < line.length) result.push({ text: line.slice(end), tone: 'text' });
+  return result;
+}
+export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } = {}) {
+  if (!hasGraphicFacts(meta)) return '';
+  if (!['adaptive', 'light', 'dark'].includes(mode)) throw new TypeError('Unknown preview palette');
+  const layout = graphicLayout(meta, previewTokens);
+  const { width: W, height: H, gap: G } = layout;
+  const dim = name => previewTokens.preview[name].$value.value;
+  const c = Object.fromEntries(Object.entries(baseTokens.color[mode === 'adaptive' ? 'light' : mode]).map(([k, v]) => [k, color(v)]));
+  if (mode === 'adaptive') Object.assign(c, {
+    text: '#66707b', muted: '#6e7781', border: '#8c959f',
+    success: '#1a7f37', danger: '#cf222e', link: '#0969da',
+  });
+  const stroke = mode === 'adaptive' ? ' paint-order="stroke" stroke="white" stroke-opacity=".76" stroke-width=".8" stroke-linejoin="round"' : '';
+  const text = (x, y, value, { size = dim('labelSize'), tone = 'text', weight = 400, anchor = 'start', attrs = '' } = {}) =>
+    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${stroke}${attrs}>${esc(value)}</text>`;
+  const line = (x1, y1, x2, y2) => `<path d="M${x1},${y1}L${x2},${y2}" fill="none" stroke="${c.border}" stroke-opacity=".5"/>`;
+  const fact = meta.summary, brand = meta.brand || { name: 'Code host', initials: 'CH' };
+  const safeLogo = typeof brand.logoData === 'string' && /^data:image\/(?:png|webp);base64,[A-Za-z0-9+/=]+$/.test(brand.logoData) && brand.logoData.length < 200000;
+  const mark = safeLogo
+    ? `<image x="${G}" y="8" width="18" height="18" preserveAspectRatio="xMidYMid meet" href="${brand.logoData}"/>`
+    : `<rect x="${G}" y="8" width="18" height="18" rx="3" fill="none" stroke="${c.text}"/>` + text(G + 9, 21, cut(brand.initials || brand.name, 2).toUpperCase(), { size: 9, weight: 650, anchor: 'middle' });
+  const kind = fact.kind === 'pull' ? 'PR' : fact.kind === 'repository' ? 'REPO' : String(fact.kind).toUpperCase();
+  let body = `<g data-preview-header>${mark}${text(G + 26, layout.header, cut(brand.name, 24), { weight: 650 })}${text(W - G, layout.header, kind + (fact.number ? ' #' + fact.number : ''), { tone: 'muted', anchor: 'end' })}</g>` + line(G, layout.rule, W - G, layout.rule);
+  if (fact.kind === 'file' && layout.lines.length) {
+    const start = Number.isSafeInteger(fact.lineStart) && fact.lineStart > 0 ? fact.lineStart : 1;
+    const lastNumber = start + layout.lines.length - 1;
+    const codeSize = dim('codeSize');
+    const numberWidth = String(lastNumber).length * codeSize * .65;
+    const codeX = G + Math.max(30, numberWidth + 12);
+    const maxChars = Math.max(8, Math.floor((W - G - codeX) / (codeSize * .66)));
+    body += text(G, layout.metadata, `${num(fact.metrics?.find(m => m.label === 'Bytes')?.value)} bytes · ${cut(fact.sha || '—', 12)}`, { tone: 'muted', size: 11, attrs: ' data-preview-metadata' });
+    layout.lines.forEach((source, i) => {
+      const y = layout.codeStart + i * layout.codeStep;
+      body += text(G, y, String(start + i), { tone: 'muted', size: codeSize, attrs: ' data-line-number font-family="ui-monospace, SFMono-Regular, Menlo, monospace"' });
+      // A single SVG text run lets the browser position tokens, preserving spaces and glyph widths.
+      const spans = syntaxSegments(cut(source, maxChars)).map(token => `<tspan fill="${c[token.tone]}" data-tone="${token.tone}">${esc(token.text)}</tspan>`).join('');
+      body += `<text data-code-row="${i}" x="${codeX}" y="${y}" xml:space="preserve" font-size="${codeSize}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"${stroke}>${spans}</text>`;
     });
-    body += t(
-      G,
-      H - 14,
-      `Lines ${fact.lineStart || 1}–${(fact.lineStart || 1) + Math.max(0, code.length - 1)} · excerpt only`,
-      { tone: "muted" },
-    );
+    body += text(G, layout.codeFooter, `Lines ${start}–${lastNumber} · excerpt only`, { tone: 'muted', size: 11, attrs: ' data-preview-footer' });
   } else {
-    const metrics = (fact.metrics || []).slice(0, 4),
-      step = (W - 2 * G) / Math.max(1, metrics.length);
-    metrics.forEach((item, i) => {
-      const value = cut(num(item.value), 8);
-      const size =
-        typeof item.value === "string"
-          ? Math.min(dim("textValueSize"), dim("numberSize"))
-          : Math.min(
-              dim("numberSize"),
-              Math.floor(
-                (step - dim("metricGap")) /
-                  Math.max(1, [...value].length) /
-                  0.64,
-              ),
-            );
-      body += t(G + i * step, 90, value, {
-        size: Math.max(label, size),
-        weight: 650,
-        tone: item.tone,
+    const metrics = (fact.metrics || []).filter(m => hasValue(m.value)).slice(0, 4);
+    const step = (W - 2 * G) / Math.max(1, metrics.length);
+    for (const [i, item] of metrics.entries()) {
+      const value = cut(num(item.value), 10);
+      const preferred = typeof item.value === 'string' ? dim('textValueSize') : dim('numberSize');
+      const size = Math.max(12, Math.min(preferred, (step - dim('metricGap')) / Math.max(1, [...value].length) / .68));
+      body += `<g data-metric="${i}">${text(G + i * step, layout.metricValue, value, { size, weight: 650, tone: item.tone })}${text(G + i * step, layout.metricLabel, cut(item.label, 13), { size: 11, tone: 'muted' })}</g>`;
+    }
+    if (fact.kind === 'repository' && fact.activity?.days?.length) {
+      const activity = fact.activity, days = activity.days.slice(0, 28).map(n => Number.isFinite(n) && n > 0 ? n : 0);
+      const max = Math.max(1, ...days), step = (W - 2 * G) / 28;
+      body += '<g data-preview-chart>';
+      days.forEach((count, i) => {
+        if (count) { const h = count / max * (layout.chartBottom - layout.chartTop);
+          body += `<rect x="${G + i * step + 1}" y="${layout.chartBottom - h}" width="${step - 3}" height="${h}" rx="1" fill="${c.success}"/>`; }
       });
-      body += t(G + i * step, 115, cut(item.label, 12), { tone: "muted" });
-    });
-    if (fact.kind === "repository" && fact.activity) {
-      const a = fact.activity,
-        max = Math.max(1, ...a.days),
-        startY = 179,
-        chartY = 137,
-        barWidth = (W - 2 * G) / 28;
-      a.days.slice(0, 28).forEach((value, i) => {
-        if (value > 0)
-          body += `<rect x="${G + i * barWidth + 1}" y="${startY - (value / max) * (startY - chartY)}" width="${barWidth - 3}" height="${(value / max) * (startY - chartY)}" rx="1" fill="${c.text}"/>`;
-      });
-      body +=
-        t(W - G, 134, `max ${max}/day`, { tone: "muted", anchor: "end" }) +
-        line(G, startY, W - G, startY) +
-        t(
-          G,
-          204,
-          `${a.total}${a.sampled ? "+" : ""} commits · ${a.authorCount} authors`,
-          { tone: "muted" },
-        ) +
-        t(W - G, 204, `28d · ${a.end.slice(5)}`, {
-          tone: "muted",
-          anchor: "end",
-        });
-    } else if (fact.kind === "pull" || fact.kind === "commit") {
-      const add = fact.metrics?.find((x) => x.label === "Added")?.value,
-        del = fact.metrics?.find((x) => x.label === "Removed")?.value;
-      if (typeof add === "number" && typeof del === "number" && add + del > 0) {
-        const span = W - 2 * G;
-        body += `<rect x="${G}" y="137" width="${(span * add) / (add + del)}" height="5" fill="${c.success}"/><rect x="${G + (span * add) / (add + del)}" y="137" width="${(span * del) / (add + del)}" height="5" fill="${c.danger}"/>`;
+      body += line(G, layout.chartBottom, W - G, layout.chartBottom) + '</g>';
+      body += text(G, layout.footer, cut(`${num(activity.total)}${activity.sampled ? '+' : ''} commits · ${num(activity.authorCount)} authors`, 37), { tone: 'muted', size: 11, attrs: ' data-preview-footer' });
+      body += text(W - G, layout.footer, '28d' + (activity.end ? ' · ' + String(activity.end).slice(5, 10) : ''), { tone: 'muted', size: 11, anchor: 'end' });
+    } else if (fact.kind === 'pull' || fact.kind === 'commit') {
+      const add = fact.metrics?.find(m => m.label === 'Added')?.value;
+      const del = fact.metrics?.find(m => m.label === 'Removed')?.value;
+      if (Number.isFinite(add) && Number.isFinite(del) && add >= 0 && del >= 0 && add + del > 0) {
+        const span = W - 2 * G, plus = span * add / (add + del);
+        body += `<g data-preview-diff><rect x="${G}" y="86" width="${plus}" height="4" fill="${c.success}"/><rect x="${G + plus}" y="86" width="${span - plus}" height="4" fill="${c.danger}"/></g>`;
       }
-      const detail =
-        fact.kind === "pull"
-          ? `${fact.base || "base"} ← ${fact.head || "head"}`
-          : `${fact.sha} · ${num(fact.metrics?.find((x) => x.label === "Parents")?.value)} parent(s)`;
-      body += t(G, 173, cut(detail, 45), { tone: "muted" });
-      body +=
-        t(G, 204, cut(fact.author || "Author unavailable", 25), {
-          tone: "muted",
-        }) +
-        t(W - G, 204, fact.created || "Date unavailable", {
-          tone: "muted",
-          anchor: "end",
-        });
-    } else if (fact.kind === "issue") {
-      body +=
-        t(
-          G,
-          155,
-          cut(fact.author ? `by ${fact.author}` : "Author unavailable", 25),
-          { tone: "muted" },
-        ) +
-        t(W - G, 155, fact.created || "—", { tone: "muted", anchor: "end" });
-      body += t(G, 190, cut(fact.labels?.join(" · ") || "No labels", 46), {
-        tone: "muted",
-      });
-      if (fact.updated && fact.updated !== fact.created)
-        body += t(W - G, 215, "Updated " + fact.updated, {
-          tone: "muted",
-          anchor: "end",
-        });
+      const detail = fact.kind === 'pull' ? `${fact.base || 'base'} ← ${fact.head || 'head'}` : `${fact.sha || '—'} · ${num(fact.metrics?.find(m => m.label === 'Parents')?.value)} parent(s)`;
+      body += text(G, layout.detail, cut(detail, 54), { size: 11, tone: 'muted', attrs: ' data-preview-detail' });
+      if (fact.author) body += text(G, layout.footer, cut(fact.author, 30), { size: 11, tone: 'muted', attrs: ' data-preview-footer' });
+      if (fact.created) body += text(W - G, layout.footer, cut(fact.created, 10), { size: 11, tone: 'muted', anchor: 'end' });
+    } else if (fact.kind === 'issue') {
+      if (fact.author) body += text(G, 94, cut('by ' + fact.author, 30), { size: 11, tone: 'muted' });
+      if (fact.created) body += text(W - G, 94, cut(fact.created, 10), { size: 11, tone: 'muted', anchor: 'end' });
+      if (fact.labels?.length) body += text(G, 109, cut(fact.labels.join(' · '), 58), { size: 11, tone: 'muted' });
+      if (fact.updated && fact.updated !== fact.created) body += text(W - G, layout.footer, 'Updated ' + cut(fact.updated, 10), { size: 11, tone: 'muted', anchor: 'end', attrs: ' data-preview-footer' });
     } else {
-      body +=
-        t(G, 160, "Activity not available", { tone: "muted" }) +
-        t(G, 204, fact.language || "No language reported", { tone: "muted" }) +
-        t(W - G, 204, fact.updated || "Date unavailable", {
-          tone: "muted",
-          anchor: "end",
-        });
+      if (fact.language) body += text(G, layout.footer, cut(fact.language, 25), { size: 11, tone: 'muted' });
+      if (fact.updated) body += text(W - G, layout.footer, cut(fact.updated, 10), { size: 11, tone: 'muted', anchor: 'end' });
     }
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(fact.kind + " facts; title and description are in the message text")}" style="display:block;width:100%;height:auto;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;font-variant-numeric:tabular-nums">${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(fact.kind + ' facts; title and description are in the message text')}" style="display:block;width:100%;height:auto;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;font-variant-numeric:tabular-nums">${body}</svg>`;
 }

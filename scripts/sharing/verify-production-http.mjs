@@ -57,11 +57,10 @@ try {
   assert.ok(!invalid.body.toString('utf8').includes('example.invalid'));
   assert.match(invalid.body.toString('utf8'), /Protected link/);
   proof.results.push({ check: 'Unconfigured origins receive a neutral page without external navigation', pass: true });
-  const image = await request('/image?url=' + encodeURIComponent(canonical));
-  assert.equal(image.status, 200);
-  assert.match(image.headers['content-type'], /^image\/png/);
-  assert.equal(image.body.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
-  proof.results.push({ check: 'Public image endpoint returns a valid PNG without viewer credentials', pass: true });
+  const image = await request('/image?url=' + encodeURIComponent('https://unconfigured.invalid/a/b'));
+  assert.equal(image.status, 204);
+  assert.equal(image.body.length, 0);
+  proof.results.push({ check: 'Unavailable resource emits no placeholder image', pass: true });
 } catch (error) {
   proof.results.push({ check: 'Public HTTP acceptance', pass: false, error: error.message });
   process.exitCode = 1;

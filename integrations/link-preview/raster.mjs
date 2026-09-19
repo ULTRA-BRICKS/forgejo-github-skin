@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { browserSession } from "./browser-session.mjs";
 import path from "node:path";
-import { graphic } from "./graphic.mjs";
+import { graphic, graphicLayout, hasGraphicFacts } from "./graphic.mjs";
 import { loadPlaywright } from "../../scripts/playwright.mjs";
 const root = path.resolve(import.meta.dirname, "../..");
 const tokens = JSON.parse(
@@ -15,11 +15,13 @@ const session = browserSession(async () => {
   return chromium.launch({ headless: true });
 });
 export async function renderGraphic(meta) {
+  if (!hasGraphicFacts(meta)) throw new TypeError("No renderable preview facts");
+  const layout = graphicLayout(meta, sizes);
   const instance = await session.get();
   const context = await instance.newContext({
     viewport: {
-      width: sizes.preview.width.$value.value,
-      height: sizes.preview.height.$value.value,
+      width: layout.width,
+      height: layout.height,
     },
     deviceScaleFactor: sizes.preview.scale.$value,
     colorScheme: "light",
