@@ -1,3 +1,5 @@
+import {HomeDispatcher} from './home-dispatch.mjs';
+import {homeView} from './slack-home.mjs';
 import {textOnlyCard} from './slack-presentation.mjs';
 import {publicMetadata} from './public-metadata.mjs';
 import { composeSlackCard, visualAddsInformation } from "./unfurl-layout.mjs";
@@ -17,6 +19,7 @@ async function resolveBatch(values,resolve) {
 export class SlackIntegration {
   constructor(config, store, forgejo, oauth) {
     Object.assign(this, { config, store, forgejo, oauth });
+    this.homeDispatcher=new HomeDispatcher(event=>this.publishHome(event));
   }
   async call(method, payload) {
     if (
@@ -25,6 +28,7 @@ export class SlackIntegration {
         "entity.presentDetails",
         "views.open",
         "views.update",
+        "views.publish",
         "conversations.info",
         "auth.test",
       ].includes(method)
@@ -176,15 +180,35 @@ export class SlackIntegration {
     if(user_auth_url)return this.call('entity.presentDetails',{trigger_id:event.trigger_id,user_auth_required:true,user_auth_url});
     return this.call('entity.presentDetails',{trigger_id:event.trigger_id,error:{status:'restricted',actions:[{text:'Open in Forgejo',action_id:'forgejo_open_original',url:link.originalUrl}]}});
   }
+  queueHome(envelope) {
+    if(envelope.team_id!==this.config.slack.teamId||envelope.api_app_id!==this.config.slack.appId||envelope.event?.tab!=='home'||!/^U[A-Z0-9]+$/.test(envelope.event.user||''))return null;
+    return this.homeDispatcher.enqueue(envelope);
+  }
+  async publishHome(envelope) {
+    const event=envelope.event;
+    if(envelope.team_id!==this.config.slack.teamId||envelope.api_app_id!==this.config.slack.appId||event?.tab!=='home'||!/^U[A-Z0-9]+$/.test(event.user||''))return;
+    let connected=false,connectionError=false;
+    try{connected=!!(await this.oauth.access(envelope.team_id,event.user,this.config.forgejo));}catch{connectionError=true;}
+    const connectUrl=this.oauth.ticket(envelope.team_id,event.user,this.config.forgejo);
+    return this.call('views.publish',{user_id:event.user,view:homeView(this.preferences(envelope.team_id,event.user),{origin:this.config.forgejo,connected,connectionError,connectUrl})});
+  }
   async openSettings(payload,reference) {
     const ref=this.store.get('ref:'+reference);
     if(!ref||ref.team!==payload.team.id)return this.call('views.open',{trigger_id:payload.trigger_id,view:this.modal([{type:'section',text:{type:'plain_text',text:'This settings link has expired. Refresh the preview and open its settings again.'}}])});
-    const id=randomBytes(24).toString('hex');
-    this.store.put('settings:'+id,{team:payload.team.id,user:payload.user.id,url:ref.url},600);
-    const prefs=this.preferences(payload.team.id,payload.user.id),connect=this.oauth.ticket(payload.team.id,payload.user.id,ref.url);
-    return this.call('views.open',{trigger_id:payload.trigger_id,view:settingsView(id,prefs,{connect,url:ref.url})});
+    return this.openSourceSettings(payload,ref.url);
   }
-  submitSettings(payload) {return saveSettings(payload,this.config,this.store);}
+  async openSourceSettings(payload,url) {
+    const id=randomBytes(24).toString('hex');
+    this.store.put('settings:'+id,{team:payload.team.id,user:payload.user.id,url,home:payload.view?.type==='home'&&payload.view?.callback_id==='forgejo_home'},600);
+    const prefs=this.preferences(payload.team.id,payload.user.id),connect=this.oauth.ticket(payload.team.id,payload.user.id,url);
+    return this.call('views.open',{trigger_id:payload.trigger_id,view:settingsView(id,prefs,{connect,url})});
+  }
+  submitSettings(payload) {
+    const session=this.store.get('settings:'+payload.view?.private_metadata);
+    const result=saveSettings(payload,this.config,this.store);
+    if(result&&!result.response_action&&session?.home)this.queueHome({team_id:payload.team.id,api_app_id:payload.api_app_id,event:{user:payload.user.id,tab:'home'}})?.task.catch(()=>console.warn('App Home refresh failed; reopen Home to retry'));
+    return result;
+  }
   modal(blocks) {
     return {
       type: "modal",
@@ -200,6 +224,10 @@ export class SlackIntegration {
     )
       return;
     const action = payload.actions?.[0];
+    if(payload.view?.type==='home'&&payload.view?.callback_id==='forgejo_home'&&/^U[A-Z0-9]+$/.test(payload.user?.id||'')){
+      if(action?.action_id==='forgejo_home_settings')return this.openSourceSettings(payload,this.config.forgejo);
+      if(action?.action_id==='forgejo_home_refresh')return this.queueHome({team_id:payload.team.id,api_app_id:payload.api_app_id,event:{user:payload.user.id,tab:'home'}})?.task;
+    }
     if(action?.action_id==='forgejo_settings'&&/^[a-f0-9]{48}$/.test(action.value||''))return this.openSettings(payload,action.value);
     if(action?.action_id==='forgejo_more'&&/^settings:[a-f0-9]{48}$/.test(action.selected_option?.value||''))return this.openSettings(payload,action.selected_option.value.slice(9));
     // URL actions open their native destination; the signed HTTP request has already been acknowledged.
