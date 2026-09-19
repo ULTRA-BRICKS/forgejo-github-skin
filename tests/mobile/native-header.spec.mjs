@@ -27,3 +27,16 @@ test('a page without a footer retains its native brand link', async ({ page }) =
   await expect(page.locator('#navbar-logo')).toBeVisible();
   await expect(page.locator('.hgh-footer-brand')).toHaveCount(0);
 });
+
+test('native chrome releases old navbar and avoids duplicated SVG ids',async({page})=>{
+ await page.setContent('<html lang="ru" data-theme="hypergithub-light"><body><nav id="navbar"><div class="navbar-left"><a id="navbar-logo" href="/">Forgejo</a></div><div class="navbar-right"></div><a href="/explore/repos">Explore</a><button id="navbar-expand-toggle">Menu</button><svg class="octicon-search" id="original-search"><path id="original-path"/></svg></nav><div class="repo-header"><div class="flex-item-title"><a href="/a/b">repo</a></div></div><footer></footer></body></html>');
+ await page.addStyleTag({content:css});
+ await page.evaluate(()=>{const original=window.matchMedia;window.chromeBalance=0;window.matchMedia=q=>{const m=original(q),add=m.addEventListener.bind(m),remove=m.removeEventListener.bind(m);m.addEventListener=(t,f,...a)=>{if(t==='change')window.chromeBalance++;return add(t,f,...a)};m.removeEventListener=(t,f,...a)=>{if(t==='change')window.chromeBalance--;return remove(t,f,...a)};return m;};});
+ await page.addScriptTag({content:source.replaceAll('export ','')});
+ await page.evaluate(()=>enhanceNativeChrome());
+ await expect(page.locator('#original-search')).toHaveCount(1);await expect(page.locator('#original-path')).toHaveCount(1);
+ await expect(page.locator('.hgh-native-search')).toHaveAttribute('aria-label','Поиск репозиториев');
+ await page.evaluate(()=>{document.querySelector('#navbar').remove();enhanceNativeChrome();});
+ expect(await page.evaluate(()=>window.chromeBalance)).toBe(0);
+ await expect(page.locator('.hgh-footer-brand')).toHaveCount(0);
+});
