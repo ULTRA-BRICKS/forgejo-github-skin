@@ -109,6 +109,7 @@ export function workObject(model,{postedUrl,externalId}) {
   for(const field of model.fields){if(field.key==='status'&&model.entityType==='slack#/entities/task'){const {key,label,...rest}=field;fields.status=rest;order.push('status');}
     else if(field.key==='file_size'&&model.entityType==='slack#/entities/file'){fields.file_size={value:field.value};order.push('file_size');}
     else addCustom(field);}
+  if(model.limited)addCustom({key:'personal_access',label:'My access',type:'string',long:true,value:'Connect your own Forgejo account: … → Connect my account. Then choose View with my access.'});
   if(model.density==='detailed' && model.author && model.entityType!=='slack#/entities/item'){fields.created_by={type:'slack#/types/user',user:{text:model.author}};order.push('created_by');}
   if(model.density==='detailed' && model.updated && model.entityType!=='slack#/entities/item')fields.date_updated={value:model.updated,type:'slack#/types/timestamp'};
   if(model.codeImageUrl)addCustom({key:'code_preview',label:'Code excerpt',type:'slack#/types/image',image_url:model.codeImageUrl,alt_text:'Syntax-highlighted '+model.codeLanguage+' excerpt; open the file for selectable source'});

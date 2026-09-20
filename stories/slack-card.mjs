@@ -37,7 +37,6 @@ export function renderSlackCard(options={}){
    cell.append(text);grid.append(cell);
   }
   contents.append(grid);
-  if(model.limited)contents.append(element('p','wo-privacy','Use … → Connect my account to see the details available to you.'));
  }
  card.append(contents);
  const footer=element('footer','wo-card-footer'),status=element('span','wo-timestamp','As of 10:00 AM');footer.append(status);

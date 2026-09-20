@@ -136,3 +136,14 @@ test('public entity refresh preserves its registered reference and highlighted-c
   assert.equal(slack.imageSnapshot({...sample,summary:undefined}),null);
  }finally{store.close();}
 });
+
+test('private connection guidance is sent in real Work Object metadata, not only drawn by Storybook',()=>{
+ const model=buildPresentation(meta('file',true),{settingsReference:reference});
+ const entity=workObject(model,{postedUrl:model.url,externalId:'e'});
+ const field=entity.entity_payload.custom_fields.find(f=>f.key==='personal_access');
+ assert.match(field?.value||'',/Connect my account/);
+ assert.equal(field.long,true);
+ assert.ok(entity.entity_payload.display_order.includes('personal_access'));
+ const personal=buildPresentation(meta('file',true),{audience:'viewer'});
+ assert.ok(!workObject(personal,{postedUrl:personal.url,externalId:'e'}).entity_payload.custom_fields.some(f=>f.key==='personal_access'));
+});
