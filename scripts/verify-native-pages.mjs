@@ -26,7 +26,7 @@ try{
    assert.ok(data.documentWidth<=width+1);
    if(width<768&&name==='organization'){assert.ok(data.creationY<data.repositoriesY);assert.ok(data.repositoriesY<data.membersY);}
    if(width<768&&name==='pull'){assert.equal(data.activeTabVisible,true);assert.ok(data.tabs.every(t=>t.right<=width&&t.scroll<=t.client+1));
-    await page.getByRole('button',{name:'More items',exact:true}).click();const settings=page.getByRole('link',{name:'Settings',exact:true});await settings.waitFor();assert.ok((await settings.getAttribute('href')).endsWith('/settings'));await page.keyboard.press('Escape');data.settingsMenuReachable=true;}
+    await page.getByRole('button',{name:'More items',exact:true}).click();const settings=page.getByRole('menuitem',{name:'Settings',exact:true});await settings.waitFor();assert.ok((await settings.getAttribute('href')).endsWith('/settings'));await page.keyboard.press('Escape');data.settingsMenuReachable=true;}
    await page.screenshot({path:path.join(output,name+'-'+width+'.png'),animations:'disabled',mask:[page.locator('#navbar img.avatar')],maskColor:'#d1d9e0'});
    receipt.results.push({name,...data,passed:true});
   }finally{await page.close();}
