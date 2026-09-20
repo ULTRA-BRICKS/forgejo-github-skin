@@ -23,13 +23,13 @@ for(const kind of ['repository','pull','issue','commit','file'])test(kind+': nat
  assert.equal(result.entity.entity_type,kind==='file'?'slack#/entities/file':['issue','pull'].includes(kind)?'slack#/entities/task':'slack#/entities/item');
  const actions=result.entity.entity_payload.actions;
  assert.ok(actions.primary_actions.length>=1&&actions.primary_actions.length<=2);assert.ok(actions.overflow_actions.length<=5);
- for(const action of [...actions.primary_actions,...actions.overflow_actions]){if(action.url)assert.equal(new URL(action.url).origin,origin);else assert.equal(action.action_id,'forgejo_settings');}
+ for(const action of [...actions.primary_actions,...actions.overflow_actions]){if(action.url)assert.equal(new URL(action.url).origin,origin);else {assert.ok(['forgejo_settings','forgejo_account','forgejo_personal'].includes(action.action_id));assert.equal(action.value,ref);};}
  assert.ok(result.card.preview.title.text.length<=150);
  if(['repository','commit'].includes(kind))assert.equal(result.entity.entity_payload.fields,undefined);
 });
 test('canonical PR action paths do not append files after a fragment or existing subpage',()=>{
  const link=parseForgejoLink(repo+'/pulls/23/files#issuecomment-45',origin),actions=linkActions(link,ref);
- assert.equal(actions.primary_actions[1].url,repo+'/pulls/23/files');assert.equal(actions.overflow_actions[0].url,repo+'/pulls/23/commits');
+ assert.equal(actions.primary_actions[1].url,repo+'/pulls/23/files');assert.equal(actions.overflow_actions.find(a=>a.action_id==='forgejo_open_commits').url,repo+'/pulls/23/commits');
 });
 test('plain source metadata never expands Slack mentions or repeated title prefixes',()=>{
  const m=metadata();m.title='PR #23: <@U123> *boom*';m.description='<!everyone> hostile';

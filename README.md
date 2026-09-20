@@ -2,7 +2,7 @@
 
 **[Live Storybook](https://forgejo-ui.vercel.app/)** · **[Real Forgejo demo](https://forgejo-ui-demo.hyperide.ai/demo-author/keyboard-lab)** · **[Danny: English installation guide](docs/DANNY-INSTALL.md)**
 
-Storybook is hosted independently on Vercel. The real synthetic demo is Mac-hosted through a dedicated supervised tunnel and requires the Mac to remain online. Production is unchanged.
+Storybook is hosted independently on Vercel. The production skin is deployed on `git.hyperide.ai` through `hyperide/glide-infra`. The separate synthetic demo and Slack preview receiver currently remain Mac-hosted; moving the receiver is tracked independently from the skin release.
 
 GitHub-familiar, opt-in UI/UX layer for Forgejo without maintaining a Forgejo fork. The target instance currently runs Forgejo 16.0.3; compatibility is gated against the reviewed upstream source fingerprints.
 
@@ -57,7 +57,7 @@ Loading and empty-state references are checked in as `feedback-loading.png` and 
 
 ### Keyboard parity
 
-The skin keeps GitHub's familiar key chords where Forgejo exposes the same safe action. The live `?` dialog is page-aware and only advertises commands whose native destination/control exists for the current page and permissions. The complete compatibility matrix is in [`docs/hotkeys.md`](docs/hotkeys.md).
+The skin keeps GitHub's familiar key chords where Forgejo exposes the same safe action. The **Shortcuts** entry (keyboard icon; under **File actions** on mobile) opens a page-aware dialog that only advertises commands whose native destination/control exists for the current page and permissions. The complete compatibility matrix is in [`docs/hotkeys.md`](docs/hotkeys.md).
 
 ![GitHub-compatible repository shortcuts](research/screenshots/storybook/hotkeys-repository.png)
 
@@ -69,6 +69,6 @@ The gaps are deliberate rather than placeholders: GitHub-only features (for exam
 
 [Live sharing walkthrough](https://forgejo-links.hyperide.ai/) · [Integration setup and security boundaries](integrations/link-preview/README.md).
 
-Public Open Graph/PNG cards and real synthetic Forgejo OAuth/private reads are verified. A real classic Slack web card is captured. The installed Slack app still needs its runtime credentials and event verification; protected in-Slack unfurls are **not yet verified**. Production is unchanged.
+Public Open Graph/PNG cards and real synthetic Forgejo OAuth/private reads are verified. A real classic Slack web card is captured. The installed Slack app supports native Work Object links, direct source actions and per-user account linking. Choose **… → Connect my account**; personal source permissions are checked on each **View with my access**. Shared private cards intentionally omit protected descriptions and code. Personal details are shown in a viewer-scoped modal rather than metadata that could refresh the shared Work Object. See `docs/ACCEPTANCE-020.md` for the release checks and boundaries.
 
 ![Actual classic Slack web preview, not an authenticated app unfurl](research/screenshots/sharing/slack-public-preview.png)

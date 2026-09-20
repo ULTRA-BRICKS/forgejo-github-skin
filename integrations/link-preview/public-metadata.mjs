@@ -20,5 +20,7 @@ export async function publicMetadata({config,forgejo,oauth},raw) {
 export async function publicImageMetadata(runtime, locator) {
   const raw=locator?.sourceUrl || locator?.link?.originalUrl;
   if(typeof raw!=="string" || !runtime.forgejo.parse(raw))return null;
-  return publicMetadata(runtime,raw);
+  const meta=await publicMetadata(runtime,raw);
+  if(locator.view==='code'){if(!meta?.summary?.code?.length)return null;return {...meta,previewVariant:'code'};}
+  return meta;
 }

@@ -1,3 +1,4 @@
+import {syntaxSegments} from '../integrations/link-preview/graphic.mjs';
 import {slackFixture} from './slack-fixtures.mjs';
 import {bindDisclosure} from '../src/list-options.mjs';
 import {icon} from './repository-shell.mjs';
@@ -25,17 +26,22 @@ export function renderSlackCard(options={}){
    const cell=element('div','wo-field');if(field.long)cell.classList.add('wo-wide');cell.dataset.key=key;
    cell.append(element('div','wo-field-label',field.label));
    const value=field.type==='slack#/types/user'?field.user.text:field.value;
+   if(key==='code_excerpt'){
+    const pre=element('pre','wo-code');pre.dataset.language=model.codeLanguage;
+    for(const source of model.code){const row=element('span','wo-code-line');for(const token of syntaxSegments(source)){const span=element('span','',token.text);span.dataset.tone=token.tone;row.append(span);}pre.append(row);}
+    cell.append(pre);grid.append(cell);continue;
+   }
+
    if(field.type==='slack#/types/image'){const image=element('img','wo-additional-chart');image.src=field.image_url;image.alt=field.alt_text;cell.classList.add('wo-wide');cell.append(image);grid.append(cell);continue;}
    const text=element(field.link?'a':'div','wo-field-value',value);if(field.link)text.href=field.link;if(field.tag_color){text.classList.add('wo-tag');text.dataset.color=field.tag_color;}
    cell.append(text);grid.append(cell);
   }
   contents.append(grid);
-  if(model.limited)contents.append(element('p','wo-privacy','Internal summary · private code and descriptions remain in Forgejo.'));
  }
  card.append(contents);
  const footer=element('footer','wo-card-footer'),status=element('span','wo-timestamp','As of 10:00 AM');footer.append(status);
  const refresh=svgButton('Refresh preview','sync');refresh.onclick=()=>{status.textContent='Just refreshed';announce('Preview refreshed from the synthetic source.');};footer.append(refresh);
- const action=(item)=>{const el=element(item.url?'a':'button','wo-action',item.text);if(item.url)el.href=item.url;else el.type='button';el.dataset.actionId=item.action_id;if(item.action_id==='forgejo_settings')el.onclick=()=>openSettings(el);return el;};
+ const action=(item)=>{const el=element(item.url?'a':'button','wo-action',item.text);if(item.url)el.href=item.url;else el.type='button';el.dataset.actionId=item.action_id;if(item.action_id==='forgejo_settings')el.onclick=()=>openSettings(el);if(item.action_id==='forgejo_account')el.onclick=()=>openAccount(el);if(item.action_id==='forgejo_personal')el.onclick=()=>{root.replaceWith(renderSlackCard({...options,personal:true,account:false,actionsOpen:false}));};return el;};
  const primary=element('div','wo-primary');for(const item of payload.actions.primary_actions)primary.append(action(item));
  const more=element('details','wo-more'),summary=element('summary','wo-icon-button');summary.setAttribute('aria-label','More actions');summary.innerHTML=icon('kebab-horizontal',16);
  const menu=element('div','wo-menu');menu.setAttribute('role','group');menu.setAttribute('aria-label','More actions');
@@ -45,6 +51,13 @@ export function renderSlackCard(options={}){
  const live=element('p','wo-result');live.setAttribute('role','status');root.append(live);
  function announce(text){live.textContent=text;}
  root.addEventListener('click',event=>{const anchor=event.target.closest('a');if(anchor&&root.contains(anchor)){event.preventDefault();announce('Opens directly: '+anchor.href);}});
+ function openAccount(trigger){
+  more.open=false;const dialog=element('dialog','wo-settings');dialog.setAttribute('aria-label','My Forgejo account');
+  dialog.append(element('h2','','My Forgejo account'),element('p','',options.connected?'Your own Forgejo account is connected.':'Connect your own Forgejo account to view the details available to you.'),element('p','','Your permissions are checked for each personal view. Private details are not posted to the channel.'));
+  const connect=element('button','wo-action',options.connected?'Reconnect my account':'Connect my account');connect.onclick=()=>announce('Starts browser sign-in for the clicking person; this fixture never issues real credentials.');
+  const close=element('button','wo-action','Close');close.onclick=()=>dialog.close();dialog.append(connect,close);root.append(dialog);
+  dialog.addEventListener('close',()=>{trigger?.focus();dialog.remove();});dialog.showModal();
+ }
  function openSettings(trigger){
   more.open=false;let dialog=root.querySelector('dialog');if(dialog)dialog.remove();dialog=element('dialog','wo-settings');dialog.setAttribute('aria-label','Preview settings');
   const form=element('form');form.method='dialog';form.append(element('h2','','Preview settings'),element('p','','Preferences apply to links you share next.'));
@@ -55,6 +68,7 @@ export function renderSlackCard(options={}){
   const controls=element('div','wo-setting-buttons'),cancel=element('button','','Cancel'),save=element('button','wo-save','Save');cancel.value='cancel';save.value='save';controls.append(cancel,save);form.append(controls);dialog.append(form);root.append(dialog);
   dialog.addEventListener('close',()=>{if(dialog.returnValue==='save'){for(const select of form.querySelectorAll('select'))root.dataset[select.name]=select.value;announce('Preferences saved for the next shared link.');}trigger?.focus();});dialog.showModal();
  }
+ if(options.account)queueMicrotask(()=>openAccount(summary));
  if(options.actionsOpen)more.open=true;if(options.settings)queueMicrotask(()=>openSettings(summary));
  return root;
 }

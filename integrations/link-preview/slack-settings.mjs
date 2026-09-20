@@ -6,8 +6,8 @@ export function settingsView(id,prefs,{connect,url}) {
     select('density','Information density','density',[option('Compact','compact'),option('Detailed','detailed')]),
     select('visuals','Supplemental charts','visuals',[option('Only when they add information','auto'),option('Text and fields only','off')]),
     select('format','Slack presentation','format',[option('Native work objects','native'),option('Compatible Block Kit cards','blocks')]),
-    {type:'actions',elements:[...(connect?[{type:'button',action_id:'forgejo_connect',text:{type:'plain_text',text:'Connect Forgejo'},url:connect}]:[]),{type:'button',action_id:'forgejo_open_original',text:{type:'plain_text',text:'Open source'},url}]},
-    {type:'context',elements:[{type:'plain_text',text:'Private previews share only an approved internal summary. Code and private descriptions remain in Forgejo.'}]},
+    {type:'actions',elements:[...(connect?[{type:'button',action_id:'forgejo_connect',text:{type:'plain_text',text:'Connect my account'},url:connect}]:[]),{type:'button',action_id:'forgejo_open_original',text:{type:'plain_text',text:'Open source'},url}]},
+    {type:'context',elements:[{type:'plain_text',text:'Each person connects their own Forgejo account. Personal views use your permissions; private details are not posted to the channel.'}]},
   ]};
 }
 export function saveSettings(payload,config,store) {
