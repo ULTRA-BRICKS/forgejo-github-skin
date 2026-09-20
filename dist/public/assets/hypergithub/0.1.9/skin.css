@@ -449,3 +449,17 @@ html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list) {box-shadow:in
  html[data-hgh-ready] #repo-files-table tr:not(.commit-list)>td.name {display:table-cell;width:auto}
  html[data-hgh-ready] #repo-files-table td.name>a {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
 }
+
+/* A flex item's default min-content width must not widen an entire PR diff.
+   Source lines scroll inside the diff body; file actions and labels remain visible. */
+@media(max-width:767px) {
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository :is(#diff-content-container,#diff-file-boxes,.diff-file-box) {min-width:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-header {gap:8px!important;min-width:0!important;max-width:100%;box-sizing:border-box}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name {flex:1 1 100%!important;min-width:0;overflow-wrap:anywhere}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-header-actions {max-width:100%;min-width:0;flex-wrap:wrap!important}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-body {min-width:0;max-width:100%;overflow-x:auto}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file {min-width:0;gap:4px;overflow:hidden}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file>.file-link {min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file>.ui.label {flex:0 0 auto;white-space:nowrap}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file>button {flex:0 0 auto}
+}
