@@ -1,3 +1,4 @@
+import {assertNativeRoute} from './native-route.mjs';
 import {chromium} from '@playwright/test';import fs from 'node:fs/promises';
 const browser=await chromium.connectOverCDP('http://127.0.0.1:9223'),context=browser.contexts()[0];
 const {version}=JSON.parse(await fs.readFile(new URL('../package.json',import.meta.url),'utf8'));
@@ -8,8 +9,8 @@ let next=0;const results=[];
 await Promise.all(Array.from({length:2},async()=>{while(next<tasks.length){const job=tasks[next++],p=await context.newPage(),errors=[];p.setDefaultTimeout(15000);p.on('pageerror',e=>errors.push(e.message));
  try{
   await p.setViewportSize({width:job.width,height:956});await p.emulateMedia({colorScheme:job.scheme,reducedMotion:'reduce'});
-  const response=await p.goto(job.url,{waitUntil:'load'});await p.locator('html[data-hgh-ready]').waitFor({state:'attached'});await p.evaluate(()=>document.fonts.ready);
-  const measure=await p.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth,theme:document.documentElement.dataset.theme,skin:document.querySelector('link[data-hgh-release-theme]')?.href,title:document.title}));
+  const response=await p.goto(job.url,{waitUntil:'load'});assertNativeRoute(p.url(),job.url);await p.locator('.page-content.repository').waitFor();await p.locator('html[data-hgh-ready]').waitFor({state:'attached'});await p.waitForFunction(version=>{const link=document.querySelector('link[data-hgh-release-theme]');return link?.sheet&&new URL(link.href).searchParams.get('skin')===version;},version);await p.evaluate(()=>document.fonts.ready);
+  const measure=await p.evaluate(()=>({scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth,theme:document.documentElement.dataset.theme,skin:document.querySelector('link[data-hgh-release-theme]')?.href,title:document.title,actualUrl:location.href}));
   const pass=response.status()===200&&measure.scrollWidth<=job.width+1&&errors.length===0;
   await p.screenshot({path:out+'/'+job.name+'-'+job.width+'-'+job.scheme+'.png',mask:[p.locator('img.avatar')],maskColor:'#cbd1d6',animations:'disabled'});
   results.push({...job,...measure,status:response.status(),errors,pass});if(!pass)console.log('FAIL',results.at(-1));
