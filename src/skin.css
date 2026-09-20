@@ -395,3 +395,57 @@ html[data-hgh-repository-chrome] footer .hgh-footer-brand img {width:20px;height
  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav #settings-btn.item{box-sizing:border-box;width:32px;min-width:32px;max-width:32px;padding-inline:8px!important;justify-content:center}
  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav #settings-btn.item>.resize-for-semibold{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 }
+
+/* Native repository controls: joined counters, one mobile action menu, balanced search. */
+html[data-hgh-ready] .repo-buttons {display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button {box-sizing:border-box;display:inline-flex;align-items:center;gap:0;height:32px;min-height:32px;padding:0!important;margin:0!important;border:1px solid var(--hgh-color-border)!important;border-radius:6px!important;background:var(--hgh-color-subtle)!important;box-shadow:none}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button>.button {display:inline-flex;gap:6px;align-items:center;border:0!important;border-radius:6px!important;min-height:30px!important;height:30px!important;padding:0 9px!important;box-shadow:none!important;background:transparent!important;margin:0}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button>.label {display:inline-flex;align-items:center;justify-content:center;position:static!important;min-height:20px!important;height:20px!important;line-height:20px!important;border:0!important;border-radius:999px!important;margin:0 6px 0 0!important;padding:0 6px!important;background:var(--hgh-color-counter)!important;font-size:12px!important;min-width:20px}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button>.label:before {display:none!important}
+html[data-hgh-ready] .repo-buttons :is(svg,.svg) {width:16px;height:16px;flex:none;margin-block:0}
+html[data-hgh-ready] .hgh-clone>summary {display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;min-height:32px;box-sizing:border-box;padding:0 14px;font-size:14px;line-height:20px;border-radius:6px;cursor:pointer;list-style:none}
+html[data-hgh-ready] .hgh-clone>summary::-webkit-details-marker {display:none}
+html[data-hgh-ready] .hgh-clone>summary>svg {fill:currentColor;flex:none}
+html[data-hgh-ready] .hgh-help-button {display:inline-flex;align-items:center;gap:8px}
+html[data-hgh-ready] .hgh-help-button svg {fill:none;flex:none}
+html[data-hgh-ready] .code-search {background:transparent;padding:0!important;border:0!important;margin:8px 0 12px}
+html[data-hgh-ready] .code-search .action.input {display:flex;align-items:stretch;width:100%;height:36px;border:1px solid var(--hgh-color-border);border-radius:6px;background:var(--hgh-color-canvas)}
+html[data-hgh-ready] .code-search .action.input>input {min-width:0;flex:1;width:0;border:0;border-radius:6px 0 0 6px!important;padding:6px 12px;font-size:14px;box-shadow:none}
+html[data-hgh-ready] .code-search .action.input>.selection.dropdown {display:flex;align-items:center;gap:8px;flex:0 0 auto;min-width:100px;width:auto;height:34px;min-height:34px;padding:0 10px;border:0;border-left:1px solid var(--hgh-color-border);border-radius:0!important;background:var(--hgh-color-subtle);font-size:13px}
+html[data-hgh-ready] .code-search .selection.dropdown>svg {position:static!important;order:1;width:12px;height:12px;margin-left:auto}
+html[data-hgh-ready] .code-search .action.input>button {min-width:36px;width:36px;height:34px;min-height:34px;margin:0;border:0;border-left:1px solid var(--hgh-color-border);border-radius:0 6px 6px 0!important;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:none}
+html[data-hgh-ready] #repo-files-table .commit-list {background:var(--hgh-color-subtle)}
+html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list)>td {border-top:1px solid var(--hgh-color-border)}
+@media(max-width:767px){
+ html[data-hgh-repository-chrome] .repository.file .repo-header>.flex-item {display:none}
+ html[data-hgh-ready] .repository>.ui.container>.repo-buttons {margin:0 0 16px}
+ html[data-hgh-ready] .repo-buttons .button .not-mobile {display:inline!important;font-size:13px}
+ html[data-hgh-ready] .repo-button-row[data-hgh-repo-controls] {display:flex;flex-wrap:nowrap;gap:8px;width:100%;min-width:0;margin:18px 0 12px}
+ html[data-hgh-ready] [data-hgh-repo-controls]>.button-sequence {display:contents!important}
+ html[data-hgh-ready] [data-hgh-repo-controls]>div:has(>.hgh-clone) {display:contents!important}
+ html[data-hgh-ready] [data-hgh-repo-controls] .js-branch-tag-selector {min-width:0;flex:1;max-width:calc(100% - 132px)}
+ html[data-hgh-ready] [data-hgh-repo-controls] .branch-dropdown-button {max-width:100%;width:auto;min-width:100px;height:32px;min-height:32px;padding-block:0!important}
+ html[data-hgh-ready] [data-hgh-repo-controls] .hgh-clone {margin-left:auto;flex:none}
+ html[data-hgh-ready] [data-hgh-repo-controls] .hgh-clone>summary {width:84px}
+ html[data-hgh-ready] .hgh-repo-more>.hgh-options-panel {width:260px;padding:8px}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.button {display:flex;width:100%;min-height:36px;justify-content:flex-start;border:0!important;box-shadow:none!important;background:transparent;margin:0!important;text-align:left;padding:8px!important;font-size:14px}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.button:hover {background:var(--hgh-color-subtle)!important}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.dropdown>.menu {position:relative!important;inset:auto!important;width:100%;min-width:0;box-shadow:none!important;border:0!important}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.dropdown {flex-wrap:wrap}
+ html[data-hgh-ready] .repo-description {margin-bottom:12px}
+ html[data-hgh-ready] .repository-summary {border:0!important;box-shadow:none!important;border-radius:0;margin:16px 0!important;color:var(--hgh-color-muted)}
+ html[data-hgh-ready] .repository-summary .ui.segment {border:0!important;box-shadow:none!important;padding:0 0 10px}
+ html[data-hgh-ready] .repository-summary .language-stats {height:5px;min-height:5px}
+ html[data-hgh-ready] .code-search .action.input>.selection.dropdown {min-width:80px;padding-inline:8px;font-size:12px}
+}
+html[data-hgh-ready] #new-pull-request>.hgh-control-label {display:none}
+html[data-hgh-ready] .hgh-repo-more #new-pull-request>.hgh-control-label {display:inline}
+@media(max-width:359px){html[data-hgh-ready] .repo-buttons .button .not-mobile{display:none!important}html[data-hgh-ready] .repo-buttons {gap:6px}}
+
+html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list)>td {border-top:0}
+html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list) {box-shadow:inset 0 1px 0 var(--hgh-color-border)}
+@media(max-width:767px){
+ html[data-hgh-repository-chrome] .repository.file .repo-header:not(:has(.repo-buttons)) {display:none}
+ html[data-hgh-ready] #repo-files-table tr:not(.commit-list)>td.name {display:table-cell;width:auto}
+ html[data-hgh-ready] #repo-files-table td.name>a {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+}

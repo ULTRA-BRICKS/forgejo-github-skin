@@ -10,7 +10,7 @@ export const slackCases={
  DetailedPullRequest:{kind:'pull',density:'detailed'},LongTitle:{kind:'pull',longTitle:true},RepositoryWithoutActivity:{kind:'repository',activity:false},
  DarkPullRequest:{kind:'pull',surface:'dark'},DarkFile:{kind:'file',surface:'dark'},MobilePullRequest:{kind:'pull',width:360},
  ConnectAccount:{kind:'pull',state:'connect'},AccessDenied:{kind:'issue',state:'denied'},Loading:{kind:'repository',state:'loading'},Expired:{kind:'file',state:'expired'},
- Settings:{kind:'pull',settings:true},ActionsMenu:{kind:'pull',actionsOpen:true},DarkActions:{kind:'pull',actionsOpen:true,surface:'dark'},
+ FileTextSyntax:{kind:'file',textCode:true},FileImageDark:{kind:'file',surface:'dark'},ConnectedAccount:{kind:'pull',private:true,account:true,connected:true},ConnectMyAccount:{kind:'pull',private:true,account:true},PersonalPrivateFile:{kind:'file',private:true,personal:true},Settings:{kind:'pull',settings:true},ActionsMenu:{kind:'pull',actionsOpen:true},DarkActions:{kind:'pull',actionsOpen:true,surface:'dark'},
 };
 export function slackFixture(options={}){
  const kind=options.kind||'pull',base=structuredClone(previewFixtures[kind]);
@@ -28,8 +28,8 @@ export function slackFixture(options={}){
  if(options.checks)base.summary.checks=options.checks;
  if(options.activity===false)base.summary.activity=null;
  if(options.longTitle)base.title='A deliberately long pull request title with keyboard-navigation-and-context-preservation details that must wrap cleanly on a narrow phone without clipping the status or actions';
- const activityImage=new URL('../assets/slack-examples/activity.png',import.meta.url).href;
- const model=buildPresentation(base,{density:options.density,settingsReference:'b'.repeat(48),imageUrl:activityImage});model.icon=icons[kind];
+ const activityImage=kind==='file'?new URL('../assets/slack-examples/code.png',import.meta.url).href:new URL('../assets/slack-examples/activity.png',import.meta.url).href;
+ const model=buildPresentation(base,{density:options.density,settingsReference:'b'.repeat(48),imageUrl:options.textCode?null:activityImage,audience:options.personal?'viewer':'conversation'});model.icon=icons[kind];
  const stateIcons={Merged:new URL('../assets/slack-icons/pull-merged.png',import.meta.url).href,Draft:new URL('../assets/slack-icons/pull-draft.png',import.meta.url).href,Closed:new URL('../assets/slack-icons/pull-closed.png',import.meta.url).href};
  if(kind==='pull'&&stateIcons[base.status])model.icon=stateIcons[base.status];
  if(kind==='issue'&&base.status==='Closed')model.icon=new URL('../assets/slack-icons/issue-closed.png',import.meta.url).href;

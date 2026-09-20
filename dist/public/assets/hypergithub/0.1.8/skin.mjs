@@ -1,3 +1,4 @@
+import {enhanceRepositoryControls, restoreRepositoryControls} from './repository-controls.mjs';
 import {enhanceNativeChrome, restoreNativeChrome} from './mobile-chrome.mjs';
 import {enhanceNativeListOptions, restoreNativeListOptions} from './list-options.mjs';
 /** Progressive enhancements only: existing Forgejo links/forms remain authoritative. */
@@ -381,7 +382,8 @@ function boot() {
         const details = document.createElement('details');
         details.className = 'hgh-clone';
         const summary = document.createElement('summary');
-        summary.textContent = `‹› ${t('Code', 'Код')} ▾`;
+        summary.innerHTML = `<span>${t('Code', 'Код')}</span><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="m4 6 4 4 4-4Z"/></svg>`;
+        summary.setAttribute('aria-label',t('Clone repository','Клонировать репозиторий'));
         panel.before(details);
         details.append(summary, panel);
         details.addEventListener('toggle', () => {
@@ -400,12 +402,18 @@ function boot() {
           button.type = 'button';
           button.dataset.hghHelp = '';
           button.className = 'ui basic compact button hgh-help-button';
-          button.textContent = '?';
+          button.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1" y="3" width="14" height="10" rx="2" fill="none" stroke="currentColor"/><path d="M3 6h1m2 0h1m2 0h1m2 0h1M3 8h1m2 0h1m2 0h1m2 0h1M4 10h8" stroke="currentColor"/></svg><span>'+t('Shortcuts','Горячие клавиши')+'</span>';
+          button.title=t('Keyboard shortcuts','Горячие клавиши');
           button.setAttribute('aria-label', t('Keyboard shortcuts', 'Горячие клавиши'));
-          button.addEventListener('click', help);
+          button.addEventListener('click', () => {
+            const menu=button.closest('.hgh-repo-more');
+            if(menu?.open){menu.open=false;menu.querySelector('summary')?.focus();}
+            help();
+          });
           host.append(button);
         }
       }
+      enhanceRepositoryControls(document);
       root.dataset.hghReady = 'true';
     } finally {
       if (enabled()) bodyObserver.observe(document.body, {childList: true, subtree: true});
@@ -529,6 +537,7 @@ function boot() {
       ['e', '.non-diff-file-content a[href*="/_edit/"], a[href*="/_edit/"]'],
     ]);
     const selector = selectors.get(key);
+    if(selector){const target=document.querySelector(selector),menu=target?.closest('.hgh-repo-more');if(menu&&usable(menu.querySelector('summary')))menu.open=true;}
     if (selector && navigate(firstUsable(selector))) event.preventDefault();
   });
 
@@ -546,6 +555,7 @@ function boot() {
   new MutationObserver(() => {
     syncBodyObserver();
     if (!enabled()) {
+      restoreRepositoryControls(document);
       restoreNativeListOptions(document);
       restoreNativeChrome(document);
       closeMenus();

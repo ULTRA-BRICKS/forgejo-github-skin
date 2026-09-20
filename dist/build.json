@@ -1,11 +1,12 @@
 {
-  "version": "0.1.7",
+  "version": "0.1.8",
   "tokenCount": 98,
   "files": [
     "skin.css",
     "skin.mjs",
     "core.mjs",
     "list-options.mjs",
+    "repository-controls.mjs",
     "mobile-chrome.mjs",
     "repository-ui.css"
   ],

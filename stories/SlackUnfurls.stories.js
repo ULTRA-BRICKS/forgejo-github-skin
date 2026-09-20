@@ -37,3 +37,9 @@ export const AppHomeDisconnected={render:()=>renderSlackHome({connected:false})}
 export const AppHomeConnectionError={render:()=>renderSlackHome({connected:false,connectionError:true})};
 export const AppHomeDark={render:()=>renderSlackHome({surface:"dark"})};
 export const AppHomeSettings={render:()=>renderSlackHome({settings:true})};
+
+export const FileTextSyntax={render:()=>renderSlackCard(slackCases.FileTextSyntax)};
+export const FileImageDark={render:()=>renderSlackCard(slackCases.FileImageDark)};
+export const ConnectMyAccount={render:()=>renderSlackCard(slackCases.ConnectMyAccount)};
+export const ConnectedAccount={render:()=>renderSlackCard(slackCases.ConnectedAccount)};
+export const PersonalPrivateFile={render:()=>renderSlackCard(slackCases.PersonalPrivateFile)};

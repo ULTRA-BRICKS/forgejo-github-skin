@@ -124,8 +124,13 @@ export function protectedCard(opaqueReference, link) {
       ...(link ? [{type: 'button', action_id: 'forgejo_open_original',
         text: {type: 'plain_text', text: 'Open in Forgejo', emoji: false}, url: link.originalUrl}] : []),
       {type: 'button', action_id: 'forgejo_settings',
-       text: {type: 'plain_text', text: 'Preview settings', emoji: false}, value: opaqueReference}]},
+       text: {type: 'plain_text', text: 'Preview settings', emoji: false}, value: opaqueReference},
+      {type:'button',action_id:'forgejo_account',text:{type:'plain_text',text:'Connect my account',emoji:false},value:opaqueReference}]},
   ]};
+}
+
+export function assertValidatedLink(link) {
+  if(!link || !parsedLinks.has(link))throw new TypeError('A freshly validated source link is required');
 }
 
 /** Rich text is built ONLY after an explicit server-side policy decision.

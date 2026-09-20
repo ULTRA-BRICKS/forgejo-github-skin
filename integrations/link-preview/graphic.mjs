@@ -24,16 +24,17 @@ function codeLines(meta) {
 export function graphicLayout(meta, tokens) {
   const dim = name => tokens.preview[name].$value.value;
   const width = dim('width'), baseHeight = dim('height'), gap = dim('gutter');
-  const lines = codeLines(meta), codeStart = 64, codeStep = dim('lineHeight');
+  const codeOnly=meta.previewVariant==='code'&&meta.summary?.kind==='file';
+  const lines = codeLines(meta), codeStart = codeOnly?28:64, codeStep = codeOnly?20:dim('lineHeight');
   const codeEnd = codeStart + Math.max(0, lines.length - 1) * codeStep;
   const codeFooter = codeEnd + 20;
   const height = meta.summary?.kind === 'file' && lines.length
-    ? Math.max(baseHeight, codeFooter + 12) : baseHeight;
-  return { width, height, gap, lines, codeStart, codeStep, codeFooter,
+    ? (codeOnly?codeFooter+16:Math.max(baseHeight, codeFooter + 12)) : baseHeight;
+  return { width, height, gap, lines, codeOnly, codeStart, codeStep, codeFooter,
     header: 22, rule: 32, metadata: 46, metricValue: 58, metricLabel: 75,
     chartTop: 87, chartBottom: 109, detail: 106, footer: height - 12 };
 }
-function syntaxSegments(line) {
+export function syntaxSegments(line) {
   const pattern = /(\/\/.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:const|let|var|function|return|if|else|for|while|async|await|import|export|from|class|new|throw|true|false|null|undefined)\b|\b\d+(?:\.\d+)?\b)/g;
   const result = []; let end = 0;
   for (const match of line.matchAll(pattern)) {
@@ -67,14 +68,15 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
     : `<rect x="${G}" y="8" width="18" height="18" rx="3" fill="none" stroke="${c.text}"/>` + text(G + 9, 21, cut(brand.initials || brand.name, 2).toUpperCase(), { size: 9, weight: 650, anchor: 'middle' });
   const kind = fact.kind === 'pull' ? 'PR' : fact.kind === 'repository' ? 'REPO' : String(fact.kind).toUpperCase();
   let body = `<g data-preview-header>${mark}${text(G + 26, layout.header, cut(brand.name, 24), { weight: 650 })}${text(W - G, layout.header, kind + (fact.number ? ' #' + fact.number : ''), { tone: 'muted', anchor: 'end' })}</g>` + line(G, layout.rule, W - G, layout.rule);
+  if(layout.codeOnly)body='';
   if (fact.kind === 'file' && layout.lines.length) {
     const start = Number.isSafeInteger(fact.lineStart) && fact.lineStart > 0 ? fact.lineStart : 1;
     const lastNumber = start + layout.lines.length - 1;
-    const codeSize = dim('codeSize');
+    const codeSize = layout.codeOnly?16:dim('codeSize');
     const numberWidth = String(lastNumber).length * codeSize * .65;
     const codeX = G + Math.max(30, numberWidth + 12);
     const maxChars = Math.max(8, Math.floor((W - G - codeX) / (codeSize * .66)));
-    body += text(G, layout.metadata, `${num(fact.metrics?.find(m => m.label === 'Bytes')?.value)} bytes · ${cut(fact.sha || '—', 12)}`, { tone: 'muted', size: 11, attrs: ' data-preview-metadata' });
+    if(!layout.codeOnly)body += text(G, layout.metadata, `${num(fact.metrics?.find(m => m.label === 'Bytes')?.value)} bytes · ${cut(fact.sha || '—', 12)}`, { tone: 'muted', size: 11, attrs: ' data-preview-metadata' });
     layout.lines.forEach((source, i) => {
       const y = layout.codeStart + i * layout.codeStep;
       body += text(G, y, String(start + i), { tone: 'muted', size: codeSize, attrs: ' data-line-number font-family="ui-monospace, SFMono-Regular, Menlo, monospace"' });

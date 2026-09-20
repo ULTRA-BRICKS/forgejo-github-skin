@@ -14,7 +14,7 @@ try{
    try{for(;;){const id=ids[next++];if(!id)break;errors=[];
     try{
      const r=await page.goto(base+'/iframe.html?id='+id+'&viewMode=story',{waitUntil:'load'});
-     await page.waitForFunction(visibleStoryContent);
+     await page.waitForFunction(visibleStoryContent,undefined,{polling:120,timeout:15000});
      await page.evaluate(async()=>{await Promise.race([document.fonts.ready,new Promise(resolve=>setTimeout(resolve,2000))]);await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
      const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
      const pass=r.status()===200&&!errors.length&&overflow<=1;

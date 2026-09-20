@@ -1,3 +1,4 @@
+import {composePersonalCard, externalReference} from './unfurl-layout.mjs';
 import {HomeDispatcher} from './home-dispatch.mjs';
 import {homeView} from './slack-home.mjs';
 import {textOnlyCard} from './slack-presentation.mjs';
@@ -76,7 +77,7 @@ export class SlackIntegration {
     // A durable locator, not a durable copy of repository content. Every image
     // read rechecks public visibility before the renderer/cache is consulted.
     const id = randomBytes(24).toString("hex");
-    this.store.put("image:" + id, {sourceUrl:link.originalUrl,version:2}, 30*86400);
+    this.store.put("image:" + id, {sourceUrl:link.originalUrl,version:2,...(meta.summary.kind==='file'?{view:'code'}:{})}, 30*86400);
     return this.config.origin + "/image/s/" + id;
   }
   publicMetadata(url) {return publicMetadata(this,url);}
@@ -161,24 +162,30 @@ export class SlackIntegration {
   }
   async presentDetails(envelope) {
     const event=envelope.event;
-    if(envelope.team_id!==this.config.slack.teamId||envelope.api_app_id!==this.config.slack.appId||event.type!=='entity_details_requested')return;
+    if(envelope.team_id!==this.config.slack.teamId||envelope.api_app_id!==this.config.slack.appId||event.type!=='entity_details_requested'||!/^U[A-Z0-9]+$/.test(event.user||''))return;
     const raw=event.entity_url||event.link?.url,link=this.forgejo.parse(raw);
-    if(!link)return this.call('entity.presentDetails',{trigger_id:event.trigger_id,error:{status:'not_found'}});
+    const reply=payload=>this.call('entity.presentDetails',{trigger_id:event.trigger_id,...payload});
+    if(!link)return reply({error:{status:'not_found'}});
+    const expected=externalReference(link);
+    if((event.external_ref?.id&&event.external_ref.id!==expected.id)||(event.external_ref?.type&&event.external_ref.type!==expected.type))return reply({error:{status:'not_found'}});
     try {
-      const resolved=await this.resolveShared({...envelope,event:{...event,source:'conversations_history'}},raw);
-      if(resolved?.meta&&resolved.facts){
-        const reference=this.reference(envelope.team_id,link.originalUrl);
-        const result=composeSlackCard(resolved.meta,resolved.facts,resolved.policy,{settingsReference:reference,iconOrigin:this.config.origin,...this.preferences(envelope.team_id,event.user),visuals:'off'});
-        if((event.external_ref?.id&&event.external_ref.id!==result.entity.external_ref.id)||(event.external_ref?.type&&event.external_ref.type!==result.entity.external_ref.type))return this.call('entity.presentDetails',{trigger_id:event.trigger_id,error:{status:'not_found'}});
-        const {app_unfurl_url,...metadata}=result.entity;
-        return this.call('entity.presentDetails',{trigger_id:event.trigger_id,metadata});
+      // Public-only reader never grants private access. Private details are fetched with THIS viewer's token.
+      let meta=await this.publicMetadata(raw);
+      if(!meta){
+        const token=await this.oauth.access(envelope.team_id,event.user,raw);
+        if(!token){const url=this.oauth.ticket(envelope.team_id,event.user,raw);return reply(url?{user_auth_required:true,user_auth_url:url}:{error:{status:'restricted'}});}
+        try{meta=await this.forgejo.metadata(raw,token,{enrich:true});}
+        catch(error){if(!isAccessDenied(error.status))throw error;return reply({error:{status:'restricted',actions:[{text:'Open in Forgejo',action_id:'forgejo_open_original',url:link.originalUrl}]}});}
       }
-    }catch(error){console.warn('Entity details could not be refreshed: '+(error.slackCode||error.status||'source_error'));return this.call('entity.presentDetails',{trigger_id:event.trigger_id,error:{status:'custom_partial_view',custom_title:'Source temporarily unavailable',custom_message:'Try Refresh again shortly, or open the original in Forgejo.',actions:[{text:'Open in Forgejo',action_id:'forgejo_open_original',url:link.originalUrl}]}});}
-    const linked=await this.oauth.access(envelope.team_id,event.user,raw);
-    if(linked)return this.call('entity.presentDetails',{trigger_id:event.trigger_id,error:{status:'restricted',actions:[{text:'Open in Forgejo',action_id:'forgejo_open_original',url:link.originalUrl}]}});
-    const user_auth_url=this.oauth.ticket(envelope.team_id,event.user,raw);
-    if(user_auth_url)return this.call('entity.presentDetails',{trigger_id:event.trigger_id,user_auth_required:true,user_auth_url});
-    return this.call('entity.presentDetails',{trigger_id:event.trigger_id,error:{status:'restricted',actions:[{text:'Open in Forgejo',action_id:'forgejo_open_original',url:link.originalUrl}]}});
+      if(!meta || typeof meta.private!=='boolean')return reply({error:{status:'not_found'}});
+      const reference=this.reference(envelope.team_id,link.originalUrl);
+      if(meta.private===true)return reply({error:{status:'custom_partial_view',custom_title:'Your account has access',custom_message:'Open in Forgejo, or view the details in a personal window. Private details are not copied to the channel.',actions:[{text:'View with my access',action_id:'forgejo_personal',value:reference},{text:'Open in Forgejo',action_id:'forgejo_open_original',url:link.originalUrl}]}});
+      const preferences=this.preferences(envelope.team_id,event.user);
+      const imageUrl=meta.private===false&&preferences.visuals!=='off'&&visualAddsInformation(meta)?this.imageSnapshot(meta):null;
+      const result=composeSlackCard(meta,{resourceVerified:true,checkIsFresh:true,visibility:'public',sourceDeclaredPublic:true,resourceUrl:link.resourceUrl},{},{settingsReference:reference,iconOrigin:this.config.origin,imageUrl,...preferences});
+      const {app_unfurl_url,...metadata}=result.entity;
+      return reply({metadata});
+    }catch(error){console.warn('Entity details refresh failed: '+(error.slackCode||error.status||'source_error'));return reply({error:{status:'custom_partial_view',custom_title:'Source temporarily unavailable',custom_message:'Try Refresh again shortly, or open the original in Forgejo.',actions:[{text:'Open in Forgejo',action_id:'forgejo_open_original',url:link.originalUrl}]}});}
   }
   queueHome(envelope) {
     if(envelope.team_id!==this.config.slack.teamId||envelope.api_app_id!==this.config.slack.appId||envelope.event?.tab!=='home'||!/^U[A-Z0-9]+$/.test(envelope.event.user||''))return null;
@@ -191,6 +198,37 @@ export class SlackIntegration {
     try{connected=!!(await this.oauth.access(envelope.team_id,event.user,this.config.forgejo));}catch{connectionError=true;}
     const connectUrl=this.oauth.ticket(envelope.team_id,event.user,this.config.forgejo);
     return this.call('views.publish',{user_id:event.user,view:homeView(this.preferences(envelope.team_id,event.user),{origin:this.config.forgejo,connected,connectionError,connectUrl})});
+  }
+  async openPersonal(payload,reference) {
+    const ref=this.store.get('ref:'+reference);
+    if(!ref||ref.team!==payload.team.id)return this.openSettings(payload,reference);
+    const opened=await this.call('views.open',{trigger_id:payload.trigger_id,view:this.modal([{type:'section',text:{type:'plain_text',text:'Checking your own Forgejo access…'}}])});
+    let blocks;
+    try{
+      const token=await this.oauth.access(payload.team.id,payload.user.id,ref.url);
+      if(!token){const url=this.oauth.ticket(payload.team.id,payload.user.id,ref.url);blocks=[{type:'section',text:{type:'plain_text',text:'Connect your own Forgejo account to see the details available to you.'}},...(url?[{type:'actions',elements:[{type:'button',action_id:'forgejo_connect',text:{type:'plain_text',text:'Connect my account'},url}]}]:[])];}
+      else {
+        const meta=await this.forgejo.metadata(ref.url,token,{enrich:true});
+        const link=this.forgejo.parse(ref.url);if(!meta||typeof meta.private!=='boolean'||!link)throw new Error('Unavailable');
+        const personal=composePersonalCard(meta,{team:payload.team.id,user:payload.user.id,resourceUrl:link.resourceUrl,accessChecked:true},{iconOrigin:this.config.origin,density:'detailed'});
+        // A modal is viewer-scoped. Work Object detail metadata may auto-refresh channel unfurls.
+        blocks=personal.card.blocks;
+      }
+    }catch(error){blocks=[{type:'section',text:{type:'plain_text',text:isAccessDenied(error.status)?'This resource is not available to your Forgejo account.':'Your source could not be loaded. Try again shortly or open it in Forgejo.'}}];}
+    if(!blocks.some(b=>b.type==='actions'))blocks.push({type:'actions',elements:[{type:'button',action_id:'forgejo_open_original',text:{type:'plain_text',text:'Open in Forgejo'},url:ref.url}]});
+    return this.call('views.update',{view_id:opened.view.id,view:{...this.modal(blocks),title:{type:'plain_text',text:'My Forgejo access'}}});
+  }
+  async openAccount(payload,reference) {
+    const ref=this.store.get('ref:'+reference);
+    if(!ref||ref.team!==payload.team.id)return this.openSettings(payload,reference);
+    const opened=await this.call('views.open',{trigger_id:payload.trigger_id,view:this.modal([{type:'section',text:{type:'plain_text',text:'Checking your Forgejo connection…'}}])});
+    let connected=false,unavailable=false;
+    try{connected=!!(await this.oauth.access(payload.team.id,payload.user.id,ref.url));}catch{unavailable=true;}
+    const connect=this.oauth.ticket(payload.team.id,payload.user.id,ref.url);
+    const blocks=[{type:'section',text:{type:'plain_text',text:unavailable?'Connection status is temporarily unavailable. Retry shortly.':connected?'Your Forgejo account is connected. Personal previews use your permissions; they do not publish private details to the channel.':'Connect your own Forgejo account. Each person uses their own permissions; another person’s connection does not grant you access.'}},
+      {type:'actions',elements:[...(connect?[{type:'button',action_id:'forgejo_connect',text:{type:'plain_text',text:connected?'Reconnect my account':'Connect my account'},url:connect}]:[]),{type:'button',action_id:'forgejo_open_original',text:{type:'plain_text',text:'Open in Forgejo'},url:ref.url}]},
+      {type:'context',elements:[{type:'plain_text',text:'Then choose View with my access from the private preview’s … menu. You can also manage your connection from the Hyperide Links Home tab.'}]}];
+    return this.call('views.update',{view_id:opened.view.id,view:{...this.modal(blocks),title:{type:'plain_text',text:'My Forgejo account'}}});
   }
   async openSettings(payload,reference) {
     const ref=this.store.get('ref:'+reference);
@@ -224,6 +262,19 @@ export class SlackIntegration {
     )
       return;
     const action = payload.actions?.[0];
+    if(!/^U[A-Z0-9]+$/.test(payload.user?.id||''))return;
+    let operation=action?.action_id,reference=action?.value;
+    if(operation==='forgejo_more'){
+      const selected=/^(account|personal):([a-f0-9]{48})$/.exec(action.selected_option?.value||'');
+      if(selected){operation='forgejo_'+selected[1];reference=selected[2];}
+    }
+    if(['forgejo_account','forgejo_personal'].includes(operation)&&/^[a-f0-9]{48}$/.test(reference||'')){
+      if(operation==='forgejo_account')return this.openAccount(payload,reference);
+      const ref=this.store.get('ref:'+reference);
+      if(!ref||ref.team!==payload.team.id)return this.openSettings(payload,reference);
+      return this.openPersonal(payload,reference);
+    }
+
     if(payload.view?.type==='home'&&payload.view?.callback_id==='forgejo_home'&&/^U[A-Z0-9]+$/.test(payload.user?.id||'')){
       if(action?.action_id==='forgejo_home_settings')return this.openSourceSettings(payload,this.config.forgejo);
       if(action?.action_id==='forgejo_home_refresh')return this.queueHome({team_id:payload.team.id,api_app_id:payload.api_app_id,event:{user:payload.user.id,tab:'home'}})?.task;
@@ -231,129 +282,10 @@ export class SlackIntegration {
     if(action?.action_id==='forgejo_settings'&&/^[a-f0-9]{48}$/.test(action.value||''))return this.openSettings(payload,action.value);
     if(action?.action_id==='forgejo_more'&&/^settings:[a-f0-9]{48}$/.test(action.selected_option?.value||''))return this.openSettings(payload,action.selected_option.value.slice(9));
     // URL actions open their native destination; the signed HTTP request has already been acknowledged.
-    if (!["forgejo_preview", "forgejo_view_private"].includes(action?.action_id)) return;
-    if (
-      !/^[a-f0-9]{48}$/.test(action.value || "") ||
-      !/^U[A-Z0-9]+$/.test(payload.user?.id || "")
-    )
-      return;
-    const ref = this.store.get("ref:" + action.value);
-    if (!ref) {
-      await this.call("views.open", {
-        trigger_id: payload.trigger_id,
-        view: this.modal([{ type: "section", text: { type: "plain_text",
-          text: "This preview has expired. Use Open in Forgejo on the message, or share the original link again to refresh the personal preview." } }]),
-      });
-      return;
+    if (["forgejo_preview", "forgejo_view_private"].includes(action?.action_id) && /^[a-f0-9]{48}$/.test(action?.value||'')) {
+      const storedLink=this.store.get('ref:'+action.value);
+      if(storedLink && storedLink.team!==payload.team.id)return;
+      return this.openPersonal(payload,action.value);
     }
-    if (ref.team !== payload.team.id) return;
-    const original = this.forgejo.parse(ref.url);
-    if (!original) return;
-    const openOriginal = { type: "actions", elements: [{ type: "button",
-      action_id: "forgejo_open_original", text: { type: "plain_text", text: "Open in Forgejo" },
-      url: original.originalUrl }] };
-    const opened = await this.call("views.open", {
-      trigger_id: payload.trigger_id,
-      view: this.modal([
-        {
-          type: "section",
-          text: { type: "plain_text", text: "Checking your Forgejo access…" },
-        },
-      ]),
-    });
-    const user = payload.user.id,
-      team = payload.team.id,
-      token = await this.oauth.access(team, user, ref.url);
-    let blocks;
-    if (!token) {
-      const url = this.oauth.ticket(team, user, ref.url);
-      if (!url) {
-        await this.call("views.update", {
-          view_id: opened.view.id,
-          view: this.modal([
-            openOriginal,
-            {
-              type: "section",
-              text: {
-                type: "plain_text",
-                text: "Account linking for this Forgejo server is not configured. Open the original below and sign in with your normal account.",
-              },
-            },
-          ]),
-        });
-        return;
-      }
-      blocks = [
-        {
-          type: "section",
-          text: {
-            type: "plain_text",
-            text: "Connect your own Forgejo account. Protected details are shown only in your personal view. This Forgejo version grants broad OAuth access; the integration uses read-only requests. ",
-          },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              action_id: "forgejo_connect",
-              text: { type: "plain_text", text: "Connect Forgejo" },
-              url,
-            },
-          ],
-        },
-      ];
-    } else {
-      try {
-        const meta = await this.forgejo.metadata(ref.url, token);
-        if (!meta) throw new Error("Unavailable");
-        blocks = [
-          { type: "header", text: { type: "plain_text", text: meta.title } },
-          {
-            type: "section",
-            text: {
-              type: "plain_text",
-              text: meta.description || "No description",
-            },
-          },
-          {
-            type: "context",
-            elements: [
-              {
-                type: "plain_text",
-                text: `${meta.repository} · ${meta.status} · Access checked for your account`,
-              },
-            ],
-          },
-          {
-            type: "actions",
-            elements: [
-              {
-                type: "button",
-                action_id: "forgejo_open_original",
-                text: { type: "plain_text", text: "Open in Forgejo" },
-                url: ref.url,
-              },
-            ],
-          },
-        ];
-      } catch {
-        blocks = [
-          {
-            type: "section",
-            text: {
-              type: "plain_text",
-              text: "This resource is unavailable to your linked account. It may have changed or your access may have been revoked.",
-            },
-          },
-        ];
-      }
-    }
-    if (!blocks.some(block => block.type === "actions" && block.elements?.some(element => element.action_id === "forgejo_open_original")))
-      blocks.push(openOriginal);
-    await this.call("views.update", {
-      view_id: opened.view.id,
-      view: this.modal(blocks),
-    });
   }
 }

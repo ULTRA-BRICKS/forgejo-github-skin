@@ -106,7 +106,7 @@ test("approved synthetic channel copy requires linked actor and fresh safe audie
   try {
     await f.slack.unfurl(event());
     assert.ok(JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
-    assert.ok(JSON.stringify(f.calls).includes("Shared copy"));
+    assert.ok(JSON.stringify(f.calls).includes("Connect my account"));
   } finally {
     f.store.close();
   }
@@ -151,7 +151,7 @@ test("private modal rechecks the clicking viewer and reports revoked access gene
     assert.equal(f.calls[0].method, "views.open");
     assert.equal(f.calls.at(-1).method, "views.update");
     assert.ok(!JSON.stringify(f.calls).includes("PRIVATE SENTINEL"));
-    assert.match(JSON.stringify(f.calls), /unavailable to your linked account/);
+    assert.match(JSON.stringify(f.calls), /not available to your Forgejo account/);
   } finally {
     f.store.close();
   }
