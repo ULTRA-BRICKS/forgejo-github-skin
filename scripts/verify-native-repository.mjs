@@ -15,7 +15,8 @@ for(const width of widths)for(const scheme of schemes){
   if(!file)return r.continue();try{await r.fulfill({body:await fs.readFile(file),contentType:file.endsWith('.css')?'text/css':'text/javascript'});}catch{return r.continue();}
  });
  try{
-  await p.goto(repo,{waitUntil:'domcontentloaded'});await p.locator('[data-hgh-repo-controls]').waitFor();
+  await p.goto(repo,{waitUntil:'load'});await p.locator('[data-hgh-repo-controls]').waitFor();
+  await p.evaluate(async()=>{await document.fonts.ready;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
   if(!candidate)await expect(p.locator('link[data-hgh-release-theme]')).toHaveAttribute('href',new RegExp('skin='+version.replaceAll('.','\\.')));
   const dims=await p.locator('.repo-button-row').evaluate(row=>{const box=e=>{const b=e.getBoundingClientRect();return{x:b.x,y:b.y,w:b.width,h:b.height}};return{branch:box(row.querySelector('.branch-dropdown-button')),clone:box(row.querySelector('.hgh-clone>summary')),more:box(row.querySelector('.hgh-repo-more>summary')),width:innerWidth,scroll:document.documentElement.scrollWidth};});
   expect(dims.scroll).toBeLessThanOrEqual(width+1);

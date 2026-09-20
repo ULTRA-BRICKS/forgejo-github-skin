@@ -36,13 +36,18 @@ export class SlackIntegration {
     )
       throw new Error("Slack method rejected");
     const form = payload.metadata ? new URLSearchParams(Object.entries(payload).map(([key,value])=>[key,typeof value==='object'?JSON.stringify(value):String(value)])) : null;
-    const r = await fetch("https://slack.com/api/" + method, {
-      method: "POST",
+    // conversations.info is a read endpoint. This workspace rejects its
+    // channel argument in a JSON POST; keep it in the documented GET query.
+    const readOnly = method === "conversations.info";
+    const endpoint = new URL("https://slack.com/api/" + method);
+    if (readOnly) endpoint.search = new URLSearchParams(Object.entries(payload).map(([key, value]) => [key, String(value)])).toString();
+    const r = await fetch(endpoint.href, {
+      method: readOnly ? "GET" : "POST",
       headers: {
         Authorization: "Bearer " + this.config.slack.botToken,
         "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json; charset=utf-8",
       },
-      body: form || JSON.stringify(payload),
+      body: readOnly ? undefined : form || JSON.stringify(payload),
       redirect: "error",
       signal: AbortSignal.timeout(8000),
     });
