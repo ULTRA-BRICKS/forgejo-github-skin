@@ -1,3 +1,4 @@
+import {enhanceUniversalSearch, restoreUniversalSearch, openUniversalSearch} from './universal-search.mjs';
 import {enhanceRepositoryControls, restoreRepositoryControls} from './repository-controls.mjs';
 import {enhanceNativeChrome, restoreNativeChrome} from './mobile-chrome.mjs';
 import {enhanceNativeListOptions, restoreNativeListOptions} from './list-options.mjs';
@@ -132,24 +133,7 @@ function boot() {
     return dialog;
   }
 
-  function focusBestSearch() {
-    const selectors = [
-      '.issue-list-search input[type="search"]',
-      '.issue-list-search input[name="q"]',
-      '#repo-search-form input[type="search"]',
-      '#repo-search-form input[name="q"]',
-      'input[type="search"]',
-      '.ui.search.input input',
-    ];
-    for (const selector of selectors) {
-      const input = firstUsable(selector);
-      if (!input) continue;
-      input.focus();
-      input.select?.();
-      return true;
-    }
-    return false;
-  }
+  function focusBestSearch() { return openUniversalSearch(document); }
 
   function goToLine() {
     if (!document.querySelector('[data-line-number]')) return false;
@@ -371,7 +355,7 @@ function boot() {
 
   function enhance() {
     syncReleaseStyles();
-    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); }
+    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); enhanceUniversalSearch(document); }
     queued = false;
     if (!enabled()) return;
 
@@ -451,11 +435,9 @@ function boot() {
     }
     if (!shortcuts) return;
 
-    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key === '/') {
-      if (firstUsable('.issue-list-search input[type="search"], .issue-list-search input[name="q"]')) {
-        event.preventDefault();
-        focusBestSearch();
-      }
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.key === '/' || key === 'k')) {
+      event.preventDefault();
+      focusBestSearch();
       return;
     }
 
@@ -558,6 +540,7 @@ function boot() {
       restoreRepositoryControls(document);
       restoreNativeListOptions(document);
       restoreNativeChrome(document);
+      restoreUniversalSearch(document);
       closeMenus();
       for (const menu of document.querySelectorAll('details.hgh-clone')) {
         const panel = menu.querySelector('.clone-panel');

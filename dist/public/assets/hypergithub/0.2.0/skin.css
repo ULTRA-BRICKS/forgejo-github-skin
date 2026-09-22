@@ -1,0 +1,466 @@
+@import url('./universal-search.css');
+@import url('./repository-ui.css');
+/* Native Forgejo DOM and semantics; every visual rule is scoped to an opt-in theme. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) {
+  --fonts-regular: var(--hgh-font-sans);
+  --fonts-monospace: var(--hgh-font-mono);
+  --font-weight-normal: var(--hgh-font-weightNormal);
+  --font-weight-semibold: var(--hgh-font-weightStrong);
+  font-family: var(--hgh-font-sans);
+  scroll-padding-top: 80px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) body {
+  font-family: var(--hgh-font-sans);
+  font-size: var(--hgh-font-bodySize);
+  line-height: 1.5;
+  color: var(--hgh-color-text);
+  background: var(--hgh-color-canvas);
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(button,input,select,textarea) { font-family: inherit; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(a,button,input,textarea,select,summary):focus-visible {
+  outline: var(--hgh-control-focusWidth) solid var(--hgh-color-focus);
+  outline-offset: 2px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar {
+  min-height: 64px;
+  background: var(--hgh-color-subtle);
+  border-bottom: 1px solid var(--hgh-color-border);
+  padding-inline: 24px;
+  gap: 8px;
+  box-shadow: none;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar-logo img { width: 32px; height: 32px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav {
+  background: var(--hgh-color-subtle);
+  border-bottom: 1px solid var(--hgh-color-border);
+  padding-top: 8px;
+  margin-bottom: 24px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav > .ui.container {
+  max-width: none;
+  width: auto;
+  margin-inline: 32px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-header { min-height: 48px; padding-block: 8px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-header .flex-item-title {
+  font-size: 20px;
+  line-height: 30px;
+  gap: 4px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-header .flex-item-title a { color: var(--hgh-color-link); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-header .ui.label {
+  background: transparent;
+  color: var(--hgh-color-muted);
+  border: 1px solid var(--hgh-color-border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 7px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .secondary-nav .overflow-menu-items { gap: 8px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .secondary-nav .overflow-menu-items > a.item {
+  min-height: 48px;
+  padding: 12px 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--hgh-color-text);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .secondary-nav .overflow-menu-items > a.item.active {
+  font-weight: 600;
+  border-bottom-color: var(--hgh-color-tabIndicator);
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .secondary-nav .overflow-menu-items > a.item:hover { background: var(--hgh-color-counter); }
+/* Scope exclusions to navigation only. Existing data, endpoints and inline links remain untouched. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .secondary-nav a.item:is([href$="/projects"],[href$="/releases"],[href$="/wiki"]) { display: none; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .secondary-nav .ui.label {
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--hgh-color-counter);
+  color: var(--hgh-color-text);
+  font-weight: 500;
+  min-width: 20px;
+  padding: 2px 6px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository > .ui.container:not(.fluid) {
+  width: calc(100% - 64px);
+  max-width: var(--hgh-layout-contentMax);
+  margin-inline: auto;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button,
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.basic.button {
+  min-height: var(--hgh-control-medium);
+  border-radius: var(--hgh-radius-medium);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 5px var(--hgh-control-paddingInline);
+  background: var(--hgh-color-subtle);
+  color: var(--hgh-color-text);
+  border-color: var(--hgh-color-border);
+  transition: background-color var(--hgh-motion-micro) var(--hgh-motion-hover), border-color var(--hgh-motion-micro) var(--hgh-motion-hover);
+  box-shadow: 0 1px 0 rgb(31 35 40 / 4%);
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button:is(.primary,.green),
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > summary {
+  background: var(--hgh-color-primary);
+  color: var(--hgh-color-onPrimary);
+  border: 1px solid rgb(31 35 40 / 15%);
+  font-weight: 600;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button:is(.primary,.green):hover,
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > summary:hover { background: var(--hgh-color-primaryHover); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button:is(.primary,.green):active,
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > summary:active { background: var(--hgh-color-primaryActive); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button.red { color: var(--hgh-color-danger); background: var(--hgh-color-subtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button.red:hover { color: var(--hgh-color-onPrimary); background: var(--hgh-color-danger); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.input > input,.ui.form input:not([type="checkbox"]):not([type="radio"]),.ui.form textarea) {
+  border-radius: var(--hgh-radius-medium);
+  color: var(--hgh-color-text);
+  border-color: var(--hgh-color-border);
+  background: var(--hgh-color-canvas);
+  font-size: 14px;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.segment,.ui.table,.ui.attached.header,.ui.comments .comment .content) { border-color: var(--hgh-color-border); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.segment { border-radius: var(--hgh-radius-medium); box-shadow: none; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row { gap: 8px; align-items: center; margin-block: 16px; flex-wrap: wrap; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row .button-sequence { gap: 8px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table { border-radius: var(--hgh-radius-medium); border: 1px solid var(--hgh-color-border); border-spacing: 0; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table td { padding: 9px 16px; line-height: 22px; border-color: var(--hgh-color-border); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table tr:hover > td { background: var(--hgh-color-subtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table :is(.octicon-file-directory,.octicon-file-directory-fill) { color: #54aeff; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table :is(.message,.age) { color: var(--hgh-color-muted); font-size: 14px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-topic.ui.label { color: var(--hgh-color-link); background: var(--hgh-color-hunk); border-radius: 999px; font-size: 12px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .non-diff-file-content { min-width: 0; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .non-diff-file-content .file-content { overflow-x: auto; max-width: 100%; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .non-diff-file-content :is(pre,code,.lines-num),
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-box :is(pre,code,.lines-num) { font-family: var(--hgh-font-mono); font-size: var(--hgh-font-codeSize); line-height: 20px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .lines-num { color: var(--hgh-color-muted); user-select: none; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .lines-code { color: var(--hgh-color-text); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.diff-file-box,.non-diff-file-content .file-header) { border-color: var(--hgh-color-border); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-box .diff-file-header { background: var(--hgh-color-subtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .issue.list > .item { padding: 12px 16px; border-color: var(--hgh-color-border); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .issue.list > .item:hover { background: var(--hgh-color-subtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .issue.list .title { font-size: 16px; font-weight: 600; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository.view.issue .title { line-height: 1.25; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.comments .comment .content { border-radius: var(--hgh-radius-medium); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.comments .comment .content .header { background: var(--hgh-color-subtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone { position: relative; flex-shrink: 0; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 32px;
+  padding: 5px 14px;
+  line-height: 20px;
+  border-radius: var(--hgh-radius-medium);
+  white-space: nowrap;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > summary::-webkit-details-marker { display: none; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > .clone-panel {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 4px);
+  width: min(400px, calc(100vw - 32px));
+  min-width: min(320px, calc(100vw - 32px));
+  padding: 16px;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--hgh-color-canvas);
+  border: 1px solid var(--hgh-color-border);
+  border-radius: var(--hgh-radius-large);
+  box-shadow: 0 8px 24px rgb(31 35 40 / 16%);
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone:not([open]) > .clone-panel { display: none; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone .clone-panel input { min-width: 0; flex: 1 1 150px; font-family: var(--hgh-font-mono); font-size: 12px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 24px;
+  color: var(--hgh-color-text);
+  background: var(--hgh-color-canvas);
+  border: 1px solid var(--hgh-color-border);
+  border-radius: var(--hgh-radius-large);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 24%);
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog::backdrop { background: rgb(0 0 0 / 40%); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog h2 { font-size: 20px; padding-right: 24px; margin: 0 0 20px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-close { position: absolute; top: 12px; right: 12px; border: none; background: transparent; color: inherit; min-width: 32px; min-height: 32px; font-size: 24px; cursor: pointer; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog dl { display: grid; grid-template-columns: 48px 1fr; gap: 10px 16px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog dt { font-family: var(--hgh-font-mono); font-size: 12px; background: var(--hgh-color-subtle); border: 1px solid var(--hgh-color-border); border-radius: 4px; padding: 2px 6px; text-align: center; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog dd { margin: 0; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog label { display: flex; gap: 8px; margin-top: 24px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog input:not([type="checkbox"]) { padding: 8px 12px; border: 1px solid var(--hgh-color-border); border-radius: 6px; background: var(--hgh-color-canvas); color: inherit; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-dialog form button { min-height: 36px; padding: 6px 12px; margin-left: 8px; border-radius: 6px; border: 1px solid var(--hgh-color-border); }
+@media (max-width: 767px) {
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar { padding-inline: 16px; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav > .ui.container { margin-inline: 16px; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository > .ui.container:not(.fluid) { width: calc(100% - 32px); }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav { margin-bottom: 16px; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-header .flex-item-title { font-size: 18px; min-width: 0; overflow-wrap: anywhere; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row { align-items: flex-start; gap: 8px; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row .ui.button,
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > summary,
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-close { min-height: var(--hgh-control-touch); min-width: var(--hgh-control-touch); display: inline-flex; align-items: center; justify-content: center; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row > div { min-width: 0; max-width: 100%; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table td { padding: 10px 12px; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table td.message { display: none; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table td.name { max-width: 60vw; overflow: hidden; text-overflow: ellipsis; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #repo-files-table td.age { white-space: nowrap; font-size: 12px; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > .clone-panel { position: fixed; top: auto; inset: auto 16px 16px; width: auto; min-width: 0; max-height: calc(100dvh - 100px); overflow: auto; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.comments .comment .content { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) { scroll-behavior: auto; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button,.hgh-clone,.hgh-dialog,.hgh-clone > summary) { transition: none; animation: none; }
+}
+@media (forced-colors: active) {
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button,.hgh-clone > summary,.hgh-dialog,.secondary-nav .item.active) { border-color: ButtonText; }
+}
+
+/* Feedback surfaces: map existing Forgejo messages to GitHub-like semantic panels. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.message,
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .flash-message {
+  position: relative;
+  padding: 12px 16px;
+  border: 1px solid var(--hgh-color-border);
+  border-radius: var(--hgh-radius-medium);
+  box-shadow: none;
+  color: var(--hgh-color-text);
+  background: var(--hgh-color-canvas);
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.positive.message,.flash-success) { border-color: var(--hgh-color-success); background: var(--hgh-color-successSubtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.negative.message,.flash-error) { border-color: var(--hgh-color-danger); background: var(--hgh-color-dangerSubtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.warning.message,.flash-warning) { border-color: var(--hgh-color-attention); background: var(--hgh-color-attentionSubtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.info.message,.flash-info) { border-color: var(--hgh-color-border); background: var(--hgh-color-subtle); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.message > .header { margin-bottom: 4px; font-weight: 600; color: inherit; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.message :is(p,.content) { color: inherit; }
+
+/* Loading feedback keeps geometry stable and respects reduced motion. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.is-loading,.htmx-request) { cursor: progress; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .htmx-indicator {
+  width: 16px;
+  height: 16px;
+  margin: 8px auto;
+  border: 2px solid var(--hgh-color-border);
+  border-top-color: var(--hgh-color-muted);
+  border-radius: 50%;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .htmx-request .htmx-indicator { animation: hgh-spin 700ms linear infinite; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .is-loading > :not(.htmx-indicator) { opacity: .72; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button.loading { min-width: 32px; cursor: progress; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-skeleton { overflow: hidden; background: var(--hgh-color-subtle); border-radius: var(--hgh-radius-small); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-skeleton::after { content:""; display:block; width:40%; height:100%; transform:translateX(-120%); background:linear-gradient(90deg,transparent,rgb(255 255 255 / 45%),transparent); animation:hgh-shimmer 1.2s ease-in-out infinite; }
+@keyframes hgh-spin { to { transform: rotate(360deg); } }
+@keyframes hgh-shimmer { to { transform: translateX(350%); } }
+@media (prefers-reduced-motion: reduce) { html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.htmx-indicator,.hgh-skeleton::after) { animation: none; } }
+
+/* Native Forgejo toasts/clipboard feedback: preserve behavior, refine presentation. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toastify {
+  min-width: min(320px, calc(100vw - 32px));
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 8px;
+  color: var(--hgh-color-text);
+  background: var(--hgh-color-canvas) !important;
+  border: 1px solid var(--hgh-color-border);
+  border-radius: var(--hgh-radius-medium);
+  box-shadow: 0 8px 24px rgb(31 35 40 / 16%);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toastify[style*="--color-green"] { border-left: 4px solid var(--hgh-color-success); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toastify[style*="--color-orange"] { border-left: 4px solid var(--hgh-color-attention); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toastify[style*="--color-red"] { border-left: 4px solid var(--hgh-color-danger); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toast-icon { color: var(--hgh-color-muted); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toast-body { padding: 5px 8px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toast-close { color: var(--hgh-color-muted); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .tippy-box { border-radius: var(--hgh-radius-medium); font-size: 12px; box-shadow: 0 8px 24px rgb(31 35 40 / 16%); }
+
+/* Small anchored motion; never animate repository layout or source rows. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone[open] > .clone-panel { animation: hgh-pop 100ms var(--hgh-motion-hover); transform-origin: top right; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .ui.button:active,
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone > summary:active { transform: translateY(1px); }
+@keyframes hgh-pop {
+  from { opacity: 0; transform: translateY(-2px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-clone[open] > .clone-panel { animation: none; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button,.hgh-clone > summary):active { transform: none; }
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .toastify { transition: none; }
+}
+
+/* Genuine Forgejo geometry; only its palette changes, never user avatars. */
+
+
+/* Native-instance corrections: validated against Forgejo 16.0.5, not just stories. */
+html[data-theme^="hypergithub-"] #navbar-logo img,html[data-theme^="hypergithub-"] .home img[src$="/logo.svg"] { filter: grayscale(1); }
+html[data-theme="hypergithub-dark"] :is(#navbar-logo img,.home img[src$="/logo.svg"]) { filter: grayscale(1) invert(.8); }
+@media (prefers-color-scheme:dark) { html[data-theme="hypergithub-auto"] :is(#navbar-logo img,.home img[src$="/logo.svg"]) {filter:grayscale(1) invert(.8);} }
+html[data-theme^="hypergithub-"] .repository > .ui.container:not(.fluid) {max-width:1216px;}
+html[data-theme^="hypergithub-"] .file-view.code-view {overflow-x:auto;max-width:100%;}
+html[data-theme^="hypergithub-"] .file-view.code-view .code-inner {white-space:pre;overflow-wrap:normal;word-break:normal;}
+html[data-theme^="hypergithub-"] .repo-button-row {justify-content:flex-start;gap:8px;}
+html[data-theme^="hypergithub-"] .repo-button-row > :has(> .hgh-clone) {margin-left:auto;}
+html[data-theme^="hypergithub-"] .hgh-help-button {flex:0 0 auto;}
+
+/* Forgejo's global dialog[open] flex layout must not rearrange our dialog. */
+html[data-theme^="hypergithub-"] dialog.hgh-dialog[open] {display:block;}
+html[data-theme^="hypergithub-"] dialog.hgh-dialog:not([open]) {display:none;}
+html[data-theme^="hypergithub-"] .hgh-dialog dl {margin-block:0;}
+/* The native container cap is !important; override only the desktop repository body. */
+@media(min-width:1024px){html[data-theme^="hypergithub-"] .repository > .ui.container:not(.fluid){max-width:min(1216px,calc(100% - 64px)) !important;}}
+
+/* Native mobile reference pass: do not inherit badge size or baseline-align button SVGs. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-header .ui.label {font-size:12px!important;line-height:18px!important;min-height:20px;max-height:24px;padding:0 7px!important;display:inline-flex;align-items:center;flex:0 0 auto}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button, .button-sequence>.button, .hgh-clone>summary) {align-items:center;gap:8px}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.ui.button, .button-sequence>.button, .hgh-clone>summary)>svg {flex-shrink:0;vertical-align:middle;margin-block:0;position:static}
+@media(max-width:767px) {
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar {min-height:64px;padding-inline:16px;background:var(--hgh-color-subtle)}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar-logo {position:static!important;transform:none!important;margin-right:8px!important;flex:0 0 32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar-logo img {width:32px;height:32px;object-fit:contain}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row {align-items:center;padding-inline:0;gap:8px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row :is(.ui.button,.button,.branch-dropdown-button) {display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:32px;max-width:100%;padding-inline:12px;margin:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repo-button-row :is(.svg,svg) {position:static;flex:0 0 auto;margin-block:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters {align-items:center;gap:12px;position:relative;overflow:visible}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-right {flex:0 0 auto;margin-left:auto}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .issue-list-toolbar-left {min-width:0;flex-wrap:wrap}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-list-options {margin-left:auto}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .issue.list>.item {overflow-wrap:anywhere}
+}
+
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository > .ui.container:not(.fluid){width:calc(100% - 32px)!important;margin-inline:16px!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .primary.button{background:var(--hgh-color-primary);color:var(--hgh-color-onPrimary);border-color:#1f232826;display:inline-flex;gap:8px;align-items:center;min-height:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #navbar .navbar-left{width:100%;gap:12px;align-items:center;min-width:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #navbar .navbar-mobile-right{display:contents!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #navbar-logo{margin:0!important;padding:0!important;min-width:32px;max-width:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-toggle{width:32px!important;height:32px!important;min-height:32px!important;padding:0!important;border:1px solid var(--hgh-color-border);border-radius:6px;display:inline-flex!important;justify-content:center}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-context{display:flex!important;align-items:center;flex:1;min-width:0;margin:0;padding:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--hgh-color-text)}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-search{padding:0!important;display:inline-flex!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile{margin:0!important;flex:0 0 32px;width:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>summary{padding:0!important;width:32px;height:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>summary img{width:32px;height:32px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>summary>span{display:none!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #navbar .hgh-native-profile>.content{position:fixed!important;inset:64px 16px auto auto!important;width:min(300px,calc(100vw - 32px));max-height:calc(100dvh - 90px);overflow:auto}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] .repository.issue-list .repo-header{display:none}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])[data-hgh-mobile-chrome] #mobile-notifications-icon{margin-left:auto!important}
+}
+@media(max-width:767px){
+ html[data-hgh-mobile-chrome] #navbar .hgh-native-profile{display:block!important}
+ html[data-hgh-mobile-chrome] #navbar .hgh-native-profile>summary img{display:block!important}
+ html[data-hgh-mobile-chrome] .repository.issue-list .secondary-nav{padding-top:0}
+ html[data-hgh-mobile-chrome] .secondary-nav .overflow-menu-items>a.item{min-height:36px;padding-block:8px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;width:100%;gap:12px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-left{order:0;min-width:0;flex:1}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-left>.switch{display:flex;flex-wrap:wrap;min-width:0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #issue-filters .issue-list-toolbar-right{order:1;min-width:32px;width:auto!important;margin-left:auto!important;flex:0 0 32px!important}
+}
+
+/* Repository brand belongs to the footer; native controls keep their target size. */
+html[data-hgh-repository-chrome] #navbar #navbar-logo {display:none!important}
+html[data-hgh-repository-chrome] #navbar :is(.hgh-native-toggle,.hgh-native-search,#mobile-notifications-icon) svg {width:16px!important;height:16px!important}
+html[data-hgh-repository-chrome] #navbar .hgh-native-profile > summary {display:flex;align-items:center;justify-content:center}
+html[data-hgh-repository-chrome] #navbar .hgh-native-profile > summary img {width:24px!important;height:24px!important;border-radius:50%}
+html[data-hgh-repository-chrome] footer .hgh-footer-brand {display:inline-flex;align-items:center;justify-content:center;padding:8px;flex:none;margin:0 8px;color:inherit}
+html[data-hgh-repository-chrome] footer .hgh-footer-brand img {width:20px;height:20px;object-fit:contain}
+
+/* Native mobile layout corrections verified on the actual Forgejo DOM. */
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container{width:calc(100% - 32px)!important;margin-inline:16px!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.ui.mobile.reversed.stackable.grid{flex-direction:column!important;margin:0!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.eleven.column{padding:16px 0!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.five.column{display:contents!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.five.column>.center.aligned{order:-1;padding:8px 0 0}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .organization.profile>.ui.container>.grid>.five.column>.divider{display:none}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabs>.ui.pull.tabular.menu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;overflow:visible}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item{width:auto;min-width:0;justify-content:center;flex-wrap:wrap;gap:4px;padding:9px 4px;font-size:12px;white-space:normal}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item>svg{display:none}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item>.label{margin:0 0 0 2px;font-size:11px;padding:1px 4px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>span{display:none!important}
+}
+@media(max-width:359px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .ui.pull.tabular.menu>.item{flex-direction:column;gap:4px}
+}
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav .overflow-menu-items>.item:first-child{order:-2}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav .overflow-menu-items>.item.active{order:-1}
+}
+
+/* Forgejo reserves the complete Settings item width for overflow; keep that budget compact. */
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav #settings-btn.item{box-sizing:border-box;width:32px;min-width:32px;max-width:32px;padding-inline:8px!important;justify-content:center}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .secondary-nav #settings-btn.item>.resize-for-semibold{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
+
+/* Native repository controls: joined counters, one mobile action menu, balanced search. */
+html[data-hgh-ready] .repo-buttons {display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button {box-sizing:border-box;display:inline-flex;align-items:center;gap:0;height:32px;min-height:32px;padding:0!important;margin:0!important;border:1px solid var(--hgh-color-border)!important;border-radius:6px!important;background:var(--hgh-color-subtle)!important;box-shadow:none}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button>.button {display:inline-flex;gap:6px;align-items:center;border:0!important;border-radius:6px!important;min-height:30px!important;height:30px!important;padding:0 9px!important;box-shadow:none!important;background:transparent!important;margin:0}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button>.label {display:inline-flex;align-items:center;justify-content:center;position:static!important;min-height:20px!important;height:20px!important;line-height:20px!important;border:0!important;border-radius:999px!important;margin:0 6px 0 0!important;padding:0 6px!important;background:var(--hgh-color-counter)!important;font-size:12px!important;min-width:20px}
+html[data-hgh-ready] .repo-buttons .ui.labeled.button>.label:before {display:none!important}
+html[data-hgh-ready] .repo-buttons :is(svg,.svg) {width:16px;height:16px;flex:none;margin-block:0}
+html[data-hgh-ready] .hgh-clone>summary {display:inline-flex;align-items:center;justify-content:center;gap:8px;height:32px;min-height:32px;box-sizing:border-box;padding:0 14px;font-size:14px;line-height:20px;border-radius:6px;cursor:pointer;list-style:none}
+html[data-hgh-ready] .hgh-clone>summary::-webkit-details-marker {display:none}
+html[data-hgh-ready] .hgh-clone>summary>svg {fill:currentColor;flex:none}
+html[data-hgh-ready] .hgh-help-button {display:inline-flex;align-items:center;gap:8px}
+html[data-hgh-ready] .hgh-help-button svg {fill:none;flex:none}
+html[data-hgh-ready] .code-search {background:transparent;padding:0!important;border:0!important;margin:8px 0 12px}
+html[data-hgh-ready] .code-search .action.input {display:flex;align-items:stretch;width:100%;height:36px;border:1px solid var(--hgh-color-border);border-radius:6px;background:var(--hgh-color-canvas)}
+html[data-hgh-ready] .code-search .action.input>input {min-width:0;flex:1;width:0;border:0;border-radius:6px 0 0 6px!important;padding:6px 12px;font-size:14px;box-shadow:none}
+html[data-hgh-ready] .code-search .action.input>.selection.dropdown {display:flex;align-items:center;gap:8px;flex:0 0 auto;min-width:100px;width:auto;height:34px;min-height:34px;padding:0 10px;border:0;border-left:1px solid var(--hgh-color-border);border-radius:0!important;background:var(--hgh-color-subtle);font-size:13px}
+html[data-hgh-ready] .code-search .selection.dropdown>svg {position:static!important;order:1;width:12px;height:12px;margin-left:auto}
+html[data-hgh-ready] .code-search .action.input>button {min-width:36px;width:36px;height:34px;min-height:34px;margin:0;border:0;border-left:1px solid var(--hgh-color-border);border-radius:0 6px 6px 0!important;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:none}
+html[data-hgh-ready] #repo-files-table .commit-list {background:var(--hgh-color-subtle)}
+html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list)>td {border-top:1px solid var(--hgh-color-border)}
+@media(max-width:767px){
+ html[data-hgh-repository-chrome] .repository.file .repo-header>.flex-item {display:none}
+ html[data-hgh-ready] .repository>.ui.container>.repo-buttons {margin:0 0 16px}
+ html[data-hgh-ready] .repo-buttons .button .not-mobile {display:inline!important;font-size:13px}
+ html[data-hgh-ready] .repo-button-row[data-hgh-repo-controls] {display:flex;flex-wrap:nowrap;gap:8px;width:100%;min-width:0;margin:18px 0 12px}
+ html[data-hgh-ready] [data-hgh-repo-controls]>.button-sequence {display:contents!important}
+ html[data-hgh-ready] [data-hgh-repo-controls]>div:has(>.hgh-clone) {display:contents!important}
+ html[data-hgh-ready] [data-hgh-repo-controls] .js-branch-tag-selector {min-width:0;flex:1;max-width:calc(100% - 132px)}
+ html[data-hgh-ready] [data-hgh-repo-controls] .branch-dropdown-button {max-width:100%;width:auto;min-width:100px;height:32px;min-height:32px;padding-block:0!important}
+ html[data-hgh-ready] [data-hgh-repo-controls] .hgh-clone {margin-left:auto;flex:none}
+ html[data-hgh-ready] [data-hgh-repo-controls] .hgh-clone>summary {width:84px}
+ html[data-hgh-ready] .hgh-repo-more>.hgh-options-panel {width:260px;padding:8px}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.button {display:flex;width:100%;min-height:36px;justify-content:flex-start;border:0!important;box-shadow:none!important;background:transparent;margin:0!important;text-align:left;padding:8px!important;font-size:14px}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.button:hover {background:var(--hgh-color-subtle)!important}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.dropdown>.menu {position:relative!important;inset:auto!important;width:100%;min-width:0;box-shadow:none!important;border:0!important}
+ html[data-hgh-ready] .hgh-repo-more .hgh-options-panel>.dropdown {flex-wrap:wrap}
+ html[data-hgh-ready] .repo-description {margin-bottom:12px}
+ html[data-hgh-ready] .repository-summary {border:0!important;box-shadow:none!important;border-radius:0;margin:16px 0!important;color:var(--hgh-color-muted)}
+ html[data-hgh-ready] .repository-summary .ui.segment {border:0!important;box-shadow:none!important;padding:0 0 10px}
+ html[data-hgh-ready] .repository-summary .language-stats {height:5px;min-height:5px}
+ html[data-hgh-ready] .code-search .action.input>.selection.dropdown {min-width:80px;padding-inline:8px;font-size:12px}
+}
+html[data-hgh-ready] #new-pull-request>.hgh-control-label {display:none}
+html[data-hgh-ready] .hgh-repo-more #new-pull-request>.hgh-control-label {display:inline}
+@media(max-width:359px){html[data-hgh-ready] .repo-buttons .button .not-mobile{display:none!important}html[data-hgh-ready] .repo-buttons {gap:6px}}
+
+html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list)>td {border-top:0}
+html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list) {box-shadow:inset 0 1px 0 var(--hgh-color-border)}
+@media(max-width:767px){
+ html[data-hgh-repository-chrome] .repository.file .repo-header:not(:has(.repo-buttons)) {display:none}
+ html[data-hgh-ready] #repo-files-table tr:not(.commit-list)>td.name {display:table-cell;width:auto}
+ html[data-hgh-ready] #repo-files-table td.name>a {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+}
+
+/* A flex item's default min-content width must not widen an entire PR diff.
+   Source lines scroll inside the diff body; file actions and labels remain visible. */
+@media(max-width:767px) {
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository :is(#diff-content-container,#diff-file-boxes,.diff-file-box) {min-width:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-header {gap:8px!important;min-width:0!important;max-width:100%;box-sizing:border-box}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name {flex:1 1 100%!important;min-width:0;overflow-wrap:anywhere}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-header-actions {max-width:100%;min-width:0;flex-wrap:wrap!important}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-body {min-width:0;max-width:100%;overflow-x:auto}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file {min-width:0;gap:4px;overflow:hidden}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file>.file-link {min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file>.ui.label {flex:0 0 auto;white-space:nowrap}
+  html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .repository .diff-file-name>.file>button {flex:0 0 auto}
+}
