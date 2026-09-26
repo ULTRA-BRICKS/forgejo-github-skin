@@ -53,13 +53,19 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
   const { width: W, height: H, gap: G } = layout;
   const dim = name => previewTokens.preview[name].$value.value;
   const c = Object.fromEntries(Object.entries(baseTokens.color[mode === 'adaptive' ? 'light' : mode]).map(([k, v]) => [k, color(v)]));
+  // Measured against #ffffff and the GitHub/Slack dark canvas #0d1117 (relative-luminance
+  // formula): #797979 is the highest min(lightContrast, darkContrast) any single grey can
+  // reach against both (~4.35:1 each). Nothing rendered here is WCAG "large text" (18.66px+
+  // bold / 24px+), so this sits just under the 4.5:1 AA-normal bar on both surfaces — the
+  // best simultaneous compromise, not a full AA pass. `muted` reuses the same grey: a dimmer
+  // secondary tone would push one surface's contrast below this floor (see #6e7781's 4.16:1
+  // worst case, or #858585's 3.69:1 — both worse than this optimum).
   if (mode === 'adaptive') Object.assign(c, {
-    text: '#66707b', muted: '#6e7781', border: '#8c959f',
+    text: '#797979', muted: '#797979', border: '#8c959f',
     success: '#1a7f37', danger: '#cf222e', link: '#0969da',
   });
-  const stroke = mode === 'adaptive' ? ' paint-order="stroke" stroke="white" stroke-opacity=".76" stroke-width=".8" stroke-linejoin="round"' : '';
   const text = (x, y, value, { size = dim('labelSize'), tone = 'text', weight = 400, anchor = 'start', attrs = '' } = {}) =>
-    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${stroke}${attrs}>${esc(value)}</text>`;
+    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${attrs}>${esc(value)}</text>`;
   const line = (x1, y1, x2, y2) => `<path d="M${x1},${y1}L${x2},${y2}" fill="none" stroke="${c.border}" stroke-opacity=".5"/>`;
   const fact = meta.summary, brand = meta.brand || { name: 'Code host', initials: 'CH' };
   const safeLogo = typeof brand.logoData === 'string' && /^data:image\/(?:png|webp);base64,[A-Za-z0-9+/=]+$/.test(brand.logoData) && brand.logoData.length < 200000;
@@ -82,7 +88,7 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
       body += text(G, y, String(start + i), { tone: 'muted', size: codeSize, attrs: ' data-line-number font-family="ui-monospace, SFMono-Regular, Menlo, monospace"' });
       // A single SVG text run lets the browser position tokens, preserving spaces and glyph widths.
       const spans = syntaxSegments(cut(source, maxChars)).map(token => `<tspan fill="${c[token.tone]}" data-tone="${token.tone}">${esc(token.text)}</tspan>`).join('');
-      body += `<text data-code-row="${i}" x="${codeX}" y="${y}" xml:space="preserve" font-size="${codeSize}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"${stroke}>${spans}</text>`;
+      body += `<text data-code-row="${i}" x="${codeX}" y="${y}" xml:space="preserve" font-size="${codeSize}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${spans}</text>`;
     });
     body += text(G, layout.codeFooter, `Lines ${start}–${lastNumber} · excerpt only`, { tone: 'muted', size: 11, attrs: ' data-preview-footer' });
   } else {
