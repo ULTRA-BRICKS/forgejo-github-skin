@@ -11,13 +11,18 @@ const inlineModule = model.replaceAll('export ', '') + '\n' + enhancer.replace(/
 
 // Builds native base/paginate.tmpl-shaped markup exactly as Forgejo renders it,
 // including the real chevron icons, so child-order assertions are meaningful.
-function nativePagination({current, total, params = '', hash = ''}) {
+function nativePagination({current, total, params = '', hash = '', lang = 'en'}) {
   const q = params ? (params.startsWith('?') ? params : '?' + params) : '';
   const amp = params ? '&' + params.replace(/^\?/, '') : '';
   const frag = hash ? (hash.startsWith('#') ? hash : '#' + hash) : '';
   const link = (page) => `/repo/issues?page=${page}${amp}${frag}`;
   const isFirst = current === 1, isLast = current === total;
   const hasPrev = current > 1, hasNext = current < total;
+  // Matches stories/Pagination.stories.js's Russian fixture exactly, so a
+  // long-labels regression reproduced there reproduces identically here.
+  const labels = lang === 'ru'
+    ? {first: 'Первая', previous: 'Пред.', next: 'След.', last: 'Последняя'}
+    : {first: 'First', previous: 'Previous', next: 'Next', last: 'Last'};
   // Windowed like Forgejo's real Paginater: first, ellipsis, a few around current, ellipsis, last.
   const nums = new Set([1, total, current - 1, current, current + 1].filter((n) => n >= 1 && n <= total));
   const sorted = [...nums].sort((a, b) => a - b);
@@ -32,11 +37,11 @@ function nativePagination({current, total, params = '', hash = ''}) {
   }
   const chevron = (dir) => `<svg class="octicon-chevron-${dir}" viewBox="0 0 16 16" width="16" height="16"></svg>`;
   return `<div class="center page buttons"><div class="ui borderless pagination menu">` +
-    `<a class="${isFirst ? 'disabled ' : ''}item navigation" ${!isFirst ? `href="/repo/issues${q}${frag}"` : ''}>${chevron('left')}<span class="navigation_label">First</span></a>` +
-    `<a class="${!hasPrev ? 'disabled ' : ''}item navigation" ${hasPrev ? `href="${link(current - 1)}"` : ''}>${chevron('left')}<span class="navigation_label">Previous</span></a>` +
+    `<a class="${isFirst ? 'disabled ' : ''}item navigation" ${!isFirst ? `href="/repo/issues${q}${frag}"` : ''}>${chevron('left')}<span class="navigation_label">${labels.first}</span></a>` +
+    `<a class="${!hasPrev ? 'disabled ' : ''}item navigation" ${hasPrev ? `href="${link(current - 1)}"` : ''}>${chevron('left')}<span class="navigation_label">${labels.previous}</span></a>` +
     pagesHtml +
-    `<a class="${!hasNext ? 'disabled ' : ''}item navigation" ${hasNext ? `href="${link(current + 1)}"` : ''}><span class="navigation_label">Next</span>${chevron('right')}</a>` +
-    `<a class="${isLast ? 'disabled ' : ''}item navigation" ${!isLast ? `href="${link(total)}"` : ''}><span class="navigation_label">Last</span>${chevron('right')}</a>` +
+    `<a class="${!hasNext ? 'disabled ' : ''}item navigation" ${hasNext ? `href="${link(current + 1)}"` : ''}><span class="navigation_label">${labels.next}</span>${chevron('right')}</a>` +
+    `<a class="${isLast ? 'disabled ' : ''}item navigation" ${!isLast ? `href="${link(total)}"` : ''}><span class="navigation_label">${labels.last}</span>${chevron('right')}</a>` +
     `</div></div>`;
 }
 
@@ -87,6 +92,14 @@ async function centerRect(page) {
       docHeight: document.documentElement.scrollHeight,
     };
   });
+}
+
+async function expectNoOverflow(page) {
+  const {scrollWidth, clientWidth} = await page.evaluate(() => {
+    const nav = document.querySelector('.hgh-pagination');
+    return {scrollWidth: nav.scrollWidth, clientWidth: nav.clientWidth};
+  });
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
 }
 
 test('compact default shows only Previous/Next text; no numbers, First or Last are visible', async ({page}) => {
@@ -509,9 +522,10 @@ for (const width of [320, 440]) {
 }
 
 test('left and right wing columns end up the same pixel width even with asymmetric content', async ({page}) => {
-  // The mobile-safe breakpoint (<=479px) intentionally resets equalization to
-  // avoid overflow; this is the desktop-width behavior, covered separately by
-  // the 320/440 overflow/center tests below.
+  // The measured wrap layout (applyResponsiveLayout in pagination.mjs)
+  // intentionally resets equalization once the row no longer fits, to avoid
+  // overflow; this is the comfortably-wide-fits desktop behavior, covered
+  // separately by the 320/440 overflow/center tests below.
   await page.setViewportSize({width: 1024, height: 800});
   await prepare(page, nativePagination({current: 2, total: 90}));
   const widths = await page.evaluate(() => {
@@ -632,6 +646,149 @@ test('a cursor-based one-edge variant preserves the exact available href includi
   const prevHref = await page.locator('.hgh-pg-prev').getAttribute('href');
   expect(prevHref).toBeNull();
   await expect(page.locator('.hgh-pg-next')).toHaveAttribute('href', '/repo/commits?before=abc&path=src%2Ffile.js#history');
+});
+
+for (const width of [640, 600]) {
+  test(`${width}px viewport (the reported regression width) with long Russian labels and a six-digit page count never overflows before or after reveal, with the center pair and page height identical across the reveal`, async ({page}) => {
+    await page.setViewportSize({width, height: 900});
+    await prepare(page, nativePagination({current: 500000, total: 999999, lang: 'ru'}));
+    await page.clock.install();
+    await page.evaluate(() => enhancePagination());
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+    const before = await centerRect(page);
+    await page.hover('.hgh-pagination');
+    await page.clock.runFor(2000);
+    await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+    const after = await centerRect(page);
+    expect(after.center).toEqual(before.center);
+    expect(after.prev).toEqual(before.prev);
+    expect(after.next).toEqual(before.next);
+    expect(after.docHeight).toBe(before.docHeight);
+  });
+}
+
+test('a 320px-wide embedded container inside a genuinely wide 1280px viewport never overflows, before or after reveal — proves this is container-width-aware, not just a bigger viewport breakpoint', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  await prepare(page, `<div style="width:320px">${nativePagination({current: 500000, total: 999999, lang: 'ru'})}</div>`);
+  await page.clock.install();
+  await page.evaluate(() => enhancePagination());
+  // The viewport here is 1280px — well past the old 479px media-query
+  // breakpoint — and overflow contained inside the narrow div never reaches
+  // document-level scrollWidth (it stays well within the wide viewport), so
+  // only measuring the pagination region's own scrollWidth against its own
+  // clientWidth (not window.innerWidth or the document) can catch it.
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-wrap]')).toHaveCount(1);
+  await expectNoOverflow(page);
+  const before = await centerRect(page);
+  await page.hover('.hgh-pagination');
+  await page.clock.runFor(2000);
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
+  await expectNoOverflow(page);
+  const after = await centerRect(page);
+  expect(after.center).toEqual(before.center);
+  expect(after.prev).toEqual(before.prev);
+  expect(after.next).toEqual(before.next);
+  expect(after.docHeight).toBe(before.docHeight);
+});
+
+test('a padded embedding container is measured by its content width, not its clientWidth (which includes padding) — a container that only looks wide enough never gets falsely treated as available', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  // Styles nav's real DOM parent (.center.page.buttons, the div native
+  // paginate.tmpl markup wraps around .pagination.menu — nav is inserted as
+  // its sibling, so this is the actual measured parent, not a wrapping div
+  // one level up). clientWidth is 700px, but 150px of padding on each side
+  // leaves only 400px of real room — just under the ~465px this fixture's
+  // row layout needs. Using clientWidth alone would wrongly read 700px as
+  // available and stay in the overflowing row layout.
+  await prepare(page, `<style>.center.page.buttons{width:700px;padding:0 150px;box-sizing:border-box}</style>${nativePagination({current: 6, total: 90})}`);
+  await page.evaluate(() => enhancePagination());
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-wrap]')).toHaveCount(1);
+  await expectNoOverflow(page);
+});
+
+test('resizing a wrapping container (not the browser viewport) recomputes wing widths fresh each cycle, never leaves a stale min-width from a wider pass, and disconnects its ResizeObserver on teardown', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  await prepare(page, `<div id="box" style="width:900px">${nativePagination({current: 6, total: 90})}</div>`);
+  await page.evaluate(() => {
+    window.__disconnects = 0;
+    const RealRO = window.ResizeObserver;
+    window.ResizeObserver = class extends RealRO {
+      disconnect() { window.__disconnects++; super.disconnect(); }
+    };
+    enhancePagination();
+  });
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-wrap]')).toHaveCount(0);
+  const wide = await page.evaluate(() => ({
+    left: document.querySelector('.hgh-pg-wing-left').style.minWidth,
+    right: document.querySelector('.hgh-pg-wing-right').style.minWidth,
+  }));
+  expect(wide.left).not.toBe('');
+  expect(wide.left).toBe(wide.right);
+
+  await page.evaluate(() => { document.getElementById('box').style.width = '160px'; });
+  await page.waitForFunction(() => document.querySelector('.hgh-pagination').dataset.hghPgWrap === 'true');
+  await expectNoOverflow(page);
+  const narrow = await page.evaluate(() => ({
+    left: document.querySelector('.hgh-pg-wing-left').style.minWidth,
+    right: document.querySelector('.hgh-pg-wing-right').style.minWidth,
+  }));
+  expect(narrow.left).toBe('');
+  expect(narrow.right).toBe('');
+  // wing content was never revealed by hover/focus, so it must stay locked
+  // out of interaction and the tab order through every layout change.
+  await expect(page.locator('.hgh-pg-wing-items').first()).toHaveAttribute('inert', '');
+
+  await page.evaluate(() => { document.getElementById('box').style.width = '900px'; });
+  await page.waitForFunction(() => document.querySelector('.hgh-pagination').dataset.hghPgWrap === undefined);
+  const restored = await page.evaluate(() => ({
+    left: document.querySelector('.hgh-pg-wing-left').style.minWidth,
+    right: document.querySelector('.hgh-pg-wing-right').style.minWidth,
+  }));
+  // Freshly recomputed, not just whatever the first wide pass happened to
+  // leave behind — equal to each other and (for this unchanged content) equal
+  // to the original wide measurement.
+  expect(restored.left).toBe(restored.right);
+  expect(restored.left).toBe(wide.left);
+
+  await page.evaluate(() => restorePagination());
+  expect(await page.evaluate(() => window.__disconnects)).toBe(1);
+});
+
+test('once revealed, shrinking the container past the wrap boundary keeps the wings visible (reveal never gets un-done by a layout-mode change) and never overflows', async ({page}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  await prepare(page, `<div id="box" style="width:900px">${nativePagination({current: 500000, total: 999999, lang: 'ru'})}</div>`);
+  await page.clock.install();
+  await page.evaluate(() => enhancePagination());
+  await page.hover('.hgh-pagination');
+  await page.clock.runFor(2000);
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
+  await expectNoOverflow(page);
+
+  await page.evaluate(() => { document.getElementById('box').style.width = '160px'; });
+  await page.waitForFunction(() => document.querySelector('.hgh-pagination').dataset.hghPgWrap === 'true');
+  // Reveal is a one-way session flag, independent of layout mode: shrinking
+  // into the wrap boundary must never re-hide already-revealed wing content.
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
+  await expect(page.locator('.hgh-pg-wing-items').first()).toHaveCSS('visibility', 'visible');
+  await expectNoOverflow(page);
+
+  await page.evaluate(() => { document.getElementById('box').style.width = '900px'; });
+  await page.waitForFunction(() => document.querySelector('.hgh-pagination').dataset.hghPgWrap === undefined);
+  await expectNoOverflow(page);
+});
+
+test('with prefers-reduced-motion, resizing a container across the wrap boundary never reveals wings or lifts their inert lock', async ({page}) => {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await page.setViewportSize({width: 1280, height: 800});
+  await prepare(page, `<div id="box" style="width:900px">${nativePagination({current: 6, total: 90})}</div>`);
+  await page.evaluate(() => enhancePagination());
+  await expect(page.locator('.hgh-pg-wing-items').first()).toHaveAttribute('inert', '');
+  await page.evaluate(() => { document.getElementById('box').style.width = '150px'; });
+  await page.waitForFunction(() => document.querySelector('.hgh-pagination').dataset.hghPgWrap === 'true');
+  await expect(page.locator('.hgh-pg-wing-items').first()).toHaveAttribute('inert', '');
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(0);
+  await expectNoOverflow(page);
 });
 
 test('proof: measures exact before/after geometry and captures screenshots as test attachments', async ({page}, testInfo) => {

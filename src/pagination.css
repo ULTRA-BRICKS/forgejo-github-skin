@@ -43,17 +43,14 @@
   .hgh-pg-wing-items,.hgh-pg-more{transition:none}
 }
 
-/* Narrow viewports: reserve a fixed second row for wings instead of shifting the
-   centered Previous/Next pair or overflowing the page. The row only exists when
-   wings were built at all (hasExpandable); the JS-computed equal min-width from
-   equalizeWings() is reset here so wrapped mobile content never forces overflow. */
-@media (max-width:479px){
-  .hgh-pagination{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"center center" "left right";row-gap:4px;column-gap:4px;justify-items:center}
-  .hgh-pg-center{grid-area:center;justify-self:center}
-  .hgh-pg-wing-left{grid-area:left;justify-self:start}
-  .hgh-pg-wing-right{grid-area:right;justify-self:end}
-  .hgh-pg-wing{min-width:0!important}
-  .hgh-pg-wing-items{flex-wrap:wrap;row-gap:4px}
-  .hgh-pagination a.item{padding:0 8px}
-  .hgh-pg-edge .navigation_label{display:none}
-}
+/* Narrow layout, toggled by pagination.mjs's applyResponsiveLayout() from a
+   measured available-width comparison (not a viewport media query) — see
+   there for the full design rationale. */
+.hgh-pagination[data-hgh-pg-wrap]{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"center center" "left right";row-gap:4px;column-gap:4px;justify-items:center}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-center{grid-area:center;justify-self:center}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing-left{grid-area:left;justify-self:start}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing-right{grid-area:right;justify-self:end}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing{min-width:0!important}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing-items{flex-wrap:wrap;row-gap:4px;min-width:0}
+.hgh-pagination[data-hgh-pg-wrap] a.item{padding:0 8px}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-edge .navigation_label{display:none}

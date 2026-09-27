@@ -296,26 +296,127 @@ function build(doc, menu) {
   nav.addEventListener('pointerup', onNonMouseRelease);
   nav.addEventListener('pointercancel', onNonMouseRelease);
 
-  return {nav, controller, wings, undo, leftWing, rightWing, listeners: {onEnter, onNonMousePress, onLeave, onNonMouseRelease}};
+  return {nav, center, controller, wings, undo, leftWing, rightWing, resizeObserver: null, listeners: {onEnter, onNonMousePress, onLeave, onNonMouseRelease}};
 }
 
-/** Sets both wing columns to the same pixel width (the wider side's natural
- *  content width) so Previous/Next sits at the row's true center regardless of
- *  which side has more entries, and stays put across the reveal transition. */
-function equalizeWings(state) {
-  if (!state.leftWing || !state.rightWing) return;
+/** Sums each child's own rendered width (plus the flex gap between them), never
+ *  the parent box's own rendered width. Only valid in the canonical unwrapped
+ *  state (see the force-unwrap in applyResponsiveLayout): the wrap layout's
+ *  own CSS shrinks item padding and hides edge labels, so a child's own box
+ *  DOES reflow between modes — this must never be called while still wrapped.
+ *  Assumes children have no horizontal margins (true for pagination.css's
+ *  margin-free `a.item`) — a margin would be real spacing this never counts. */
+function naturalWidth(el, gap) {
+  const children = el.children;
+  let width = 0;
+  for (const child of children) width += child.getBoundingClientRect().width;
+  return children.length > 1 ? width + (children.length - 1) * gap : width;
+}
+
+// Reads the real column-gap CSS value instead of a hardcoded constant, so a
+// future pagination.css gap tweak can never silently desync the fit math.
+function columnGap(el) {
+  return parseFloat(el.ownerDocument.defaultView.getComputedStyle(el).columnGap) || 0;
+}
+
+// clientWidth includes the element's own padding, which is reserved space
+// around its content, not room available to its children — a padded parent
+// would otherwise make this measurement overstate the room nav actually has.
+function contentWidth(el) {
+  const cs = el.ownerDocument.defaultView.getComputedStyle(el);
+  const padding = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+  return Math.max(0, el.clientWidth - padding);
+}
+
+// Both wing columns always move together — equalized to the same width in
+// row mode, cleared together in wrap mode — so this stays the single place
+// that pairing is expressed instead of three separate call sites drifting.
+function setWingsMinWidth(leftWing, rightWing, value) {
+  leftWing.wing.style.minWidth = value;
+  rightWing.wing.style.minWidth = value;
+}
+
+/** Container-size-aware layout, re-run on every resize (see the ResizeObserver
+ *  in enhancePagination()): measures the real available width — the DOM
+ *  parent's content box, which shrinks for a narrow viewport and a narrow
+ *  embedding container alike — against the row layout's true natural width.
+ *  Wide enough: both wing columns are set to the same pixel width (the wider
+ *  side's natural content width) so Previous/Next sits at the row's true
+ *  center regardless of which side has more entries. Too narrow: switches to
+ *  the two-row wrap layout in pagination.css (which itself lets wing content
+ *  wrap onto further lines, so it comfortably handles ordinary narrow widths);
+ *  the pixel min-width is cleared so a value computed for a wider pass never
+ *  survives into this narrower one.
+ *
+ *  Assumes nav's real DOM parent establishes its own width independently of
+ *  nav's content (true for Forgejo's block-level `.page.buttons` container,
+ *  and for every fixture in the test suite) — a shrink-to-fit parent sized
+ *  entirely by nav's own content is not a supported configuration, the same
+ *  assumption the original fixed-viewport design made implicitly. */
+function applyResponsiveLayout(state) {
+  const {nav, center, leftWing, rightWing} = state;
+  if (!leftWing || !rightWing) return;
+  const wasWrapped = nav.dataset.hghPgWrap === 'true';
+  const prevMinWidth = leftWing.wing.style.minWidth;
+  let wrap, max;
   try {
-    const widths = [state.leftWing, state.rightWing].map((w) => w.itemsBox.getBoundingClientRect().width);
-    const max = Math.max(...widths);
-    if (max > 0) {
-      state.leftWing.wing.style.minWidth = max + 'px';
-      state.rightWing.wing.style.minWidth = max + 'px';
+    if (wasWrapped) {
+      // Force the canonical unwrapped state before measuring: the wrap
+      // layout's own CSS shortens item padding and hides edge labels, so
+      // measuring while still wrapped would underestimate the row layout's
+      // true natural width — and could wrongly declare "fits" on a later
+      // pass with no way to self-correct, since this only re-runs when the
+      // parent's own size changes, not when this function's own writes do.
+      delete nav.dataset.hghPgWrap;
+      setWingsMinWidth(leftWing, rightWing, '');
     }
-  } catch {}
+    const wingGap = columnGap(leftWing.itemsBox);
+    const leftNatural = naturalWidth(leftWing.itemsBox, wingGap);
+    const rightNatural = naturalWidth(rightWing.itemsBox, wingGap);
+    const centerWidth = center.getBoundingClientRect().width;
+    // Row mode equalizes both wings to the wider side's width (below), so the
+    // actual rendered row needs 2 * max(left, right), not left + right.
+    max = Math.max(leftNatural, rightNatural);
+    const naturalRowWidth = centerWidth + max * 2 + columnGap(nav) * 2;
+    const parent = nav.parentElement;
+    const available = parent ? contentWidth(parent) : nav.ownerDocument.documentElement.clientWidth;
+    wrap = available > 0 && naturalRowWidth > available;
+  } catch {
+    // Measurement failed partway through: restore exactly what was there
+    // before this pass touched anything, rather than leaving the nav stuck
+    // unwrapped-with-cleared-widths until an unrelated resize happens to
+    // paper over it.
+    if (wasWrapped) {
+      nav.dataset.hghPgWrap = 'true';
+      setWingsMinWidth(leftWing, rightWing, prevMinWidth);
+    }
+    return;
+  }
+  const nextMinWidth = max > 0 ? max + 'px' : '';
+  // Wrap mode's canonical min-width is always '' (setWingsMinWidth clears it
+  // whenever wrap is entered below), so only row mode needs the value
+  // compared — a min-width mismatch in wrap mode can't happen without also
+  // changing setWingsMinWidth's own pairing contract.
+  const minWidthSettled = wrap || prevMinWidth === nextMinWidth;
+  if (wrap === wasWrapped && minWidthSettled) {
+    // Nothing actually changed (e.g. a height-only resize): restore exactly
+    // what was there before the forced clear above instead of rewriting it,
+    // so an unrelated tick never touches the DOM for a decision that didn't
+    // move.
+    if (wasWrapped) nav.dataset.hghPgWrap = 'true';
+    return;
+  }
+  if (wrap) {
+    nav.dataset.hghPgWrap = 'true';
+    setWingsMinWidth(leftWing, rightWing, '');
+  } else if (max > 0) {
+    setWingsMinWidth(leftWing, rightWing, max + 'px');
+  }
 }
 
 function teardown(menu, state) {
   state.controller.destroy();
+  state.resizeObserver?.disconnect();
   state.nav.removeEventListener('pointerenter', state.listeners.onEnter);
   state.nav.removeEventListener('pointerdown', state.listeners.onNonMousePress);
   state.nav.removeEventListener('pointerleave', state.listeners.onLeave);
@@ -333,6 +434,20 @@ function cleanupDisconnected(doc) {
   }
 }
 
+/** Recomputes applyResponsiveLayout() whenever the pagination region's real
+ *  DOM parent changes size — a narrow viewport resizing, a narrow embedding
+ *  container resizing, or both — so a layout computed for one width never
+ *  goes stale in another. */
+function setupResponsiveObserver(state) {
+  if (!state.leftWing || !state.rightWing || typeof ResizeObserver === 'undefined') return;
+  const parent = state.nav.parentElement;
+  if (!parent) return;
+  try {
+    state.resizeObserver = new ResizeObserver(() => applyResponsiveLayout(state));
+    state.resizeObserver.observe(parent);
+  } catch {}
+}
+
 /** Reserve compact centered Previous/Next; wings reveal after a sustained hover/focus. */
 export function enhancePagination(doc = document) {
   cleanupDisconnected(doc);
@@ -342,7 +457,8 @@ export function enhancePagination(doc = document) {
     if (!state) continue;
     menu.hidden = true;
     menu.after(state.nav);
-    equalizeWings(state);
+    applyResponsiveLayout(state);
+    setupResponsiveObserver(state);
     states.set(menu, state);
   }
 }
