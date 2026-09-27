@@ -69,7 +69,7 @@ function heatmapSvg() {
 function dashboardHtml({repoCount, activityCount, alert}) {
   return `<div role="main" class="page-content dashboard feeds">
     <div class="secondary-nav"><div class="ui secondary stackable menu">
-      <div class="item"><div class="ui floating dropdown jump"><span class="text">ultrabricks</span></div></div>
+      <div class="item"><div class="ui floating dropdown jump"><span class="text truncated-item-container"><img class="ui avatar" alt="" src="${avatarDataUri('U', 260)}" width="20" height="20"><span class="truncated-item-name">ultrabricks</span></span></div></div>
       <div class="item"><div class="ui floating dropdown jump"><span class="text">Teams</span></div></div>
       <div class="right menu">
         <a class="item" href="/org/ultrabricks/dashboard">Activity</a>
@@ -145,7 +145,24 @@ export function organizationDashboard({dark = false, view = 'overview', empty = 
   container.innerHTML = dashboardHtml({repoCount: empty ? 0 : 12, activityCount: empty ? 0 : 7, alert});
   queueMicrotask(() => {
     enhanceOrganization(document);
-    if (view !== 'overview') location.hash = view;
+    // #prs/#issues never render a persisted view in production — they always hand off
+    // immediately to Forgejo's native aggregate page (see organization.spec.mjs). Rather than
+    // faking a "state" that doesn't exist, show which real native link each tab hands off to.
+    if (view === 'prs' || view === 'issues') {
+      const suffix = view === 'prs' ? '/pulls' : '/issues';
+      const label = view === 'prs' ? 'Pull requests' : 'Issues';
+      const target = container.querySelector(`.secondary-nav .right.menu a[href$="${suffix}"]`);
+      const note = document.createElement('p');
+      note.className = 'hgh-org-handoff-note';
+      note.append(`Selecting "${label}" always hands off to Forgejo's native aggregate page immediately — no separate view is rendered here: `);
+      const link = document.createElement('a');
+      link.href = target?.getAttribute('href') ?? suffix;
+      link.textContent = link.href;
+      note.append(link);
+      container.prepend(note);
+    } else if (view !== 'overview') {
+      location.hash = view;
+    }
   });
   return container;
 }

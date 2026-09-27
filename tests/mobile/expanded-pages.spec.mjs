@@ -44,6 +44,27 @@ test('public organization profile keeps native repository links and the access-c
  // organizationProfile()'s fixed REPOS fixture (stories/organization-page.mjs) exactly.
  await expect(page.locator('.page-content.organization.profile .flex-list > .flex-item')).toHaveCount(15);
 });
+test('PRs/Issues Storybook states demonstrate the real native handoff link, not a fabricated PR/issue list',async({page})=>{
+ await open(page,'screens-organization--pull-requests');
+ await expect(page.locator('.hgh-org-handoff-note')).toContainText('Pull requests');
+ await expect(page.locator('.hgh-org-handoff-note a')).toHaveAttribute('href',/\/ultrabricks\/pulls$/);
+ await open(page,'screens-organization--issues');
+ await expect(page.locator('.hgh-org-handoff-note')).toContainText('Issues');
+ await expect(page.locator('.hgh-org-handoff-note a')).toHaveAttribute('href',/\/ultrabricks\/issues$/);
+});
+test('desktop (1280px) overview shows a real two-column layout with no horizontal overflow',async({page})=>{
+ await page.setViewportSize({width:1280,height:900});
+ await open(page,'screens-organization--overview');
+ await page.waitForSelector('.hgh-org-page');
+ await expect.poll(()=>page.locator('.hgh-org-repo-meta').count()).toBeGreaterThan(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+ const repos=await page.locator('.hgh-org-repos').boundingBox();
+ const sidebar=await page.locator('.hgh-org-sidebar').boundingBox();
+ expect(sidebar.x).toBeGreaterThan(repos.x+repos.width-1); // sidebar sits to the right of repos, not stacked below
+ const metaBox=await page.locator('.hgh-org-repo-meta').first().boundingBox();
+ expect(metaBox.width).toBeGreaterThan(300); // wraps to the row's full width, not squeezed beside the link
+ await expect(page).toHaveScreenshot('screens-organization--overview-1280.png',{fullPage:false});
+});
 test('organization Storybook states pass real axe accessibility checks, matching this repo\'s a11y:error preview policy',async({page})=>{
  for(const id of ['screens-organization--overview','screens-organization--repos','screens-organization--activity','screens-organization--empty-results','screens-organization--profile']){
   await open(page,id);await page.waitForSelector('.hgh-org-page, .page-content.organization.profile');
@@ -58,7 +79,7 @@ test('issue discussion accepts safe literal text and source errors are actionabl
  await expect(page.getByRole('status')).toHaveText('Comment added to this preview.');
  await open(page,'screens-issue-detail--source-error');await page.getByRole('button',{name:'Retry',exact:true}).click();await expect(page.locator('.issue-detail-conversation')).toBeVisible();
 });
-for(const id of ['screens-organization--overview','screens-organization--repos','screens-organization--activity','screens-organization--dark','screens-organization--empty-results','screens-organization--loading','screens-organization--error-state','screens-organization--with-flash-alert','screens-organization--profile','screens-organization--profile-dark'])test(id+' visual regression and bounds',async({page})=>{
+for(const id of ['screens-organization--overview','screens-organization--repos','screens-organization--pull-requests','screens-organization--issues','screens-organization--activity','screens-organization--dark','screens-organization--empty-results','screens-organization--loading','screens-organization--error-state','screens-organization--with-flash-alert','screens-organization--profile','screens-organization--profile-dark'])test(id+' visual regression and bounds',async({page})=>{
  await open(page,id);await page.waitForSelector('.hgh-org-page, .page-content.organization.profile');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
  if(id.endsWith('--dark'))await expect(page.locator('.hgh-org-story')).toHaveCSS('background-color','rgb(13, 17, 23)');

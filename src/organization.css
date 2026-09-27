@@ -21,6 +21,10 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
   margin-bottom: 16px;
 }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-heatmap .vch__day__square { rx: 2px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-header img { width: 32px; height: 32px; border-radius: 6px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-header-name { font-size: 18px; font-weight: 600; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-header a.ui.basic.button { margin-left: auto; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-notices:not(:empty) { margin-bottom: 16px; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--hgh-color-border, #d1d9e0); }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-tabs > a { padding: 8px 10px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--hgh-color-muted, #59636e); text-decoration: none; font-size: 14px; font-weight: 500; }
@@ -50,9 +54,8 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-repos-status[role="status"]:not([hidden]) { font-size: 13px; color: var(--hgh-color-muted, #59636e); margin: 0 0 8px; }
 /* Exactly 10 repository rows visible before "View all repositories" reveals the rest (#repos). */
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] #dashboard-repo-list .repo-owner-name-list > li:nth-child(n+11) { display: none; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] #dashboard-repo-list .pagination,
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] #dashboard-repo-list .ui.pagination { display: none; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-repo-meta { padding: 2px 0 8px 24px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .repo-owner-name-list > li { flex-wrap: wrap; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-repo-meta { flex-basis: 100%; min-width: 0; padding: 2px 0 8px 24px; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-repo-desc { margin: 0 0 6px; font-size: 13px; color: var(--hgh-color-muted, #59636e); }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-repo-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 12px; color: var(--hgh-color-muted, #59636e); }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-stat,

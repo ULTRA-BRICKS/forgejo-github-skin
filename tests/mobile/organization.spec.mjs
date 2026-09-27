@@ -28,7 +28,7 @@ body{margin:0;font:14px/1.4 Arial;--hgh-color-text:#1f2328;--hgh-color-muted:#59
 <div role="main" class="page-content dashboard feeds">
   <div class="secondary-nav">
     <div class="ui secondary stackable menu">
-      <div class="item"><div class="ui floating dropdown jump"><span class="text">ultrabricks</span></div></div>
+      <div class="item"><div class="ui floating dropdown jump"><span class="text truncated-item-container"><img class="ui avatar" alt="" src="/avatars/ultrabricks.png" width="20" height="20"><span class="truncated-item-name">ultrabricks</span></span></div></div>
       <div class="item"><div class="ui floating dropdown jump"><span class="text">Teams</span></div></div>
       <div class="right menu">
         <a class="item" href="/org/ultrabricks/dashboard">Activity</a>
@@ -92,9 +92,27 @@ async function prepare(page) {
 test('overview shows exactly 10 repositories with a View all link into #repos', async ({page}) => {
   await prepare(page);
   await expect(page.locator('#dashboard-repo-list .repo-owner-name-list > li:visible')).toHaveCount(10);
+  // Never touch the generic pagination implementation — the native pager stays exactly as
+  // Vue rendered it (visible, untouched) even while the overview caps rows to 10 via our own CSS.
+  await expect(page.locator('#dashboard-repo-list .ui.borderless.pagination')).toBeVisible();
   const viewAll = page.locator('.hgh-org-view-all');
   await expect(viewAll).toBeVisible();
   await expect(viewAll).toHaveAttribute('href', '#repos');
+});
+
+test('shows a compact identity header reusing the native avatar/name and the real View-home link, restored exactly on teardown', async ({page}) => {
+  await prepare(page);
+  await expect(page.locator('.hgh-org-header-name')).toHaveText('ultrabricks');
+  await expect(page.locator('.hgh-org-header img.ui.avatar')).toBeVisible();
+  const homeLink = page.locator('.hgh-org-header a.ui.basic.button');
+  await expect(homeLink).toHaveAttribute('href', '/ultrabricks');
+  await expect(homeLink).toHaveText('View home');
+
+  await page.evaluate(() => { window.restoreOrganization(); });
+  await expect(page.locator('.hgh-org-header')).toHaveCount(0);
+  const restoredLink = page.locator('.secondary-nav .right.menu a.ui.basic.button[href="/ultrabricks"]');
+  await expect(restoredLink).toHaveCount(1);
+  await expect(restoredLink).toHaveText('View home');
 });
 
 test('View all reveals the complete list, keeps native pagination, and back/forward round-trip', async ({page}) => {
@@ -130,6 +148,19 @@ test('all five hashes are reachable and pull requests/issues route through nativ
   await page.evaluate(() => { window.enhanceOrganization(); });
   await page.locator('a[data-hgh-org-tab="issues"]').click();
   await expect(page).toHaveURL('https://native-ui.test/ultrabricks/issues');
+});
+
+test('prs/issues redirects replace the hash entry so Back/Forward never re-triggers the redirect', async ({page}) => {
+  await prepare(page);
+  await page.locator('a[data-hgh-org-tab="prs"]').click();
+  await expect(page).toHaveURL('https://native-ui.test/ultrabricks/pulls');
+
+  await page.goBack();
+  await expect(page).not.toHaveURL(/\/pulls$/);
+  await expect(page).not.toHaveURL(/#prs$/);
+
+  await page.goForward();
+  await expect(page).toHaveURL('https://native-ui.test/ultrabricks/pulls');
 });
 
 test('long comments and pasted screenshots collapse behind a keyboard- and tap-operable Show more/less', async ({page}) => {
@@ -195,6 +226,24 @@ test('restore fully reverts the native DOM and re-enhancing afterward is clean',
   await page.evaluate(() => { window.enhanceOrganization(); window.enhanceOrganization(); });
   await expect(page.locator('.hgh-org-page')).toHaveCount(1);
   await expect(page.locator('#dashboard-repo-list .repo-owner-name-list > li:visible')).toHaveCount(10);
+});
+
+test('shows a genuine empty state only when the org truly has zero repositories, never guessed', async ({page}) => {
+  await mockRoutes(page);
+  await page.route('**/repo/search**', (route) => {
+    if (new URL(route.request().url()).searchParams.get('count_only') === '1') return route.fulfill({contentType: 'application/json', headers: {'X-Total-Count': '0'}, body: '{}'});
+    return route.fulfill({contentType: 'application/json', headers: {'X-Total-Count': '0'}, body: JSON.stringify({data: []})});
+  });
+  await page.route('https://native-ui.test/dashboard', (route) => route.fulfill({contentType: 'text/html', body: fixture}));
+  await page.goto('https://native-ui.test/dashboard');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => {
+    document.querySelector('.repo-owner-name-list').innerHTML = ''; // simulate Vue also finding nothing
+    window.enhanceOrganization();
+  });
+  await page.waitForSelector('.hgh-org-page');
+  await expect(page.locator('.hgh-org-repos-status')).toHaveText('No repositories match.');
+  await expect(page.locator('.hgh-org-repo-meta')).toHaveCount(0);
 });
 
 test('a flash alert (and any other server-rendered notice) is relocated, never hidden, and restored exactly', async ({page}) => {

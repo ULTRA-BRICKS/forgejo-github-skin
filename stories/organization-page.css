@@ -3,3 +3,4 @@
  * step for that, so the demo fixture below overrides the same --hgh-color-* variables locally. */
 .hgh-org-story[data-surface=dark] { --hgh-color-canvas: #0d1117; --hgh-color-subtle: #161b22; --hgh-color-text: #e6edf3; --hgh-color-muted: #9da7b3; --hgh-color-border: #30363d; --hgh-color-link: #58a6ff; --hgh-color-success: #3fb950; --hgh-color-successSubtle: #133929; background: var(--hgh-color-canvas); }
 .hgh-org-story { background: var(--hgh-color-canvas, #fff); color: var(--hgh-color-text, #1f2328); min-height: 100vh; }
+.hgh-org-handoff-note { margin: 12px 16px 0; padding: 10px 14px; border: 1px solid var(--hgh-color-border, #d1d9e0); border-radius: 6px; background: var(--hgh-color-subtle, #f6f8fa); font-size: 13px; }

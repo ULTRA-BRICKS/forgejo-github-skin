@@ -154,25 +154,33 @@ function buildRepoDecoration(doc, repo) {
   return wrap;
 }
 
+function setStatus(state, text) {
+  state.status.hidden = !text;
+  state.status.textContent = text;
+}
 function watchRepoEnrichment(state, doc, win) {
   const apply = () => {
     if (state.cancelled || !state.enrichment) return;
-    for (const row of state.repoHost.querySelectorAll('.repo-owner-name-list > li:not([data-hgh-checked])')) {
+    const rows = state.repoHost.querySelectorAll('.repo-owner-name-list > li');
+    for (const row of rows) {
+      if (row.dataset.hghChecked) continue;
       const name = row.querySelector('.repo-list-link .text.truncate')?.textContent?.trim();
       const repo = name && state.enrichment.byName.get(name);
       row.dataset.hghChecked = 'true';
       if (repo) row.append(buildRepoDecoration(doc, repo));
     }
+    // `state.emptyConfirmed` (not the rendered status text) is the source of truth, so this stays
+    // correct even if the message wording changes later.
+    if (state.emptyConfirmed) setStatus(state, rows.length === 0 ? 'No repositories match.' : '');
   };
   state.enrichmentObserver = new win.MutationObserver(apply);
   state.enrichmentObserver.observe(state.repoHost, {childList: true, subtree: true});
-  state.status.hidden = false;
-  state.status.textContent = 'Loading repository details…';
+  setStatus(state, 'Loading repository details…');
   fetchEnrichment(win, state.abort.signal).then((result) => {
     if (state.cancelled) return;
     state.enrichment = result ?? {byName: new Map(), repos: []};
-    state.status.hidden = result !== null;
-    state.status.textContent = result === null ? 'Repository details are unavailable right now.' : '';
+    state.emptyConfirmed = result !== null && result.repos.length === 0;
+    setStatus(state, result === null ? 'Repository details are unavailable right now.' : '');
     apply();
   });
 }
@@ -272,7 +280,10 @@ function applyHash(state) {
   const raw = (state.win.location.hash || '#overview').slice(1);
   if (raw === 'prs' || raw === 'issues') {
     const link = nativeAggregateLink(state.root, raw === 'prs' ? '/pulls' : '/issues');
-    if (link) { state.win.location.hash = ''; state.navigate(link.href); return; }
+    // location.replace (not assign/hash='') so the `#prs`/`#issues` hash never becomes a
+    // separate history entry a later Back/Forward could land on and redirect again.
+    const safe = link && safeHref(link.href, state.win.location.href);
+    if (safe) { state.win.location.replace(safe); return; }
   }
   const view = VIEWS.has(raw) ? raw : 'overview';
   state.page.dataset.hghOrgView = view;
@@ -329,11 +340,24 @@ function buildDashboardPage(root, doc, win) {
   // state shown when the org has no feed items) must not silently vanish with the detached `flex`.
   const noticeSlots = [...main.children].filter((node) => node !== heatmap && node !== feed).map((node) => ({marker: marker(doc, node), node}));
 
+  // Compact identity header: clone the presentational avatar/name already rendered by the native
+  // context switcher (never its interactive dropdown/visibility controls), and move — not clone —
+  // the one real interactive element (the native "View <org>" link) so it stays a single, restorable
+  // native node rather than a duplicate access-control surface.
+  const identity = root.querySelector('.secondary-nav .truncated-item-container');
+  const homeLink = root.querySelector('.secondary-nav .right.menu a.ui.basic.button[href]');
+  const homeLinkMarker = homeLink ? marker(doc, homeLink) : null;
+  const header = el(doc, 'div', 'hgh-org-header');
+  const avatarSource = identity?.querySelector('img, .ui.avatar');
+  if (avatarSource) { const avatar = avatarSource.cloneNode(true); avatar.removeAttribute('id'); header.append(avatar); }
+  const nameSource = identity?.querySelector('.truncated-item-name');
+  if (nameSource) header.append(el(doc, 'span', 'hgh-org-header-name', nameSource.textContent.trim()));
+  if (homeLink) header.append(homeLink);
+
   const page = el(doc, 'div', 'hgh-org-page');
   const state = {
-    root, page, flex, heatmapMarker, feedMarker, repoHostMarker, heatmap, heatmapDivider, feed, repoHost, noticeSlots,
+    root, page, flex, heatmapMarker, feedMarker, repoHostMarker, heatmap, heatmapDivider, feed, repoHost, noticeSlots, homeLink, homeLinkMarker,
     win, enrichment: null, people: [], iconSizes: [], collapsed: [], cancelled: false, abort: new win.AbortController(),
-    navigate: (href) => { const safe = safeHref(href, win.location.href); if (safe) win.location.assign(safe); },
   };
   const notices = el(doc, 'div', 'hgh-org-notices');
   for (const {node} of noticeSlots) notices.append(node);
@@ -372,10 +396,9 @@ function buildDashboardPage(root, doc, win) {
   activitySection.append(activityHeading);
   if (feed) activitySection.append(feed);
 
-  page.append(tabs, notices, back, heatmapSlot, columns, activitySection);
+  page.append(header, tabs, notices, back, heatmapSlot, columns, activitySection);
   flex.replaceWith(page);
 
-  const homeLink = root.querySelector('.secondary-nav .right.menu a.ui.basic.button[href]');
   if (feed) compactActivity(doc, feed, state);
   watchRepoEnrichment(state, doc, win);
   renderSidebar(state, doc);
@@ -415,6 +438,7 @@ function restoreDashboard(state) {
     if (state.heatmapDivider) state.heatmap.after(state.heatmapDivider);
   }
   if (state.feed && state.feedMarker) restoreSlot(state.feedMarker, state.feed);
+  if (state.homeLink && state.homeLinkMarker) restoreSlot(state.homeLinkMarker, state.homeLink);
   for (const {marker: m, node} of state.noticeSlots) restoreSlot(m, node);
   restoreSlot(state.repoHostMarker, state.repoHost);
   if (state.page.isConnected) state.page.replaceWith(state.flex);

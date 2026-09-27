@@ -3,10 +3,12 @@ export default {title: 'Screens/Organization'};
 
 // #overview is the default view; #repos and #activity are real in-page views this module renders.
 // #prs/#issues never render a persisted view — the production module always routes them straight to
-// the native `/pulls`/`/issues` aggregate pages (see organization.spec.mjs), so the only story-visible
-// evidence of them is the tab bar itself, present in every dashboard state below.
+// the native `/pulls`/`/issues` aggregate pages (see organization.spec.mjs); PullRequests/Issues
+// below demonstrate that handoff using the real native link, not a fabricated PR/issue list.
 export const Overview = {render: () => organizationDashboard()};
 export const Repos = {render: () => organizationDashboard({view: 'repos'})};
+export const PullRequests = {render: () => organizationDashboard({view: 'prs'})};
+export const Issues = {render: () => organizationDashboard({view: 'issues'})};
 export const Activity = {render: () => organizationDashboard({view: 'activity'})};
 export const EmptyResults = {render: () => organizationDashboard({empty: true})};
 export const Loading = {render: () => organizationDashboard({loading: true})};
