@@ -85,6 +85,35 @@ test("adaptive shared SVG is transparent, compact, and cross-surface neutral", (
   assert.ok(svg.includes('fill="#1a7f37"'));
   assert.ok(svg.includes('fill="#cf222e"'));
 });
+test("Slack activity-only image has no duplicate title/metrics/logo, only the chart and its date/commit legend", () => {
+  const full = graphic(previewFixtures.repository, tokens, sizes);
+  // The full (non-Slack OG) card is unaffected by the additive-only variant: it keeps
+  // the header, brand, and every metric field.
+  assert.ok(full.includes('data-preview-header'));
+  assert.ok(full.includes('data-metric="0"'));
+  assert.ok(full.includes('>Stars<'));
+  assert.ok(full.includes('>Open issues<'));
+  assert.ok(full.includes('>Open PRs<'));
+  assert.ok(full.includes('>Forks<'));
+  assert.ok(full.includes('>REPO<') || full.includes('REPO #'));
+  assert.ok(full.includes('data-preview-chart'));
+  const activityOnly = structuredClone(previewFixtures.repository);
+  activityOnly.previewVariant = 'activity';
+  const svg = graphic(activityOnly, tokens, sizes);
+  assert.ok(!svg.includes('data-preview-header'));
+  assert.ok(!svg.includes('data-metric='));
+  assert.ok(!svg.includes('>Stars<'));
+  assert.ok(!svg.includes('>Open issues<'));
+  assert.ok(!svg.includes('>Open PRs<'));
+  assert.ok(!svg.includes('>Forks<'));
+  assert.ok(!svg.includes('Ultrabricks'));
+  assert.ok(!svg.includes('>REPO<'));
+  assert.ok(svg.includes('data-preview-chart'));
+  assert.ok(svg.includes('commits'));
+  assert.ok(svg.includes('28d'));
+  const layout = graphicLayout(activityOnly, sizes);
+  assert.ok(layout.height < graphicLayout(previewFixtures.repository, sizes).height);
+});
 test("adaptive-mode text and code rows never use a stroke/halo trick for contrast", () => {
   const svg = graphic(previewFixtures.file, tokens, sizes, { mode: "adaptive" });
   assert.ok(svg.includes('data-code-row="0"'));

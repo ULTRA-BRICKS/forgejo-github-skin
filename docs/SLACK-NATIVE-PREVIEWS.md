@@ -38,7 +38,32 @@ After verifying app settings and the linked reader, run `node scripts/sharing/co
 
 `npm run test:sharing` covers data bounds, type schemas, per-source/audience authorization, preserved code fallback, partial-batch errors, form transport, preferences, and image visibility changes. `npm run test:slack-ui` checks the shared-payload Storybook with Chromium desktop/320/440 and WebKit, interaction tests, and pixel snapshots. The published Storybook smoke test includes every native Slack state. Real-client acceptance additionally checks the delivered Work Object, source navigation, settings, refresh, and composer behavior; Storybook alone does not prove a Slack deployment.
 
-The composer `preview` title/icon is supplied on Block Kit cards. Slack controls whether a pasted URL becomes a compact reference; the `preview` field is ignored for already-posted messages. The app does not rewrite the author's message text. Work Object title/icon and `PR #N` identity remain available on the native card.
+**Documented platform facts** (from Slack's own reference docs, see citations below):
+the `unfurls[url].preview` field on `chat.unfurl` defines the compact title/icon reference
+shown while a link is still being typed/pasted in the composer (`source: "composer"`);
+that same `preview` field is explicitly ignored once a `chat.unfurl` call targets an
+already-posted message. If the author leaves the link in and sends the message, Slack
+dispatches a **separate**, later `link_shared` event with `source: "conversations_history"`
+for the posted message — a distinct event from the composer one, per the
+[unfurling-links-in-messages](https://docs.slack.dev/messaging/unfurling-links-in-messages/#unfurl_previews)
+doc's "Composer unfurls" section.
+
+**Observed local fact:** capturing this integration's own outgoing `chat.unfurl` payload
+for a `source: "composer"` event under the default `format: "native"` preference shows it
+currently sends only `metadata.entities` (Work Object) — no `unfurls` and no `preview`
+field at all. Only accounts that have switched **Slack presentation** to **Block Kit** in
+*Preview settings* currently produce an `unfurls[url].preview` payload for a composer
+event. The app never rewrites the author's message text either way.
+
+**Not verified — requires a real Slack workspace, which this repo has no path to:**
+whether Slack's composer chip actually falls back to a generic link (no title/icon) when
+only `metadata` is sent and no `preview` is present, or whether Slack derives an
+equivalent composer preview from Work Object metadata by some other undocumented path.
+Slack's own docs describe `unfurls` and `metadata` as separate parameters and never show
+a combined example, so it is also unverified whether a single `chat.unfurl` call may
+carry both together. Until a `format: "native"` account is tested pasting a link into a
+real composer and the resulting chip is observed, no behavior change ships here —
+converting this open question into code would be an unverified inference, not a fix.
 
 ## Official platform contracts
 

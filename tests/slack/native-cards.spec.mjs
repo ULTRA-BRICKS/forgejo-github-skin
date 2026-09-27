@@ -1,12 +1,18 @@
 import {test,expect} from '@playwright/test';
 const open=(page,id)=>page.goto('/iframe.html?id=sharing-slack-native-unfurls--'+id+'&viewMode=story');
-for(const id of ['repository','pull-request','issue','commit','file','private-pull-request','private-file','long-title','dark-pull-request','dark-file','failing-checks','passing-checks','no-checks','access-denied','loading','expired']) {
+for(const id of ['organization','repository','pull-request','issue','commit','file','private-pull-request','private-file','long-title','dark-pull-request','dark-file','failing-checks','passing-checks','no-checks','access-denied','loading','expired']) {
  test(id+' renders its real payload model with no missing images or overflow',async({page})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));await open(page,id);
   await expect(page.locator('.wo-card')).toBeVisible();expect(errors).toEqual([]);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
   for(const img of await page.locator('.wo-card img').all())await expect.poll(()=>img.evaluate(e=>e.complete&&e.naturalWidth>0)).toBe(true);
-  if(id==='pull-request') {await expect(page.locator('.wo-inline')).toContainText('PR #23');await expect(page.locator('.wo-card [data-action-id=forgejo_open_files]')).toHaveAttribute('href',/\/pulls\/23\/files$/);}
+ if(id==='pull-request') {await expect(page.locator('.wo-inline')).toContainText('PR #23');await expect(page.locator('.wo-card [data-action-id=forgejo_open_files]')).toHaveAttribute('href',/\/pulls\/23\/files$/);}
+ if(id==='organization') {
+  await expect(page.locator('.wo-inline')).toContainText('ultrabricks');
+  await expect(page.locator('.wo-card [data-action-id=forgejo_open_original]')).toHaveAttribute('href','https://forge.example/ultrabricks');
+  await expect(page.locator('.wo-card [data-action-id=forgejo_open_repositories]')).toHaveAttribute('href','https://forge.example/org/ultrabricks/dashboard#repos');
+  await expect(page.locator('.wo-card [data-key=repository]')).toHaveCount(0);
+ }
   if(id==='private-file')await expect(page.locator('[data-key=code_excerpt]')).toHaveCount(0);
  });
 }

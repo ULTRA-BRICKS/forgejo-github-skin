@@ -25,14 +25,20 @@ export function graphicLayout(meta, tokens) {
   const dim = name => tokens.preview[name].$value.value;
   const width = dim('width'), baseHeight = dim('height'), gap = dim('gutter');
   const codeOnly=meta.previewVariant==='code'&&meta.summary?.kind==='file';
+  // The Slack native object already shows title/metrics/logo as text fields; an
+  // activity-only image repeats none of that — just the chart and its date legend.
+  const activityOnly=meta.previewVariant==='activity'&&meta.summary?.kind==='repository';
   const lines = codeLines(meta), codeStart = codeOnly?28:64, codeStep = codeOnly?20:dim('lineHeight');
   const codeEnd = codeStart + Math.max(0, lines.length - 1) * codeStep;
   const codeFooter = codeEnd + 20;
-  const height = meta.summary?.kind === 'file' && lines.length
-    ? (codeOnly?codeFooter+16:Math.max(baseHeight, codeFooter + 12)) : baseHeight;
-  return { width, height, gap, lines, codeOnly, codeStart, codeStep, codeFooter,
+  const activityChartTop = 12, activityChartBottom = 60, activityFooter = 80;
+  const height = activityOnly ? activityFooter + 14
+    : meta.summary?.kind === 'file' && lines.length
+      ? (codeOnly?codeFooter+16:Math.max(baseHeight, codeFooter + 12)) : baseHeight;
+  return { width, height, gap, lines, codeOnly, activityOnly, codeStart, codeStep, codeFooter,
     header: 22, rule: 32, metadata: 46, metricValue: 58, metricLabel: 75,
-    chartTop: 87, chartBottom: 109, detail: 106, footer: height - 12 };
+    chartTop: activityOnly?activityChartTop:87, chartBottom: activityOnly?activityChartBottom:109,
+    detail: 106, footer: activityOnly?activityFooter:height - 12 };
 }
 export function syntaxSegments(line) {
   const pattern = /(\/\/.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:const|let|var|function|return|if|else|for|while|async|await|import|export|from|class|new|throw|true|false|null|undefined)\b|\b\d+(?:\.\d+)?\b)/g;
@@ -74,7 +80,7 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
     : `<rect x="${G}" y="8" width="18" height="18" rx="3" fill="none" stroke="${c.text}"/>` + text(G + 9, 21, cut(brand.initials || brand.name, 2).toUpperCase(), { size: 9, weight: 650, anchor: 'middle' });
   const kind = fact.kind === 'pull' ? 'PR' : fact.kind === 'repository' ? 'REPO' : String(fact.kind).toUpperCase();
   let body = `<g data-preview-header>${mark}${text(G + 26, layout.header, cut(brand.name, 24), { weight: 650 })}${text(W - G, layout.header, kind + (fact.number ? ' #' + fact.number : ''), { tone: 'muted', anchor: 'end' })}</g>` + line(G, layout.rule, W - G, layout.rule);
-  if(layout.codeOnly)body='';
+  if(layout.codeOnly||layout.activityOnly)body='';
   if (fact.kind === 'file' && layout.lines.length) {
     const start = Number.isSafeInteger(fact.lineStart) && fact.lineStart > 0 ? fact.lineStart : 1;
     const lastNumber = start + layout.lines.length - 1;
@@ -92,13 +98,15 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
     });
     body += text(G, layout.codeFooter, `Lines ${start}–${lastNumber} · excerpt only`, { tone: 'muted', size: 11, attrs: ' data-preview-footer' });
   } else {
-    const metrics = (fact.metrics || []).filter(m => hasValue(m.value)).slice(0, 4);
-    const step = (W - 2 * G) / Math.max(1, metrics.length);
-    for (const [i, item] of metrics.entries()) {
-      const value = cut(num(item.value), 10);
-      const preferred = typeof item.value === 'string' ? dim('textValueSize') : dim('numberSize');
-      const size = Math.max(12, Math.min(preferred, (step - dim('metricGap')) / Math.max(1, [...value].length) / .68));
-      body += `<g data-metric="${i}">${text(G + i * step, layout.metricValue, value, { size, weight: 650, tone: item.tone })}${text(G + i * step, layout.metricLabel, cut(item.label, 13), { size: 11, tone: 'muted' })}</g>`;
+    if(!layout.activityOnly){
+      const metrics = (fact.metrics || []).filter(m => hasValue(m.value)).slice(0, 4);
+      const step = (W - 2 * G) / Math.max(1, metrics.length);
+      for (const [i, item] of metrics.entries()) {
+        const value = cut(num(item.value), 10);
+        const preferred = typeof item.value === 'string' ? dim('textValueSize') : dim('numberSize');
+        const size = Math.max(12, Math.min(preferred, (step - dim('metricGap')) / Math.max(1, [...value].length) / .68));
+        body += `<g data-metric="${i}">${text(G + i * step, layout.metricValue, value, { size, weight: 650, tone: item.tone })}${text(G + i * step, layout.metricLabel, cut(item.label, 13), { size: 11, tone: 'muted' })}</g>`;
+      }
     }
     if (fact.kind === 'repository' && fact.activity?.days?.length) {
       const activity = fact.activity, days = activity.days.slice(0, 28).map(n => Number.isFinite(n) && n > 0 ? n : 0);
