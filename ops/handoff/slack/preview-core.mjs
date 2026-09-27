@@ -18,13 +18,15 @@ export function verifySlackRequest({rawBody, timestamp, signature, signingSecret
 
 const validName = (value) => /^[A-Za-z0-9_.-]{1,100}$/.test(value) && !['.', '..'].includes(value);
 const validSha = (value) => /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(value);
-// Sourced from Gitea/Forgejo's own reserved-username enforcement (models/user/user.go
-// `reservedUsernames`/`reservedUserPatterns`): these path segments can never be a real
+// Sourced from Forgejo's own reserved-username enforcement — reservedUsernames /
+// reservedUserPatterns in models/user/user.go, https://codeberg.org/forgejo/forgejo/raw/branch/forgejo/models/user/user.go
+// (NOT Gitea's list, which differs slightly): these path segments can never be a real
 // user/organization account, so a single-segment link must never be parsed as one.
-const reserved = new Set(['.well-known', 'admin', 'api', 'assets', 'attachments', 'avatar', 'avatars',
-  'captcha', 'explore', 'favicon.ico', 'ghost', 'gitea-actions', 'issues', 'login', 'manifest.json',
-  'metrics', 'milestones', 'notifications', 'openapi3.v1.json', 'org', 'pulls', 'repo', 'repo-avatars',
-  'robots.txt', 'sitemap.xml', 'ssh_info', 'swagger.v1.json', 'user', 'v2']);
+const reserved = new Set(['-', '.well-known', 'actor', 'admin', 'api', 'assets', 'attachments',
+  'avatar', 'avatars', 'captcha', 'explore', 'favicon.ico', 'forgejo-actions', 'ghost',
+  'gitea-actions', 'issues', 'login', 'manifest.json', 'metrics', 'milestones', 'notifications',
+  'org', 'pulls', 'repo', 'repo-avatars', 'report_abuse', 'robots.txt', 'sitemap.xml', 'ssh_info',
+  'swagger.v1.json', 'user', 'v2']);
 const reservedNameSuffix = /\.(?:keys|gpg|rss|atom|png)$/i;
 const parsedLinks = new WeakSet();
 function parsed(result) {
@@ -60,7 +62,7 @@ export function parseForgejoLink(raw, configuredBase) {
     }
     if (owner === 'org' && parts.length === 3 && route === 'dashboard') {
       const name = repo;
-      if (!validName(name ?? '') || reserved.has(name.toLowerCase())) return null;
+      if (!validName(name ?? '') || reserved.has(name.toLowerCase()) || reservedNameSuffix.test(name)) return null;
       if (url.hash && !['#overview', '#repos', '#prs', '#issues', '#activity'].includes(url.hash)) return null;
       const orgRoot = `${base.origin}${prefix}${encodeURIComponent(name)}`;
       return parsed({originalUrl: raw, owner: name, repo: null, repositoryUrl: orgRoot, kind: 'organization',

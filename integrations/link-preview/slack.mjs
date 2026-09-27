@@ -150,24 +150,36 @@ export class SlackIntegration {
           const imageUrl=meta.private===false&&prefs.visuals!=='off'&&visualAddsInformation(meta)?this.imageSnapshot(meta):null;
           const ready=imageUrl?composeSlackCard(meta,facts,policy,{postedUrl:posted.url,settingsReference:reference,iconOrigin:this.config.origin,imageUrl,...prefs}):result;
           card=ready.card;
-          if(this.config.slack.workObjectsEnabled===true&&prefs.format==='native')entities.push(ready.entity);else blocksOnly[posted.url]=card;
+          if(this.config.slack.workObjectsEnabled===true&&prefs.format==='native'){
+            entities.push(ready.entity);
+            // Slack's composer preview chip is generated only from `unfurls[url].preview`
+            // (Work Object `metadata` has no documented effect there); carry it alongside
+            // metadata in the SAME chat.unfurl call below for composer-sourced links only,
+            // never for a posted message, and never as a second call that could be
+            // interpreted as replacing the first.
+            if(event.source==='composer')blocksOnly[posted.url]=card;
+          } else blocksOnly[posted.url]=card;
         }catch(error){if(!/Protected data|Authorization proof|freshly validated/.test(error.message))throw error;blocksOnly[posted.url]=card;}
       }else blocksOnly[posted.url]=card;
       fallback[posted.url]=card;
     }
     const target=event.unfurl_id?{unfurl_id:event.unfurl_id,source:event.source}:{channel:event.channel,ts:event.message_ts};
+    let combinedUnfurlsSent=false;
     if(entities.length){
+      const includeUnfurls=event.source==='composer'&&Object.keys(blocksOnly).length>0;
+      const payload=includeUnfurls?{...target,metadata:{entities},unfurls:blocksOnly}:{...target,metadata:{entities}};
       try {
-        const result=await this.call('chat.unfurl',{...target,metadata:{entities}});
+        const result=await this.call('chat.unfurl',payload);
         const warnings=result.response_metadata?.warnings|| (result.warning?[result.warning]:[]);
         if(warnings.some(w=>!['missing_charset','superfluous_charset'].includes(w))){const error=new Error('Work Object fields rejected');error.slackCode='invalid_metadata';throw error;}
+        if(includeUnfurls)combinedUnfurlsSent=true;
       }catch(error){
         if(!['invalid_metadata','invalid_metadata_format','invalid_arguments','feature_not_enabled','missing_scope'].includes(error.slackCode))throw error;
         console.warn('Work Object compatibility fallback: '+error.slackCode);
         for(const entity of entities)blocksOnly[entity.app_unfurl_url]=fallback[entity.app_unfurl_url];
       }
     }
-    if(Object.keys(blocksOnly).length) {
+    if(Object.keys(blocksOnly).length && !combinedUnfurlsSent) {
       try{await this.call('chat.unfurl',{...target,unfurls:blocksOnly});}
       catch(error){
         if(!['cannot_unfurl_url','invalid_blocks'].includes(error.slackCode))throw error;

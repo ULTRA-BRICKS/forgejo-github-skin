@@ -141,7 +141,10 @@ export function blockCard(model) {
   const elements=model.actions.primary_actions.map(a=>({type:'button',...a,text:{type:'plain_text',text:a.text,emoji:false}}));
   if(model.actions.overflow_actions.length)elements.push({type:'overflow',action_id:'forgejo_more',options:model.actions.overflow_actions.map(a=>({text:{type:'plain_text',text:a.text,emoji:false},value:a.value?({forgejo_settings:'settings:',forgejo_account:'account:',forgejo_personal:'personal:'}[a.action_id]+a.value):a.action_id,...(a.url?{url:a.url}:{})}))});
   blocks.push({type:'actions',elements});
-  return {blocks,preview:{title:{type:'plain_text',text:cleanText(model.title,150)},...(model.icon?{icon_url:model.icon}:{})}};
+  // Slack's composer-time preview chip (unfurls[url].preview) shows only a compact
+  // reference next to the icon, not the full title — matching the inline "PR #23"/
+  // "org name"/"owner/repo" reference Slack renders alongside a Work Object link.
+  return {blocks,preview:{title:{type:'plain_text',text:cleanText(model.reference,150)},...(model.icon?{icon_url:model.icon}:{})}};
 }
 
 /** Preserve useful text when an older Slack surface rejects rich/image blocks. */

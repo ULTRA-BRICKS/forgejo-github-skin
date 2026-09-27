@@ -118,7 +118,13 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
       });
       body += line(G, layout.chartBottom, W - G, layout.chartBottom) + '</g>';
       body += text(G, layout.footer, cut(`${num(activity.total)}${activity.sampled ? '+' : ''} commits · ${num(activity.authorCount)} authors`, 37), { tone: 'muted', size: 11, attrs: ' data-preview-footer' });
-      body += text(W - G, layout.footer, '28d' + (activity.end ? ' · ' + String(activity.end).slice(5, 10) : ''), { tone: 'muted', size: 11, anchor: 'end' });
+      // Activity-only strips the header/metrics, so the legend needs the full date span
+      // (not just the end date) to remain self-contained; the full card keeps "28d · end"
+      // since its header/rule already frame the card's timeframe.
+      const range = layout.activityOnly && activity.start && activity.end
+        ? String(activity.start).slice(5, 10) + '–' + String(activity.end).slice(5, 10)
+        : '28d' + (activity.end ? ' · ' + String(activity.end).slice(5, 10) : '');
+      body += text(W - G, layout.footer, range, { tone: 'muted', size: 11, anchor: 'end' });
     } else if (fact.kind === 'pull' || fact.kind === 'commit') {
       const add = fact.metrics?.find(m => m.label === 'Added')?.value;
       const del = fact.metrics?.find(m => m.label === 'Removed')?.value;

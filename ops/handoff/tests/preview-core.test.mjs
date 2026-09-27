@@ -102,6 +102,9 @@ for (const [name, raw] of [
   ['org itself', base+'org'], ['org non-dashboard subpath', base+'org/ultrabricks/settings'],
   ['org dashboard for a reserved name', base+'org/login/dashboard'],
   ['public keys suffix', base+'someuser.keys'], ['gpg suffix', base+'someuser.gpg'],
+  ['single dash', base+'-'], ['report_abuse', base+'report_abuse'], ['forgejo-actions', base+'forgejo-actions'],
+  ['actor', base+'actor'],
+  ['org dashboard with a suffix-pattern name', base+'org/someuser.keys/dashboard'],
 ]) test('reject organization for reserved path: '+name, () => assert.equal(parseForgejoLink(raw, base), null));
 test('organization traversal/query bypass is rejected like every other kind', () => {
   assert.equal(parseForgejoLink(base+'ultrabricks?x=1', base), null);

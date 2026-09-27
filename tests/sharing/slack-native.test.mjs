@@ -103,6 +103,43 @@ test('native API metadata and Block Kit compatibility fallback use the same safe
  slack.call=async(method,payload)=>{calls.push({method,payload});if(payload.metadata){const error=new Error('unsupported');error.slackCode='invalid_metadata';throw error;}return {ok:true};};
  try{await slack.unfurl(envelope());assert.equal(calls.length,2);assert.equal(calls[0].payload.metadata.entities[0].entity_payload.attributes.title.text,'PR #23 · Improve keyboard navigation');assert.match(JSON.stringify(calls[1]),/Improve keyboard/);assert.ok(!JSON.stringify(calls).includes('Copy reference'));}finally{store.close();}
 });
+test('composer-sourced native links get a classic composer preview alongside Work Object metadata in ONE combined call, never a second call',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{calls.push({method,payload});return {ok:true};};
+ try{
+  await slack.unfurl(envelope(repo+'/pulls/23',{source:'composer',channel:'COMPOSER',unfurl_id:'composer-fixture'}));
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].payload.unfurl_id,'composer-fixture');assert.equal(calls[0].payload.source,'composer');
+  assert.ok(calls[0].payload.metadata.entities.length>0);
+  const preview=calls[0].payload.unfurls[repo+'/pulls/23'].preview;
+  assert.equal(preview.title.text,'PR #23');
+  assert.ok(preview.icon_url);
+ }finally{store.close();}
+});
+test('posted (conversations_history) native links never carry the composer-only preview field',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{calls.push({method,payload});return {ok:true};};
+ try{
+  await slack.unfurl(envelope());
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].payload.unfurls,undefined);
+ }finally{store.close();}
+});
+test('a combined composer payload wire-encodes both metadata and unfurls as JSON in the same form body',async(t)=>{
+ const store=new Store(':memory:',randomBytes(32));
+ const cfg={...config,slack:{...config.slack,botToken:'synthetic-token'}};
+ const slack=new SlackIntegration(cfg,store,{},{});let request;
+ t.mock.method(globalThis,'fetch',async(url,options)=>{request={url,...options};return new Response(JSON.stringify({ok:true}),{status:200});});
+ try{
+  const payload={unfurl_id:'composer-fixture',source:'composer',metadata:{entities:[{entity_type:'slack#/entities/task'}]},unfurls:{[repo+'/pulls/23']:{blocks:[],preview:{title:{type:'plain_text',text:'PR #23'}}}}};
+  await slack.call('chat.unfurl',payload);
+  assert.deepEqual(JSON.parse(request.body.get('metadata')),payload.metadata);
+  assert.deepEqual(JSON.parse(request.body.get('unfurls')),payload.unfurls);
+  assert.equal(request.body.get('source'),'composer');
+ }finally{store.close();}
+});
 test('settings save is actor-bound, validated and affects only future shares by that actor',()=>{
  const store=new Store(':memory:',randomBytes(32));try{
  store.put('settings:'+ref,{team:'T123',user:'U123',url:repo},600);

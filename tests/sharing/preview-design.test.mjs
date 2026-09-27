@@ -110,7 +110,7 @@ test("Slack activity-only image has no duplicate title/metrics/logo, only the ch
   assert.ok(!svg.includes('>REPO<'));
   assert.ok(svg.includes('data-preview-chart'));
   assert.ok(svg.includes('commits'));
-  assert.ok(svg.includes('28d'));
+  assert.ok(svg.includes('08-22\u201309-18'));
   const layout = graphicLayout(activityOnly, sizes);
   assert.ok(layout.height < graphicLayout(previewFixtures.repository, sizes).height);
 });

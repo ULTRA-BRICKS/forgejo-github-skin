@@ -46,24 +46,30 @@ already-posted message. If the author leaves the link in and sends the message, 
 dispatches a **separate**, later `link_shared` event with `source: "conversations_history"`
 for the posted message — a distinct event from the composer one, per the
 [unfurling-links-in-messages](https://docs.slack.dev/messaging/unfurling-links-in-messages/#unfurl_previews)
-doc's "Composer unfurls" section.
+doc's "Composer unfurls" section. Neither `chat.unfurl` reference page states that `unfurls`
+and `metadata` are mutually exclusive in a single call — only that at least one is required.
 
-**Observed local fact:** capturing this integration's own outgoing `chat.unfurl` payload
-for a `source: "composer"` event under the default `format: "native"` preference shows it
-currently sends only `metadata.entities` (Work Object) — no `unfurls` and no `preview`
-field at all. Only accounts that have switched **Slack presentation** to **Block Kit** in
-*Preview settings* currently produce an `unfurls[url].preview` payload for a composer
-event. The app never rewrites the author's message text either way.
+**Shipped fix:** for a `source: "composer"` event, `unfurl()` now sends `unfurls[posted.url]`
+(carrying the classic `preview.title`/`icon_url`, keyed by the exact posted URL) **in the
+same** `chat.unfurl` call as `metadata.entities` — never as a second, later call that could
+be interpreted as replacing the first. `preview.title.text` is the compact reference
+(`PR #23` / org name / `owner/repo`), not the long Work Object title. A
+`source: "conversations_history"` (posted-message) event is untouched: it never includes
+`unfurls`/`preview`, since Slack documents that field as ignored there anyway, and Work
+Object registration for the posted card is driven by that separate later event, so this
+change cannot affect it. Tests assert (a) the composer path is exactly one call with both
+objects present, (b) `preview.title.text` is the compact reference, (c) a posted-message
+event never has an `unfurls` key, and (d) the real form serializer (`SlackIntegration.call`)
+JSON-encodes both `metadata` and `unfurls` correctly in the same `application/x-www-form-urlencoded` body.
 
-**Not verified — requires a real Slack workspace, which this repo has no path to:**
-whether Slack's composer chip actually falls back to a generic link (no title/icon) when
-only `metadata` is sent and no `preview` is present, or whether Slack derives an
-equivalent composer preview from Work Object metadata by some other undocumented path.
-Slack's own docs describe `unfurls` and `metadata` as separate parameters and never show
-a combined example, so it is also unverified whether a single `chat.unfurl` call may
-carry both together. Until a `format: "native"` account is tested pasting a link into a
-real composer and the resulting chip is observed, no behavior change ships here —
-converting this open question into code would be an unverified inference, not a fix.
+**Still not verified — requires a real Slack workspace, which this repo has no path to:**
+whether Slack's composer UI actually renders the resulting chip as expected once both
+parameters are present in one call. This fix supplies exactly the documented mechanism
+(the `preview` field, on the correct event, in the correct parameter shape) rather than
+guessing at undocumented behavior, but Slack's own rendering has not been observed live.
+Recommended before relying on it in production: paste a `git.hyperide.ai` link into the
+composer from a `format: "native"` account and confirm the compact title/icon chip appears
+in place of the generic link preview.
 
 ## Official platform contracts
 
