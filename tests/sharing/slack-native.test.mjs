@@ -90,6 +90,16 @@ test('text output is bounded and survives malformed Unicode',()=>{
  const m=metadata();m.title='x'.repeat(10000)+'\ud800';m.description='y'.repeat(10000);m.summary.metrics=Array.from({length:20},()=>({label:'Files',value:100}));
  const model=buildPresentation(m),card=blockCard(model);assert.ok(model.title.length<=180);assert.ok(model.description.length<=240);assert.ok(model.title.isWellFormed());assert.ok(JSON.stringify(card).length<12000);
 });
+test('composer preview.title.text is the compact reference for every kind, never empty',()=>{
+ for(const kind of ['repository','pull','issue','commit','file']){
+  const card=blockCard(buildPresentation(metadata(kind)));
+  assert.ok(card.preview.title.text.length>0,kind);
+ }
+ const orgLink=parseForgejoLink(origin+'/ultrabricks',origin);
+ const orgMeta={link:orgLink,private:false,repositoryId:null,repository:'ultrabricks',title:'Ultrabricks',description:'x',status:'Public',
+   summary:{kind:'organization',number:null,sha:'',metrics:[],labels:[],activity:null,code:null}};
+ assert.equal(blockCard(buildPresentation(orgMeta)).preview.title.text,'ultrabricks');
+});
 test('Enterprise history events without composer fields and entity events are accepted only with bounded identities',()=>{
  const e=envelope();delete e.event.source;assert.equal(validEnvelope(e,config),true);
  assert.equal(validEnvelope(envelope(repo,{source:'composer',channel:'COMPOSER',unfurl_id:'fixture.id'}),config),true);
@@ -138,6 +148,42 @@ test('a combined composer payload wire-encodes both metadata and unfurls as JSON
   assert.deepEqual(JSON.parse(request.body.get('metadata')),payload.metadata);
   assert.deepEqual(JSON.parse(request.body.get('unfurls')),payload.unfurls);
   assert.equal(request.body.get('source'),'composer');
+ }finally{store.close();}
+});
+test('a block-rejected combined composer call falls back to a rich Block Kit card instead of throwing',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{
+   calls.push({method,payload});
+   if(payload.metadata&&calls.length===1){const error=new Error('invalid blocks');error.slackCode='invalid_blocks';throw error;}
+   return {ok:true};
+ };
+ try{
+  await slack.unfurl(envelope(repo+'/pulls/23',{source:'composer',channel:'COMPOSER',unfurl_id:'composer-fixture'}));
+  assert.equal(calls.length,2);
+  assert.ok(calls[0].payload.metadata);assert.ok(calls[0].payload.unfurls);
+  assert.ok(calls[1].payload.unfurls);
+  assert.match(JSON.stringify(calls[1]),/Improve keyboard/);
+ }finally{store.close();}
+});
+test('a persistently block-rejected composer call reduces to a text-only card rather than throwing',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{
+   calls.push({method,payload});
+   // The combined call, then the rich-blocks retry, both reject with the same
+   // structural code; only the third (reduced, text-only) attempt should succeed.
+   if(calls.length<=2){const error=new Error('invalid blocks');error.slackCode='invalid_blocks';throw error;}
+   return {ok:true};
+ };
+ try{
+  await slack.unfurl(envelope(repo+'/pulls/23',{source:'composer',channel:'COMPOSER',unfurl_id:'composer-fixture'}));
+  assert.equal(calls.length,3);
+  assert.ok(calls[0].payload.metadata);assert.ok(calls[0].payload.unfurls);
+  assert.ok(calls[1].payload.unfurls);assert.equal(calls[1].payload.metadata,undefined);
+  const reducedCard=calls[2].payload.unfurls[repo+'/pulls/23'];
+  assert.ok(!JSON.stringify(reducedCard).includes('rich_text'));
+  assert.ok(!reducedCard.blocks.some(b=>b.type==='image'));
  }finally{store.close();}
 });
 test('settings save is actor-bound, validated and affects only future shares by that actor',()=>{

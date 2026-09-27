@@ -174,7 +174,12 @@ export class SlackIntegration {
         if(warnings.some(w=>!['missing_charset','superfluous_charset'].includes(w))){const error=new Error('Work Object fields rejected');error.slackCode='invalid_metadata';throw error;}
         if(includeUnfurls)combinedUnfurlsSent=true;
       }catch(error){
-        if(!['invalid_metadata','invalid_metadata_format','invalid_arguments','feature_not_enabled','missing_scope'].includes(error.slackCode))throw error;
+        // The combined call can now fail on either a metadata problem or a block
+        // problem (unfurls rides alongside metadata in the same request, atomically);
+        // tolerate both families and fall back to the safe/reduced path either way —
+        // the entire request was rejected, so the rich blocksOnly cards can't be
+        // trusted to retry unchanged.
+        if(!['invalid_metadata','invalid_metadata_format','invalid_arguments','feature_not_enabled','missing_scope','cannot_unfurl_url','invalid_blocks'].includes(error.slackCode))throw error;
         console.warn('Work Object compatibility fallback: '+error.slackCode);
         for(const entity of entities)blocksOnly[entity.app_unfurl_url]=fallback[entity.app_unfurl_url];
       }
