@@ -175,10 +175,12 @@ export class SlackIntegration {
         if(includeUnfurls)combinedUnfurlsSent=true;
       }catch(error){
         // The combined call can now fail on either a metadata problem or a block
-        // problem (unfurls rides alongside metadata in the same request, atomically);
-        // tolerate both families and fall back to the safe/reduced path either way —
-        // the entire request was rejected, so the rich blocksOnly cards can't be
-        // trusted to retry unchanged.
+        // problem (unfurls rides alongside metadata in the same request, atomically).
+        // Tolerate both families: drop the rejected Work Object metadata and retry with
+        // the rich Block Kit card below (same content, just via classic blocks). If that
+        // retry hits the same block-level rejection, its own catch further reduces to a
+        // text-only card — this is the pre-existing multi-level fallback chain, just
+        // reachable from a wider set of rejection codes on the first call now.
         if(!['invalid_metadata','invalid_metadata_format','invalid_arguments','feature_not_enabled','missing_scope','cannot_unfurl_url','invalid_blocks'].includes(error.slackCode))throw error;
         console.warn('Work Object compatibility fallback: '+error.slackCode);
         for(const entity of entities)blocksOnly[entity.app_unfurl_url]=fallback[entity.app_unfurl_url];
