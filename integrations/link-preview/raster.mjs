@@ -14,6 +14,13 @@ const session = browserSession(async () => {
   const { chromium } = await loadPlaywright();
   return chromium.launch({ headless: true });
 });
+/** Reuses the process-wide render browser instead of launching a second one.
+ * Internal build-tooling hook (e.g. pixel-comparing a fixture): the caller MUST
+ * NOT call `.close()` on the returned instance — it is shared with every
+ * `renderGraphic()` call in this process; only `closeRenderer()` may close it. */
+export async function acquireBrowser() {
+  return session.get();
+}
 export async function renderGraphic(meta) {
   if (!hasGraphicFacts(meta)) throw new TypeError("No renderable preview facts");
   const layout = graphicLayout(meta, sizes);
