@@ -74,6 +74,38 @@ export class Forgejo {
   async metadata(raw, token, { enrich = false, publicOnly = false } = {}) {
     const link = this.parse(raw);
     if (!link) return null;
+    if (link.kind === "organization") {
+      const org = await this.api("/orgs/" + encodeURIComponent(link.owner), token);
+      const orgName = org?.username || org?.name;
+      if (
+        !org ||
+        !Number.isSafeInteger(org.id) ||
+        typeof orgName !== "string" ||
+        !orgName ||
+        !["public", "limited", "private"].includes(org.visibility)
+      )
+        throw new Error("Invalid organization metadata");
+      // Visibility must be explicitly 'public'; a successful authenticated fetch is
+      // never treated as public (Forgejo returns 200 with visibility 'limited'/'private'
+      // for an org a caller's own token can read; anonymous/public-only callers must not
+      // see that content as if it were public).
+      const isPublic = org.visibility === "public";
+      if ((!token || publicOnly) && !isPublic) return null;
+      return {
+        summary: { kind: "organization", number: null, sha: "", created: "", updated: "",
+          author: "", metrics: [], labels: [], activity: null, code: null },
+        updatedAt: null,
+        link,
+        repositoryId: null,
+        organizationId: String(org.id),
+        repository: orgName,
+        private: !isPublic,
+        title: bounded(org.full_name || orgName, 150),
+        description: bounded(org.description, 400),
+        status: bounded(isPublic ? "Public" : "Private", 80),
+        author: "",
+      };
+    }
     const route =
       "/repos/" +
       encodeURIComponent(link.owner) +

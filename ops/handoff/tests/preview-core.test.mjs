@@ -73,3 +73,49 @@ test('private disclosure label is visible and mentions are plain text',()=> {
   assert(JSON.stringify(result).includes('Shared copy'));
 });
 test('link parse results are immutable',()=>assert.throws(()=>{link.originalUrl='https://evil.invalid';}));
+
+test('organization root parses to a canonical dashboard-linked identity', () => {
+  const org = parseForgejoLink(base+'ultrabricks', base);
+  assert.equal(org.kind, 'organization');
+  assert.equal(org.owner, 'ultrabricks');
+  assert.equal(org.repo, null);
+  assert.equal(org.resourceUrl, base+'ultrabricks');
+  assert.equal(org.dashboardUrl, base+'org/ultrabricks/dashboard');
+});
+test('organization dashboard route resolves to the same canonical identity as the public root', () => {
+  const dash = parseForgejoLink(base+'org/ultrabricks/dashboard', base);
+  assert.equal(dash.kind, 'organization');
+  assert.equal(dash.originalUrl, base+'org/ultrabricks/dashboard');
+  assert.equal(dash.resourceUrl, base+'ultrabricks');
+  assert.equal(dash.dashboardUrl, base+'org/ultrabricks/dashboard');
+});
+for (const hash of ['#overview', '#repos', '#prs', '#issues', '#activity'])
+  test('organization dashboard accepts coordinated hash tab '+hash, () =>
+    assert.ok(parseForgejoLink(base+'org/ultrabricks/dashboard'+hash, base)));
+test('organization dashboard rejects an arbitrary hash tab', () =>
+  assert.equal(parseForgejoLink(base+'org/ultrabricks/dashboard#danger', base), null));
+test('organization root never accepts a hash fragment', () =>
+  assert.equal(parseForgejoLink(base+'ultrabricks#repos', base), null));
+for (const [name, raw] of [
+  ['login', base+'login'], ['issues', base+'issues'], ['pulls', base+'pulls'],
+  ['milestones', base+'milestones'], ['repo', base+'repo'], ['well-known', base+'.well-known'],
+  ['org itself', base+'org'], ['org non-dashboard subpath', base+'org/ultrabricks/settings'],
+  ['org dashboard for a reserved name', base+'org/login/dashboard'],
+  ['public keys suffix', base+'someuser.keys'], ['gpg suffix', base+'someuser.gpg'],
+  ['single dash', base+'-'], ['report_abuse', base+'report_abuse'], ['forgejo-actions', base+'forgejo-actions'],
+  ['actor', base+'actor'],
+  ['org dashboard with a suffix-pattern name', base+'org/someuser.keys/dashboard'],
+]) test('reject organization for reserved path: '+name, () => assert.equal(parseForgejoLink(raw, base), null));
+test('organization traversal/query bypass is rejected like every other kind', () => {
+  assert.equal(parseForgejoLink(base+'ultrabricks?x=1', base), null);
+  assert.equal(parseForgejoLink(base+'org/../admin', base), null);
+  assert.equal(parseForgejoLink(base+'org/%2e%2e/dashboard', base), null);
+});
+test('richCard summarizes an organization by name alone, never "owner/undefined"', () => {
+  const org = parseForgejoLink(base+'ultrabricks', base);
+  const facts = {resourceVerified:true, checkIsFresh:true, visibility:'public', anonymousReadable:true, resourceUrl:org.resourceUrl};
+  const result = richCard({facts, policy:{}, link:org, title:'Ultrabricks', status:'Public'});
+  const text = JSON.stringify(result);
+  assert.ok(text.includes('ultrabricks'));
+  assert.ok(!text.includes('undefined'));
+});

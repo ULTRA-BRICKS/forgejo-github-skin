@@ -19,7 +19,7 @@ const config={origin:'https://links.example',forgejo:origin,slack:{teamId:'T123'
 const envelope=(url=repo+'/pulls/23',extra={})=>({type:'event_callback',event_id:'Ev123',team_id:'T123',api_app_id:'A123',event:{type:'link_shared',source:'conversations_history',channel:'C123',message_ts:'1789733603.123',user:'U123',links:[{url}],...extra}});
 for(const kind of ['repository','pull','issue','commit','file'])test(kind+': native object and fallback preserve validated destinations',()=>{
  const m=metadata(kind),result=composeSlackCard(m,publicFacts(m),{},{postedUrl:m.link.originalUrl,settingsReference:ref,iconOrigin:config.origin});
- assert.equal(result.entity.url,m.link.originalUrl);assert.equal(result.entity.external_ref.id.length,64);
+ assert.equal(result.entity.app_unfurl_url,m.link.originalUrl);assert.equal(result.entity.url,m.link.resourceUrl);assert.equal(result.entity.entity_payload.actions.primary_actions[0].url,m.link.originalUrl);assert.equal(result.entity.external_ref.id.length,64);
  assert.equal(result.entity.entity_type,kind==='file'?'slack#/entities/file':['issue','pull'].includes(kind)?'slack#/entities/task':'slack#/entities/item');
  const actions=result.entity.entity_payload.actions;
  assert.ok(actions.primary_actions.length>=1&&actions.primary_actions.length<=2);assert.ok(actions.overflow_actions.length<=5);
@@ -30,6 +30,33 @@ for(const kind of ['repository','pull','issue','commit','file'])test(kind+': nat
 test('canonical PR action paths do not append files after a fragment or existing subpage',()=>{
  const link=parseForgejoLink(repo+'/pulls/23/files#issuecomment-45',origin),actions=linkActions(link,ref);
  assert.equal(actions.primary_actions[1].url,repo+'/pulls/23/files');assert.equal(actions.overflow_actions.find(a=>a.action_id==='forgejo_open_commits').url,repo+'/pulls/23/commits');
+});
+test('organization actions are canonical for both posted forms; only app_unfurl_url preserves the exact posted spelling',()=>{
+ const orgLink=parseForgejoLink(origin+'/ultrabricks',origin),dashLink=parseForgejoLink(origin+'/org/ultrabricks/dashboard#repos',origin);
+ assert.equal(orgLink.dashboardUrl,dashLink.dashboardUrl);assert.equal(orgLink.resourceUrl,dashLink.resourceUrl);
+ assert.notEqual(orgLink.originalUrl,dashLink.originalUrl);
+ let canonicalActions=null;
+ for(const link of [orgLink,dashLink]){
+  const meta={link,private:false,repositoryId:null,repository:'ultrabricks',title:'Ultrabricks',description:'A public organization',status:'Public',
+    summary:{kind:'organization',number:null,sha:'',metrics:[],labels:[],activity:null,code:null}};
+  const facts={resourceVerified:true,checkIsFresh:true,visibility:'public',anonymousReadable:true,resourceUrl:link.resourceUrl};
+  const result=composeSlackCard(meta,facts,{},{postedUrl:link.originalUrl,settingsReference:ref,iconOrigin:config.origin});
+  // app_unfurl_url alone preserves the exact posted spelling; everything else is canonical.
+  assert.equal(result.entity.app_unfurl_url,link.originalUrl);
+  assert.equal(result.entity.url,link.resourceUrl);
+  assert.equal(result.entity.external_ref.id,composeSlackCard(meta,facts,{},{postedUrl:orgLink.originalUrl,settingsReference:ref,iconOrigin:config.origin}).entity.external_ref.id);
+  assert.equal(result.entity.entity_type,'slack#/entities/item');
+  const actions=result.entity.entity_payload.actions,all=[...actions.primary_actions,...actions.overflow_actions];
+  assert.equal(actions.primary_actions[0].text,'Open organization');
+  assert.equal(actions.primary_actions[0].url,link.resourceUrl);
+  assert.equal(all.find(a=>a.text==='Repositories').url,link.dashboardUrl+'#repos');
+  assert.equal(all.find(a=>a.text==='Pull requests').url,link.dashboardUrl+'#prs');
+  assert.equal(all.find(a=>a.text==='Issues').url,link.dashboardUrl+'#issues');
+  assert.ok(!all.some(a=>a.action_id==='forgejo_open_repository'));
+  assert.equal(result.card.blocks[0].elements[0].image_url,'https://links.example/icons/organization.png');
+  assert.equal(result.entity.entity_payload.fields,undefined);
+  if(canonicalActions)assert.deepEqual(actions,canonicalActions);else canonicalActions=actions;
+ }
 });
 test('plain source metadata never expands Slack mentions or repeated title prefixes',()=>{
  const m=metadata();m.title='PR #23: <@U123> *boom*';m.description='<!everyone> hostile';
@@ -63,6 +90,16 @@ test('text output is bounded and survives malformed Unicode',()=>{
  const m=metadata();m.title='x'.repeat(10000)+'\ud800';m.description='y'.repeat(10000);m.summary.metrics=Array.from({length:20},()=>({label:'Files',value:100}));
  const model=buildPresentation(m),card=blockCard(model);assert.ok(model.title.length<=180);assert.ok(model.description.length<=240);assert.ok(model.title.isWellFormed());assert.ok(JSON.stringify(card).length<12000);
 });
+test('composer preview.title.text is the compact reference for every kind, never empty',()=>{
+ for(const kind of ['repository','pull','issue','commit','file']){
+  const card=blockCard(buildPresentation(metadata(kind)));
+  assert.ok(card.preview.title.text.length>0,kind);
+ }
+ const orgLink=parseForgejoLink(origin+'/ultrabricks',origin);
+ const orgMeta={link:orgLink,private:false,repositoryId:null,repository:'ultrabricks',title:'Ultrabricks',description:'x',status:'Public',
+   summary:{kind:'organization',number:null,sha:'',metrics:[],labels:[],activity:null,code:null}};
+ assert.equal(blockCard(buildPresentation(orgMeta)).preview.title.text,'ultrabricks');
+});
 test('Enterprise history events without composer fields and entity events are accepted only with bounded identities',()=>{
  const e=envelope();delete e.event.source;assert.equal(validEnvelope(e,config),true);
  assert.equal(validEnvelope(envelope(repo,{source:'composer',channel:'COMPOSER',unfurl_id:'fixture.id'}),config),true);
@@ -75,6 +112,79 @@ test('native API metadata and Block Kit compatibility fallback use the same safe
  const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
  slack.call=async(method,payload)=>{calls.push({method,payload});if(payload.metadata){const error=new Error('unsupported');error.slackCode='invalid_metadata';throw error;}return {ok:true};};
  try{await slack.unfurl(envelope());assert.equal(calls.length,2);assert.equal(calls[0].payload.metadata.entities[0].entity_payload.attributes.title.text,'PR #23 · Improve keyboard navigation');assert.match(JSON.stringify(calls[1]),/Improve keyboard/);assert.ok(!JSON.stringify(calls).includes('Copy reference'));}finally{store.close();}
+});
+test('composer-sourced native links get a classic composer preview alongside Work Object metadata in ONE combined call, never a second call',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{calls.push({method,payload});return {ok:true};};
+ try{
+  await slack.unfurl(envelope(repo+'/pulls/23',{source:'composer',channel:'COMPOSER',unfurl_id:'composer-fixture'}));
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].payload.unfurl_id,'composer-fixture');assert.equal(calls[0].payload.source,'composer');
+  assert.ok(calls[0].payload.metadata.entities.length>0);
+  const preview=calls[0].payload.unfurls[repo+'/pulls/23'].preview;
+  assert.equal(preview.title.text,'PR #23');
+  assert.ok(preview.icon_url);
+ }finally{store.close();}
+});
+test('posted (conversations_history) native links never carry the composer-only preview field',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{calls.push({method,payload});return {ok:true};};
+ try{
+  await slack.unfurl(envelope());
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].payload.unfurls,undefined);
+ }finally{store.close();}
+});
+test('a combined composer payload wire-encodes both metadata and unfurls as JSON in the same form body',async(t)=>{
+ const store=new Store(':memory:',randomBytes(32));
+ const cfg={...config,slack:{...config.slack,botToken:'synthetic-token'}};
+ const slack=new SlackIntegration(cfg,store,{},{});let request;
+ t.mock.method(globalThis,'fetch',async(url,options)=>{request={url,...options};return new Response(JSON.stringify({ok:true}),{status:200});});
+ try{
+  const payload={unfurl_id:'composer-fixture',source:'composer',metadata:{entities:[{entity_type:'slack#/entities/task'}]},unfurls:{[repo+'/pulls/23']:{blocks:[],preview:{title:{type:'plain_text',text:'PR #23'}}}}};
+  await slack.call('chat.unfurl',payload);
+  assert.deepEqual(JSON.parse(request.body.get('metadata')),payload.metadata);
+  assert.deepEqual(JSON.parse(request.body.get('unfurls')),payload.unfurls);
+  assert.equal(request.body.get('source'),'composer');
+ }finally{store.close();}
+});
+test('a block-rejected combined composer call falls back to a rich Block Kit card instead of throwing',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{
+   calls.push({method,payload});
+   if(payload.metadata&&calls.length===1){const error=new Error('invalid blocks');error.slackCode='invalid_blocks';throw error;}
+   return {ok:true};
+ };
+ try{
+  await slack.unfurl(envelope(repo+'/pulls/23',{source:'composer',channel:'COMPOSER',unfurl_id:'composer-fixture'}));
+  assert.equal(calls.length,2);
+  assert.ok(calls[0].payload.metadata);assert.ok(calls[0].payload.unfurls);
+  assert.ok(calls[1].payload.unfurls);
+  assert.match(JSON.stringify(calls[1]),/Improve keyboard/);
+ }finally{store.close();}
+});
+test('a persistently block-rejected composer call reduces to a text-only card rather than throwing',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),calls=[],m=metadata('pull');
+ const slack=new SlackIntegration(config,store,{parse:u=>parseForgejoLink(u,origin),metadata:async()=>m},{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{
+   calls.push({method,payload});
+   // The combined call, then the rich-blocks retry, both reject with the same
+   // structural code; only the third (reduced, text-only) attempt should succeed.
+   if(calls.length<=2){const error=new Error('invalid blocks');error.slackCode='invalid_blocks';throw error;}
+   return {ok:true};
+ };
+ try{
+  await slack.unfurl(envelope(repo+'/pulls/23',{source:'composer',channel:'COMPOSER',unfurl_id:'composer-fixture'}));
+  assert.equal(calls.length,3);
+  assert.ok(calls[0].payload.metadata);assert.ok(calls[0].payload.unfurls);
+  assert.ok(calls[1].payload.unfurls);assert.equal(calls[1].payload.metadata,undefined);
+  const reducedCard=calls[2].payload.unfurls[repo+'/pulls/23'];
+  assert.ok(!JSON.stringify(reducedCard).includes('rich_text'));
+  assert.ok(!reducedCard.blocks.some(b=>b.type==='image'));
+ }finally{store.close();}
 });
 test('settings save is actor-bound, validated and affects only future shares by that actor',()=>{
  const store=new Store(':memory:',randomBytes(32));try{
@@ -108,6 +218,50 @@ test('entity details are refreshed from source and never turn private descriptio
   assert.equal(calls[0].payload.metadata.entity_payload.fields.created_by,undefined);
   calls.length=0;await slack.presentDetails({...envelope(),event:{type:'entity_details_requested',entity_url:m.link.originalUrl,user:'U123',trigger_id:'fixture',external_ref:{id:'wrong'}}});
   assert.equal(calls[0].payload.error.status,'not_found');
+ }finally{store.close();}
+});
+test('organization link_shared never consults the posting user\'s OAuth token for a non-public org',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),orgUrl=origin+'/ultrabricks';
+ const metadataCalls=[];let oauthCalls=0;
+ const forgejo={parse:u=>parseForgejoLink(u,origin),metadata:async(url,token,options)=>{
+   metadataCalls.push({token:!!token,options});
+   return {link:parseForgejoLink(url,origin),private:true,repository:'ultrabricks',title:'ORG SECRET',description:'ORG BODY',status:'Private'};
+ }};
+ const slack=new SlackIntegration(config,store,forgejo,{access:async()=>{oauthCalls++;return 'synthetic-token';},ticket:()=>null});
+ try{
+  const resolved=await slack.resolveShared({team_id:'T123',event:{user:'U123',channel:'C123',source:'conversations_history',message_ts:'1.1'}},orgUrl);
+  assert.deepEqual(Object.keys(resolved),['link']);
+  assert.equal(oauthCalls,0);
+  assert.equal(metadataCalls.length,1);
+  assert.equal(metadataCalls[0].token,false);
+  assert.equal(metadataCalls[0].options.publicOnly,true);
+ }finally{store.close();}
+});
+test('a freshly public organization becomes a public card without ever consulting OAuth',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),orgUrl=origin+'/ultrabricks';
+ let oauthCalls=0;
+ const forgejo={parse:u=>parseForgejoLink(u,origin),metadata:async(url)=>({link:parseForgejoLink(url,origin),private:false,repository:'ultrabricks',title:'Ultrabricks',description:'A public organization',status:'Public'})};
+ const slack=new SlackIntegration(config,store,forgejo,{access:async()=>{oauthCalls++;return 'synthetic-token';},ticket:()=>null});
+ try{
+  const resolved=await slack.resolveShared({team_id:'T123',event:{user:'U123',channel:'C123',source:'conversations_history',message_ts:'1.1'}},orgUrl);
+  assert.equal(resolved.facts.visibility,'public');
+  assert.equal(resolved.meta.title,'Ultrabricks');
+  assert.equal(oauthCalls,0);
+ }finally{store.close();}
+});
+test('a non-public organization is only ever revealed through the viewer\'s own personal access, never the channel card',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),orgUrl=origin+'/ultrabricks',calls=[];
+ const forgejo={parse:u=>parseForgejoLink(u,origin),metadata:async(url,token)=>{
+   if(!token){const e=new Error('Unavailable');e.status=404;throw e;}
+   return {link:parseForgejoLink(url,origin),private:true,repository:'ultrabricks',title:'Ultrabricks',description:'ORG SECRET BODY',status:'Private'};
+ }};
+ const slack=new SlackIntegration(config,store,forgejo,{access:async()=>'synthetic-token',ticket:()=>null});
+ slack.call=async(method,payload)=>{calls.push({method,payload});return {ok:true};};
+ try{
+  await slack.presentDetails({...envelope(),event:{type:'entity_details_requested',entity_url:orgUrl,user:'U123',channel:'C123',trigger_id:'fixture'}});
+  assert.equal(calls[0].payload.error.status,'custom_partial_view');
+  assert.ok(!JSON.stringify(calls).includes('ORG SECRET BODY'));
+  assert.ok(calls[0].payload.error.actions.some(a=>a.action_id==='forgejo_personal'));
  }finally{store.close();}
 });
 test('unknown Work Object validation warnings degrade to the checked text card',async()=>{
@@ -173,7 +327,7 @@ test('supplemental images store only a revalidated source locator, never a metad
  try {
   const url=slack.imageSnapshot(m);assert.match(url,/\/image\/s\/[a-f0-9]{48}$/);
   const saved=store.get('image:'+url.split('/').at(-1));
-  assert.deepEqual(saved,{sourceUrl:m.link.originalUrl,version:2});
+  assert.deepEqual(saved,{sourceUrl:m.link.originalUrl,version:3,view:'activity'});
   assert.equal(slack.imageSnapshot({...m,private:true}),null);
  }finally{store.close();}
 });

@@ -8,7 +8,7 @@ export const slackEscape = value => cleanText(value, 1800).replace(/[&<>|*_~`]/g
 const numeric = value => Number.isSafeInteger(value) && value >= 0;
 const visible = value => typeof value === 'number' ? numeric(value) : typeof value === 'string' && value.trim().length > 0;
 const epoch = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? Math.floor(Date.parse(value)/1000) : null;
-const labels = {repository:'Repository',pull:'Pull request',issue:'Issue',commit:'Commit',file:'File'};
+const labels = {repository:'Repository',pull:'Pull request',issue:'Issue',commit:'Commit',file:'File',organization:'Organization'};
 export function objectReference(meta) {
   const link=meta.link, kind=link?.kind || meta.summary?.kind;
   if(kind==='pull') return 'PR #'+(link?.number ?? meta.summary?.number ?? '?');
@@ -28,7 +28,10 @@ const MAX_OVERFLOW_ACTIONS = 5;
 export function linkActions(link, settingsReference, {limited=false}={}) {
   const origin=new URL(link.repositoryUrl).origin, primary=[], overflow=[];
   const add=(list,text,url,id)=>{const safe=safeDestination(url,origin);if(safe)list.push({text,action_id:id,url:safe,accessibility_label:cleanText(text+' in Forgejo',75)});};
-  add(primary,link.kind==='pull'?'Open PR':link.kind==='issue'?'Open issue':link.kind==='file'?'Open file':link.kind==='commit'?'Open commit':'Open repository',link.originalUrl,'forgejo_open_original');
+  // Every action is canonical except `app_unfurl_url` (see workObject()), which alone
+  // preserves the exact posted spelling. An organization can be posted as either the
+  // public root or the dashboard route; both converge on the same canonical actions.
+  add(primary,link.kind==='pull'?'Open PR':link.kind==='issue'?'Open issue':link.kind==='file'?'Open file':link.kind==='commit'?'Open commit':link.kind==='organization'?'Open organization':'Open repository',link.kind==='organization'?link.resourceUrl:link.originalUrl,'forgejo_open_original');
   if(link.kind==='pull'){
     add(primary,'Files',link.resourceUrl+'/files','forgejo_open_files');
     add(overflow,'Commits',link.resourceUrl+'/commits','forgejo_open_commits');
@@ -43,8 +46,12 @@ export function linkActions(link, settingsReference, {limited=false}={}) {
     add(primary,'Raw file',link.repositoryUrl+'/raw/commit/'+link.sha+'/'+file,'forgejo_open_raw');
     add(overflow,'Blame',link.repositoryUrl+'/blame/commit/'+link.sha+'/'+file,'forgejo_open_blame');
     add(overflow,'Commit',link.repositoryUrl+'/commit/'+link.sha,'forgejo_open_commit');
+  } else if(link.kind==='organization') {
+    add(primary,'Repositories',link.dashboardUrl+'#repos','forgejo_open_repositories');
+    add(overflow,'Pull requests',link.dashboardUrl+'#prs','forgejo_open_pulls');
+    add(overflow,'Issues',link.dashboardUrl+'#issues','forgejo_open_issues');
   }
-  if(link.kind!=='repository')add(overflow,'Repository',link.repositoryUrl,'forgejo_open_repository');
+  if(!['repository','organization'].includes(link.kind))add(overflow,'Repository',link.repositoryUrl,'forgejo_open_repository');
   if(/^[a-f0-9]{48}$/.test(settingsReference||'')) {
     const access=[{text:'Connect my account',action_id:'forgejo_account',value:settingsReference},
       ...(limited?[{text:'View with my access',action_id:'forgejo_personal',value:settingsReference}]:[])];
@@ -56,17 +63,22 @@ export function linkActions(link, settingsReference, {limited=false}={}) {
 export function buildPresentation(meta,{settingsReference,iconOrigin,imageUrl,density='compact',visuals='auto',limited=false,audience='conversation'}={}) {
   limited = limited || (meta.private === true && audience!=='viewer');
   const link=meta.link, kind=link.kind, summary=meta.summary||{}, reference=objectReference(meta);
-  const canonical=safeDestination(link.originalUrl,new URL(link.repositoryUrl).origin);
-  if(!canonical)throw new TypeError('Unsafe original destination');
+  const origin=new URL(link.repositoryUrl).origin;
+  if(!safeDestination(link.originalUrl,origin))throw new TypeError('Unsafe original destination');
+  // Work Object/message-card `url` is the canonical resource, not the exact posted
+  // spelling: `app_unfurl_url` (see workObject()) preserves the posted URL exactly,
+  // and the primary "Open" action (see linkActions()) opens `link.originalUrl` as posted.
+  const canonicalResource=safeDestination(link.resourceUrl,origin);
+  if(!canonicalResource)throw new TypeError('Unsafe canonical resource destination');
   if(!labels[kind])throw new TypeError('Unsupported preview kind');
   const rawTitle=cleanText(meta.title,160).replace(/^(?:PR|Issue) #\d+:?\s*/,'');
-  const title=kind==='repository'||kind==='file'||rawTitle===reference?reference:cleanText(reference+' · '+rawTitle,180);
+  const title=kind==='repository'||kind==='file'||kind==='organization'||rawTitle===reference?reference:cleanText(reference+' · '+rawTitle,180);
   const fields=[];
   const put=(key,label,value,extra={})=>{if(visible(value))fields.push({key,label,value:cleanText(value,160),type:'string',...extra});};
   const state=summary.metrics?.find(m=>m.label==='State')?.value;
   const statusColor=state==='Merged'?'blue':state==='Open'?'green':state==='Draft'?'yellow':'gray';
   if(state)put('status','Status',state,{tag_color:statusColor});
-  if(kind!=='repository')put('repository','Repository',meta.repository,{link:link.repositoryUrl});
+  if(!['repository','organization'].includes(kind))put('repository','Repository',meta.repository,{link:link.repositoryUrl});
   if(kind==='pull'||kind==='commit') {
     const counts=Object.fromEntries((summary.metrics||[]).filter(m=>numeric(m.value)).map(m=>[m.label,m.value]));
     if(numeric(counts.Added)||numeric(counts.Removed))put('changes','Changes',(numeric(counts.Files)?counts.Files+' files · ':'')+(numeric(counts.Added)?'+'+counts.Added:'?')+' / '+(numeric(counts.Removed)?'−'+counts.Removed:'?'));
@@ -91,7 +103,7 @@ export function buildPresentation(meta,{settingsReference,iconOrigin,imageUrl,de
   const icon=iconOrigin?new URL('/icons/'+iconKey+'.png',iconOrigin).href:null;
   return {kind,reference,title,density,description:limited||kind==='file'?'':cleanText(meta.description,density==='detailed'?600:140),
     repository:cleanText(meta.repository,120),author:limited?'':cleanText(summary.author||meta.author,80),
-    created:limited?null:epoch(summary.created),updated:limited?null:epoch(meta.updatedAt||summary.updated),url:canonical,resourceUrl:link.resourceUrl,
+    created:limited?null:epoch(summary.created),updated:limited?null:epoch(meta.updatedAt||summary.updated),url:canonicalResource,resourceUrl:link.resourceUrl,
     entityType:kind==='file'?'slack#/entities/file':['issue','pull'].includes(kind)?'slack#/entities/task':'slack#/entities/item',
     fields:(limited?fields.filter(field=>['status','repository','visibility'].includes(field.key)):fields).slice(0,density==='detailed'?9:4),actions:linkActions(link,settingsReference,{limited}),icon,
     codeLanguage:codeLanguage(link.path),codeImageUrl:kind==='file'&&!limited&&meta.private===false&&visuals!=='off'&&summary.code?.length&&imageUrl?imageUrl:null,
@@ -129,7 +141,10 @@ export function blockCard(model) {
   const elements=model.actions.primary_actions.map(a=>({type:'button',...a,text:{type:'plain_text',text:a.text,emoji:false}}));
   if(model.actions.overflow_actions.length)elements.push({type:'overflow',action_id:'forgejo_more',options:model.actions.overflow_actions.map(a=>({text:{type:'plain_text',text:a.text,emoji:false},value:a.value?({forgejo_settings:'settings:',forgejo_account:'account:',forgejo_personal:'personal:'}[a.action_id]+a.value):a.action_id,...(a.url?{url:a.url}:{})}))});
   blocks.push({type:'actions',elements});
-  return {blocks,preview:{title:{type:'plain_text',text:cleanText(model.title,150)},...(model.icon?{icon_url:model.icon}:{})}};
+  // Slack's composer-time preview chip (unfurls[url].preview) shows only a compact
+  // reference next to the icon, not the full title — matching the inline "PR #23"/
+  // "org name"/"owner/repo" reference Slack renders alongside a Work Object link.
+  return {blocks,preview:{title:{type:'plain_text',text:cleanText(model.reference,150)},...(model.icon?{icon_url:model.icon}:{})}};
 }
 
 /** Preserve useful text when an older Slack surface rejects rich/image blocks. */

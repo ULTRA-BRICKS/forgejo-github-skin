@@ -3,6 +3,7 @@ import {renderSlackCard} from './slack-card.mjs';
 import {slackCases} from './slack-fixtures.mjs';
 import './slack-native.css';
 export default {title:'Sharing/Slack native unfurls',parameters:{layout:'padded'}};
+export const Organization={render:()=>renderSlackCard(slackCases.Organization)};
 export const RepositoryWithoutActivity={render:()=>renderSlackCard(slackCases.RepositoryWithoutActivity)};
 export const Repository={render:()=>renderSlackCard(slackCases.Repository)};
 export const PullRequest={render:()=>renderSlackCard(slackCases.PullRequest)};

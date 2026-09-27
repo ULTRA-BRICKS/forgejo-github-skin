@@ -110,12 +110,12 @@ const publicBudget = new Budget(120, 60000),
 
 const renderCache = new RenderCache(renderImage);
 const logo = fs.readFileSync(path.join(root, "assets/forgejo-graphite.svg"));
-const slackIcons=new Map(['repository','pull','pull-merged','pull-draft','pull-closed','issue','issue-closed','commit','file'].map(kind=>[kind,fs.readFileSync(path.join(root,'assets/slack-icons',kind+'.png'))]));
+const slackIcons=new Map(['repository','pull','pull-merged','pull-draft','pull-closed','issue','issue-closed','commit','file','organization'].map(kind=>[kind,fs.readFileSync(path.join(root,'assets/slack-icons',kind+'.png'))]));
 const server = http.createServer(async (request, response) => {
   const { config, sources, forgejo, oauth, slack } = runtime;
   try {
     const url = new URL(request.url, config.origin);
-    const iconMatch=url.pathname.match(/^\/icons\/(repository|pull(?:-merged|-draft|-closed)?|issue(?:-closed)?|commit|file)\.png$/);
+    const iconMatch=url.pathname.match(/^\/icons\/(repository|pull(?:-merged|-draft|-closed)?|issue(?:-closed)?|commit|file|organization)\.png$/);
     if(iconMatch&&['GET','HEAD'].includes(request.method))return send(response,200,request.method==='HEAD'?'':slackIcons.get(iconMatch[1]),'image/png');
     const snapshotMatch = url.pathname.match(/^\/image\/s\/([a-f0-9]{48})$/);
     if (snapshotMatch && ["GET","HEAD"].includes(request.method)) {

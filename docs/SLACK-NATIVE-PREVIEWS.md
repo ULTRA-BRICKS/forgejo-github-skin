@@ -38,7 +38,38 @@ After verifying app settings and the linked reader, run `node scripts/sharing/co
 
 `npm run test:sharing` covers data bounds, type schemas, per-source/audience authorization, preserved code fallback, partial-batch errors, form transport, preferences, and image visibility changes. `npm run test:slack-ui` checks the shared-payload Storybook with Chromium desktop/320/440 and WebKit, interaction tests, and pixel snapshots. The published Storybook smoke test includes every native Slack state. Real-client acceptance additionally checks the delivered Work Object, source navigation, settings, refresh, and composer behavior; Storybook alone does not prove a Slack deployment.
 
-The composer `preview` title/icon is supplied on Block Kit cards. Slack controls whether a pasted URL becomes a compact reference; the `preview` field is ignored for already-posted messages. The app does not rewrite the author's message text. Work Object title/icon and `PR #N` identity remain available on the native card.
+**Documented platform facts** (from Slack's own reference docs, see citations below):
+the `unfurls[url].preview` field on `chat.unfurl` defines the compact title/icon reference
+shown while a link is still being typed/pasted in the composer (`source: "composer"`);
+that same `preview` field is explicitly ignored once a `chat.unfurl` call targets an
+already-posted message. If the author leaves the link in and sends the message, Slack
+dispatches a **separate**, later `link_shared` event with `source: "conversations_history"`
+for the posted message — a distinct event from the composer one, per the
+[unfurling-links-in-messages](https://docs.slack.dev/messaging/unfurling-links-in-messages/#unfurl_previews)
+doc's "Composer unfurls" section. Neither `chat.unfurl` reference page states that `unfurls`
+and `metadata` are mutually exclusive in a single call — only that at least one is required.
+
+**Shipped fix:** for a `source: "composer"` event, `unfurl()` now sends `unfurls[posted.url]`
+(carrying the classic `preview.title`/`icon_url`, keyed by the exact posted URL) **in the
+same** `chat.unfurl` call as `metadata.entities` — never as a second, later call that could
+be interpreted as replacing the first. `preview.title.text` is the compact reference
+(`PR #23` / org name / `owner/repo`), not the long Work Object title. A
+`source: "conversations_history"` (posted-message) event is untouched: it never includes
+`unfurls`/`preview`, since Slack documents that field as ignored there anyway, and Work
+Object registration for the posted card is driven by that separate later event, so this
+change cannot affect it. Tests assert (a) the composer path is exactly one call with both
+objects present, (b) `preview.title.text` is the compact reference, (c) a posted-message
+event never has an `unfurls` key, and (d) the real form serializer (`SlackIntegration.call`)
+JSON-encodes both `metadata` and `unfurls` correctly in the same `application/x-www-form-urlencoded` body.
+
+**Still not verified — requires a real Slack workspace, which this repo has no path to:**
+whether Slack's composer UI actually renders the resulting chip as expected once both
+parameters are present in one call. This fix supplies exactly the documented mechanism
+(the `preview` field, on the correct event, in the correct parameter shape) rather than
+guessing at undocumented behavior, but Slack's own rendering has not been observed live.
+Recommended before relying on it in production: paste a `git.hyperide.ai` link into the
+composer from a `format: "native"` account and confirm the compact title/icon chip appears
+in place of the generic link preview.
 
 ## Official platform contracts
 

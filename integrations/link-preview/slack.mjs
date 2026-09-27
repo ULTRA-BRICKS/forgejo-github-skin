@@ -72,17 +72,20 @@ export class SlackIntegration {
     return id;
   }
   imageSnapshot(meta) {
-    if (!meta?.summary || meta.private !== false) return null;
-    const summary = meta.summary;
-    const meaningful = (summary.metrics || []).some(metric => metric.value !== null && metric.value !== undefined && metric.value !== "") ||
-      (summary.code || []).length > 0 || !!summary.activity || !!summary.number || !!summary.sha;
-    if (!meaningful) return null;
+    // Reuses the exact same additive-only predicate the composer gate checks before
+    // ever calling this method — self-consistent even if a future caller forgets to
+    // pre-check, never a loose "any field is truthy" heuristic.
+    if (!meta?.summary || meta.private !== false || !visualAddsInformation(meta)) return null;
     const link=this.forgejo.parse(meta.link?.originalUrl);
-    if(!link)return null;
+    if(!link || link.kind!==meta.summary.kind)return null;
+    // The additive-only image variant is a pure function of kind: file gets a code
+    // excerpt, repository gets an activity chart. visualAddsInformation() above already
+    // guarantees the kind is one of those two with real, renderable content.
+    const view = meta.summary.kind==='file' ? 'code' : 'activity';
     // A durable locator, not a durable copy of repository content. Every image
     // read rechecks public visibility before the renderer/cache is consulted.
     const id = randomBytes(24).toString("hex");
-    this.store.put("image:" + id, {sourceUrl:link.originalUrl,version:2,...(meta.summary.kind==='file'?{view:'code'}:{})}, 30*86400);
+    this.store.put("image:" + id, {sourceUrl:link.originalUrl,version:3,view}, 30*86400);
     return this.config.origin + "/image/s/" + id;
   }
   publicMetadata(url) {return publicMetadata(this,url);}
@@ -94,6 +97,15 @@ export class SlackIntegration {
     const event=envelope.event,link=this.forgejo.parse(raw);
     if(!link)return null;
     let meta=await this.publicMetadata(raw),token=null;
+    if(link.kind==='organization') {
+      // Organization visibility never flows through per-conversation OAuth/disclosure:
+      // only a freshly, explicitly public org (this anonymous/public-reader check) or a
+      // viewer's own token in presentDetails()/openPersonal() may reveal organization
+      // data. The posting user's OAuth token is never consulted for a non-public org.
+      return meta && meta.private===false
+        ? {link,meta,facts:{resourceVerified:true,checkIsFresh:true,visibility:'public',sourceDeclaredPublic:true,resourceUrl:link.resourceUrl},policy:{}}
+        : {link};
+    }
     if(!meta){token=await this.oauth.access(envelope.team_id,event.user,raw);if(token){try{meta=await this.forgejo.metadata(raw,token,{enrich:true});}catch(error){if(!isAccessDenied(error.status))throw error;}}}
     if(!meta)return {link};
     if(meta.private===false)return {link,meta,facts:{resourceVerified:true,checkIsFresh:true,visibility:'public',sourceDeclaredPublic:true,resourceUrl:link.resourceUrl},policy:{}};
@@ -138,24 +150,43 @@ export class SlackIntegration {
           const imageUrl=meta.private===false&&prefs.visuals!=='off'&&visualAddsInformation(meta)?this.imageSnapshot(meta):null;
           const ready=imageUrl?composeSlackCard(meta,facts,policy,{postedUrl:posted.url,settingsReference:reference,iconOrigin:this.config.origin,imageUrl,...prefs}):result;
           card=ready.card;
-          if(this.config.slack.workObjectsEnabled===true&&prefs.format==='native')entities.push(ready.entity);else blocksOnly[posted.url]=card;
+          if(this.config.slack.workObjectsEnabled===true&&prefs.format==='native'){
+            entities.push(ready.entity);
+            // Slack's composer preview chip is generated only from `unfurls[url].preview`
+            // (Work Object `metadata` has no documented effect there); carry it alongside
+            // metadata in the SAME chat.unfurl call below for composer-sourced links only,
+            // never for a posted message, and never as a second call that could be
+            // interpreted as replacing the first.
+            if(event.source==='composer')blocksOnly[posted.url]=card;
+          } else blocksOnly[posted.url]=card;
         }catch(error){if(!/Protected data|Authorization proof|freshly validated/.test(error.message))throw error;blocksOnly[posted.url]=card;}
       }else blocksOnly[posted.url]=card;
       fallback[posted.url]=card;
     }
     const target=event.unfurl_id?{unfurl_id:event.unfurl_id,source:event.source}:{channel:event.channel,ts:event.message_ts};
+    let combinedUnfurlsSent=false;
     if(entities.length){
+      const includeUnfurls=event.source==='composer'&&Object.keys(blocksOnly).length>0;
+      const payload=includeUnfurls?{...target,metadata:{entities},unfurls:blocksOnly}:{...target,metadata:{entities}};
       try {
-        const result=await this.call('chat.unfurl',{...target,metadata:{entities}});
+        const result=await this.call('chat.unfurl',payload);
         const warnings=result.response_metadata?.warnings|| (result.warning?[result.warning]:[]);
         if(warnings.some(w=>!['missing_charset','superfluous_charset'].includes(w))){const error=new Error('Work Object fields rejected');error.slackCode='invalid_metadata';throw error;}
+        if(includeUnfurls)combinedUnfurlsSent=true;
       }catch(error){
-        if(!['invalid_metadata','invalid_metadata_format','invalid_arguments','feature_not_enabled','missing_scope'].includes(error.slackCode))throw error;
+        // The combined call can now fail on either a metadata problem or a block
+        // problem (unfurls rides alongside metadata in the same request, atomically).
+        // Tolerate both families: drop the rejected Work Object metadata and retry with
+        // the rich Block Kit card below (same content, just via classic blocks). If that
+        // retry hits the same block-level rejection, its own catch further reduces to a
+        // text-only card — this is the pre-existing multi-level fallback chain, just
+        // reachable from a wider set of rejection codes on the first call now.
+        if(!['invalid_metadata','invalid_metadata_format','invalid_arguments','feature_not_enabled','missing_scope','cannot_unfurl_url','invalid_blocks'].includes(error.slackCode))throw error;
         console.warn('Work Object compatibility fallback: '+error.slackCode);
         for(const entity of entities)blocksOnly[entity.app_unfurl_url]=fallback[entity.app_unfurl_url];
       }
     }
-    if(Object.keys(blocksOnly).length) {
+    if(Object.keys(blocksOnly).length && !combinedUnfurlsSent) {
       try{await this.call('chat.unfurl',{...target,unfurls:blocksOnly});}
       catch(error){
         if(!['cannot_unfurl_url','invalid_blocks'].includes(error.slackCode))throw error;

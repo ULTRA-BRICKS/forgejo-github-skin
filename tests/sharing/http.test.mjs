@@ -54,6 +54,10 @@ test("real HTTP boundary verifies raw signatures, denies private sessions and ac
       await new Promise((r) => setTimeout(r, 30));
     }
     assert.equal((await fetch(origin + "/health")).status, 200);
+    const orgIcon = await fetch(origin + "/icons/organization.png");
+    assert.equal(orgIcon.status, 200);
+    assert.equal(orgIcon.headers.get("content-type"), "image/png");
+    assert.ok((await orgIcon.arrayBuffer()).byteLength > 0);
     const unavailableImage = await fetch(origin + "/image?url=" + encodeURIComponent("https://unconfigured.invalid/a/b"));
     assert.equal(unavailableImage.status, 204);
     assert.equal((await unavailableImage.arrayBuffer()).byteLength, 0);
