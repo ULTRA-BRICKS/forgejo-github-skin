@@ -20,6 +20,8 @@
     "sharing:serve": "node integrations/link-preview/server.mjs",
     "sharing:verify": "node scripts/sharing/verify-public.mjs",
     "sharing:doctor": "node scripts/sharing/doctor.mjs",
+    "sharing:preflight": "node scripts/sharing/check-renderer-preflight.mjs",
+    "sharing:cold-render-evidence": "node scripts/sharing/cold-render-evidence.mjs",
     "test:mobile": "playwright test -c playwright.mobile.config.mjs",
     "test:mobile:update": "playwright test -c playwright.mobile.config.mjs --update-snapshots",
     "test:preview-layout": "node scripts/sharing/check-preview-layout.mjs",
