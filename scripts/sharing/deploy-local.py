@@ -61,6 +61,28 @@ def main():
         render_proof = json.loads(rendered.stdout)
         if render_proof.get('passed') != 7:
             raise RuntimeError('Rendering preflight did not verify every preview type')
+        # FJ-24: an HTTP 200 from /health never touches Chromium — a cold renderer can be
+        # published "healthy" on that alone. This bounded check (startupTimeoutMs/renderTimeoutMs
+        # inside the renderer itself) actually launches and renders before the candidate is
+        # ever considered ready, so a stalled cold Chromium fails deployment instead of a live
+        # request downstream.
+        # Timeout matches the sibling rendering-preflight call above: comfortably above the
+        # renderer's own worst-case bound (startup + render + close, each independently capped)
+        # plus node/Playwright module load, so a healthy-but-slow cold start on loaded hardware
+        # is never mistaken for the stalled-Chromium failure this check exists to catch.
+        try:
+            preflight = subprocess.run([node, str(release / 'scripts/sharing/check-renderer-preflight.mjs')],
+                cwd=release, env=env, capture_output=True, text=True, timeout=60)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError('Renderer cold-start preflight did not complete within its bound')
+        if preflight.returncode:
+            raise RuntimeError('Renderer cold-start preflight failed: ' + preflight.stderr[-3000:])
+        try:
+            preflight_proof = json.loads(preflight.stdout)
+        except json.JSONDecodeError:
+            raise RuntimeError('Renderer cold-start preflight produced unparseable output: ' + preflight.stdout[-3000:])
+        if not preflight_proof.get('ok'):
+            raise RuntimeError('Renderer preflight did not report ready')
         candidate = subprocess.Popen([node, str(release / 'integrations/link-preview/server.mjs')],
             env={**env, 'FORGEJO_PREVIEW_PORT': str(port), 'FORGEJO_PREVIEW_STATE_DIR': state},
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -110,7 +132,8 @@ def main():
         proof = health(3190)
         if proof.get('build') != revision:
             raise RuntimeError('Supervisor did not activate the staged revision')
-    print(json.dumps({'applied': args.apply, 'revision': revision, 'health': proof, 'renderedPreviews': render_proof['passed']}, indent=2))
+    print(json.dumps({'applied': args.apply, 'revision': revision, 'health': proof,
+        'renderedPreviews': render_proof['passed'], 'rendererPreflight': preflight_proof}, indent=2))
 
 if __name__ == '__main__':
     main()
