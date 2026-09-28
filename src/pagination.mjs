@@ -14,7 +14,7 @@
  * restorePagination() reverses them in order and returns the exact native nodes
  * to their exact original state, not a rebuilt copy.
  */
-import {buildPaginationPlan, createRevealController} from './pagination-model.mjs';
+import {buildPaginationPlan, createRevealController, createStorageBridge} from './pagination-model.mjs';
 
 const states = new Map(); // native <div class="pagination menu"> -> state
 
@@ -54,56 +54,14 @@ function parseMenu(menu) {
   };
 }
 
-// When real Storage is unavailable (disabled, or a getter/method that throws —
-// e.g. some private-browsing modes), fall back to a plain in-memory store scoped
-// to this module instance. In a real browser that's exactly one page load, so
-// "exactly once per session" still holds across multiple enhance/restore cycles
-// within that load; it just can't survive an actual reload (nothing durable can,
-// with storage off). Session-file-process isolation for unit tests is unaffected
-// since pagination-model.test.mjs exercises createRevealController directly.
-const memoryStore = new Map();
-function memoryGet(prefix, key) {
-  const full = prefix + key;
-  return memoryStore.has(full) ? memoryStore.get(full) : null;
-}
-function memorySet(prefix, key, value) {
-  memoryStore.set(prefix + key, String(value));
-}
-// Real Storage may fail in ways narrower than "entirely absent": the getter can
-// throw, `getItem` can throw, or only `setItem` can throw (e.g. quota/private
-// mode with reads allowed). Every write always lands in the page-memory mirror
-// first, and every read tries real storage before falling back to it — so
-// "exactly once per session" survives any of those failure shapes across
-// repeated enhance/restore cycles within one page load, not just total absence.
-// A key whose real write just failed is tracked: its real value may now be
-// stale (e.g. a habit count that should have bumped from 2 to 3 but didn't
-// land), so reads for that key trust memory until a real write succeeds again.
-const failedRealWrites = new Set();
-function storageOf(doc, name) {
-  const prefix = name + ':';
-  return {
-    getItem(key) {
-      const full = prefix + key;
-      if (!failedRealWrites.has(full)) {
-        try {
-          const value = doc.defaultView[name].getItem(key);
-          if (value !== null) return value;
-        } catch {}
-      }
-      return memoryGet(prefix, key);
-    },
-    setItem(key, value) {
-      const full = prefix + key;
-      memorySet(prefix, key, value);
-      try { doc.defaultView[name].setItem(key, value); failedRealWrites.delete(full); }
-      catch { failedRealWrites.add(full); }
-    },
-  };
-}
+// Storage-failure fallback (memory mirror on a throwing/disabled real Storage)
+// is shared with every other widget in the page via pagination-model.mjs's
+// createStorageBridge — see its own comment for why that sharing matters.
 
 // --- Reversible DOM mutation helpers: every call pushes its own exact inverse. ---
 
 function trackClass(el, cls, undo) {
+  if (el.classList.contains(cls)) return;
   el.classList.add(cls);
   undo.push(() => el.classList.remove(cls));
 }
@@ -220,7 +178,7 @@ function build(doc, menu) {
   nav.className = 'hgh-pagination';
   nav.setAttribute('aria-label', strings.label);
 
-  const controller = createRevealController({session: storageOf(doc, 'sessionStorage'), local: storageOf(doc, 'localStorage')});
+  const controller = createRevealController({session: createStorageBridge(doc, 'sessionStorage'), local: createStorageBridge(doc, 'localStorage')});
   const alreadyRevealed = controller.isRevealed();
   const wings = [];
 

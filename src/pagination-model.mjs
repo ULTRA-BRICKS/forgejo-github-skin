@@ -18,6 +18,76 @@ const NAMESPACE = 'hgh.pagination.v1.';
 export const REVEALED_KEY = NAMESPACE + 'revealed';
 export const HABIT_KEY = NAMESPACE + 'reveals';
 
+// When real Storage is unavailable (disabled, or a getter/method that throws —
+// e.g. some private-browsing modes), fall back to a plain in-memory mirror. The
+// mirror is deliberately NOT a single module-wide store: it is keyed by the
+// real `Storage` object's own identity (`doc.defaultView.sessionStorage` /
+// `.localStorage`), so every widget that reads that SAME real object within
+// one document (the classic Fomantic pager, the Vue-owned dashboard/org
+// repo-list pager, any future one, all in one page load) shares exactly one
+// fallback view of "was this already revealed"/"what's the real habit count"
+// under a real write failure — fixing the bug where two independently-owned
+// private Maps each re-revealed and re-bumped the shared habit counter once
+// instead of the second observing the first's already-set flag. Keying by the
+// real object's identity, rather than by a bare 'sessionStorage'/'localStorage'
+// name string, also means two DIFFERENT documents (two tabs, two iframes, two
+// Playwright pages) — which always have two distinct real Storage object
+// references even for the same-named property — automatically get two
+// separate mirrors: no cross-document leakage, without tracking document
+// identity explicitly. When the real storage property itself is missing or
+// throws just to access (not merely to read/write), the mirror falls back to
+// a slot keyed by the document's own window plus the storage name, which
+// still isolates unrelated documents from each other.
+const mirrorsByStorage = new WeakMap(); // real Storage object -> {store: Map, failed: Set}
+const mirrorsByWindow = new WeakMap(); // window (no usable Storage object) -> Map<name, {store, failed}>
+
+function mirrorFor(doc, name) {
+  let storageObj;
+  try { storageObj = doc.defaultView?.[name]; } catch { storageObj = undefined; }
+  if (storageObj && typeof storageObj === 'object') {
+    let mirror = mirrorsByStorage.get(storageObj);
+    if (!mirror) { mirror = {store: new Map(), failed: new Set()}; mirrorsByStorage.set(storageObj, mirror); }
+    return mirror;
+  }
+  const winKey = doc.defaultView || doc;
+  let byName = mirrorsByWindow.get(winKey);
+  if (!byName) { byName = new Map(); mirrorsByWindow.set(winKey, byName); }
+  let mirror = byName.get(name);
+  if (!mirror) { mirror = {store: new Map(), failed: new Set()}; byName.set(name, mirror); }
+  return mirror;
+}
+
+/**
+ * A `Storage`-shaped bridge (`getItem`/`setItem`) around `doc.defaultView[name]`
+ * (`'sessionStorage'` or `'localStorage'`) that falls back to an in-memory
+ * mirror scoped to that real Storage object's identity on any read/write
+ * failure. Every caller in the same document that resolves the same real
+ * Storage object observes the same fallback state; a different document's
+ * real Storage object (even with the same property name) gets its own.
+ * @param {Document} doc
+ * @param {'sessionStorage'|'localStorage'} name
+ */
+export function createStorageBridge(doc, name) {
+  return {
+    getItem(key) {
+      const mirror = mirrorFor(doc, name);
+      if (!mirror.failed.has(key)) {
+        try {
+          const value = doc.defaultView?.[name]?.getItem(key);
+          if (value !== null && value !== undefined) return value;
+        } catch {}
+      }
+      return mirror.store.has(key) ? mirror.store.get(key) : null;
+    },
+    setItem(key, value) {
+      const mirror = mirrorFor(doc, name);
+      mirror.store.set(key, String(value));
+      try { doc.defaultView?.[name]?.setItem(key, value); mirror.failed.delete(key); }
+      catch { mirror.failed.add(key); }
+    },
+  };
+}
+
 function readRevealed(storage) {
   if (!storage) return false;
   try { return storage.getItem(REVEALED_KEY) === 'true'; } catch { return false; }

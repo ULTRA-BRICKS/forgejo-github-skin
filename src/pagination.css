@@ -1,6 +1,21 @@
-/* Compact-by-default pagination. Loaded by pagination.mjs's markup only; scoped
-   entirely under .hgh-pagination so it never touches native Forgejo pagination
-   before enhancement or any other component's styles. */
+/* The browser's `[hidden]{display:none}` default is user-agent-origin CSS, so any
+   author-origin rule beats it regardless of specificity — Fomantic's own
+   `.ui(...).menu{display:…}` does exactly that (issue #6: production showed
+   getComputedStyle(display)=='inline-flex' on a menu with hidden=true, First/1/2/Last
+   still rendered/hit-testable alongside the new compact bar). This rule already
+   out-specifies `.ui.pagination.menu` on its own (four classes plus two attribute
+   selectors vs. three classes), but `!important` makes that guaranteed rather than
+   contingent on Fomantic never raising its own specificity. Matches any hidden
+   `.page.buttons > .pagination.menu` while a hypergithub theme is active — not only the
+   one enhancePagination() itself hides — which also keeps the separately-owned Vue
+   dashboard pager (`#dashboard-repo-list …`, no `.page.buttons` ancestor) out of reach.
+   Gated on `data-theme` so a cached/still-enabled stylesheet can never suppress the
+   native pager once the skin itself is switched off. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .page.buttons>.pagination.menu[hidden]{display:none!important}
+
+/* Compact-by-default pagination. Loaded by pagination.mjs's markup only; `.hgh-pagination`
+   itself never touches native Forgejo pagination before enhancement or any other
+   component's styles (the hidden-native-menu override above is the sole exception). */
 .hgh-pagination{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--hgh-color-text,#1f2328)}
 .hgh-pagination *{box-sizing:border-box}
 .hgh-pagination a,.hgh-pg-more{text-decoration:none;color:inherit;cursor:pointer}

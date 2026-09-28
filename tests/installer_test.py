@@ -1,4 +1,4 @@
-import importlib.util, pathlib, sys, tempfile, unittest
+import importlib.util, json, pathlib, sys, tempfile, unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 spec=importlib.util.spec_from_file_location('installer',ROOT/'scripts/install.py')
@@ -47,7 +47,7 @@ class InstallerTests(unittest.TestCase):
  def test_compat_helper_is_shared(self):
   self.assertEqual(installer.check_version('v16.0.3+build',{'testedForgejo':['16.0.3']}),'16.0.3')
  def test_asset_names_include_pagination_and_organization_modules(self):
-  for name in ('pagination.mjs','pagination-model.mjs','pagination.css','organization.mjs','organization.css'):
+  for name in ('pagination.mjs','pagination-model.mjs','pagination.css','organization.mjs','organization.css','dashboard-pagination.mjs','dashboard-pagination.css'):
    self.assertIn(name,installer.ASSET_NAMES)
  def test_asset_set_accepts_current_and_previous_known_release(self):
   version='0.2.0'
@@ -67,6 +67,15 @@ class InstallerTests(unittest.TestCase):
   current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES}
   with self.assertRaises(ValueError):
    installer.validate_asset_set(themes|current|{pathlib.Path('hypergithub/0.1.9/evil.js')},version)
+ def test_current_dist_plan_includes_current_version_dashboard_pagination(self):
+  version=json.loads((ROOT/'package.json').read_text())['version']
+  with tempfile.TemporaryDirectory(dir=ROOT) as d:
+   root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')
+   planned=installer.plan(custom,ini,False)
+   names={str(path.relative_to(custom)) for path,_,_ in planned if path.is_relative_to(custom)}
+   self.assertIn(f'public/assets/hypergithub/{version}/dashboard-pagination.mjs',names)
+   self.assertIn(f'public/assets/hypergithub/{version}/dashboard-pagination.css',names)
+   self.assertIn('public/assets/hypergithub/0.3.0/organization.mjs',names)
  def test_current_dist_plan_includes_0_3_0_pagination_and_organization(self):
   with tempfile.TemporaryDirectory(dir=ROOT) as d:
    root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')
