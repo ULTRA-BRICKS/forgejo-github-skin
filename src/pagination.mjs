@@ -116,11 +116,16 @@ function trackAttr(el, name, value, undo) {
 }
 
 /** Moves `el` to wherever it's appended next; a comment marker remembers its exact
- *  original slot so undo puts it back there, not just "into some parent". */
+ * original slot so undo puts it back there, not just "into some parent". Restore keys off
+ * `marker.parentNode`, never `marker.isConnected`: an htmx-style swap can detach the whole
+ * native `.pagination.menu` (marker included) before teardown runs, and `isConnected` is
+ * false there even though the marker's parent still exists — checking it would silently
+ * discard every relocated anchor instead of restoring them (same lesson as organization.mjs's
+ * restoreSlot). `replaceWith` doesn't require the parent to be attached to the document. */
 function relocate(doc, el, undo) {
   const marker = doc.createComment('hgh-pg-slot');
   el.before(marker);
-  undo.push(() => { if (marker.isConnected) marker.replaceWith(el); else el.remove(); });
+  undo.push(() => { if (marker.parentNode) marker.replaceWith(el); else el.remove(); });
   return el;
 }
 
@@ -314,8 +319,26 @@ function equalizeWings(state) {
   } catch {}
 }
 
+/** Enhancing inside a still-hidden subtree (a collapsed panel, an unshown tab, htmx content
+ *  swapped in hidden) measures zero-width wings above and skips reserving space — the compact
+ *  state would then render genuinely off-center the moment the subtree becomes visible, with no
+ *  further trigger to correct it (nothing here re-runs equalizeWings on its own). Watch for real
+ *  width to appear and equalize silently before the user could ever see or interact with it, then
+ *  stop watching — this must never wait for reveal, or the correction becomes a visible jump. */
+function watchForVisibility(win, state) {
+  if (!state.leftWing || !state.rightWing || state.leftWing.wing.style.minWidth) return; // already measured successfully
+  if (typeof win.ResizeObserver !== 'function') return;
+  const observer = new win.ResizeObserver(() => {
+    equalizeWings(state);
+    if (state.leftWing.wing.style.minWidth) observer.disconnect(); // confirmed a real measurement, not just a nonzero container width
+  });
+  observer.observe(state.nav);
+  state.visibilityObserver = observer;
+}
+
 function teardown(menu, state) {
   state.controller.destroy();
+  state.visibilityObserver?.disconnect();
   state.nav.removeEventListener('pointerenter', state.listeners.onEnter);
   state.nav.removeEventListener('pointerdown', state.listeners.onNonMousePress);
   state.nav.removeEventListener('pointerleave', state.listeners.onLeave);
@@ -323,7 +346,6 @@ function teardown(menu, state) {
   state.nav.removeEventListener('pointercancel', state.listeners.onNonMouseRelease);
   for (let i = state.undo.length - 1; i >= 0; i--) state.undo[i]();
   state.nav.remove();
-  if (menu.isConnected) menu.hidden = false;
   states.delete(menu);
 }
 
@@ -333,16 +355,20 @@ function cleanupDisconnected(doc) {
   }
 }
 
-/** Reserve compact centered Previous/Next; wings reveal after a sustained hover/focus. */
+/** Reserve compact centered Previous/Next; wings reveal after a sustained pointer hover over the
+ *  whole region, or immediately on activating the always-focusable "More pages" trigger (the
+ *  keyboard/touch path — see the Tab-reaches-trigger test) — never on a bare unactivated focus,
+ *  which would otherwise arm an unwanted countdown while merely tabbing past. */
 export function enhancePagination(doc = document) {
   cleanupDisconnected(doc);
   for (const menu of doc.querySelectorAll('.page.buttons > .pagination.menu')) {
     if (states.has(menu)) continue;
     const state = build(doc, menu);
     if (!state) continue;
-    menu.hidden = true;
+    trackAttr(menu, 'hidden', '', state.undo);
     menu.after(state.nav);
     equalizeWings(state);
+    watchForVisibility(doc.defaultView ?? window, state);
     states.set(menu, state);
   }
 }

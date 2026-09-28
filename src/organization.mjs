@@ -24,6 +24,11 @@ import {safeHref} from './core.mjs';
 
 const dashboards = new Map();
 const profiles = new Map();
+// The sidebar's Top languages/Topics and the empty-org heuristic are only ever computed from this
+// one page of the most-recently-updated repos, never a full paginated crawl: acceptable for the
+// common case (the vast majority of orgs), but for an org with more repos than this, the counts are
+// a biased sample of the newest repos, not a total — never presented as more complete than that.
+const ENRICHMENT_LIMIT = 100;
 
 const LANGUAGE_COLORS = {
   JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5', Go: '#00ADD8', Rust: '#dea584',
@@ -98,7 +103,7 @@ function repoSearchBase(win) {
   const sub = win.config?.appSubUrl ?? '';
   const orgId = win.config?.pageData?.dashboardRepoList?.organizationId;
   if (orgId === undefined) return null;
-  return `${sub}/repo/search?sort=updated&order=desc&uid=${orgId}&team_id=0&q=&mode=&page=1&limit=100`;
+  return `${sub}/repo/search?sort=updated&order=desc&uid=${orgId}&team_id=0&q=&mode=&page=1&limit=${ENRICHMENT_LIMIT}`;
 }
 
 /** Fetches enrichment data once; resolves to `{byName, repos}` — `byName` is looked up by both
@@ -158,9 +163,37 @@ function setStatus(state, text) {
   state.status.hidden = !text;
   state.status.textContent = text;
 }
+/** The dashboard repo-list's own pager (`DashboardRepoList.vue`, `v-if="showMoreReposLink"`) has no
+ * hrefs — only `@click="changePage(...)"` — and Vue wholesale-replaces the node on every page change,
+ * so it can never be relocated the way pagination.mjs treats real server-rendered pagers (confirmed
+ * against the real v16.0.3 template: exactly 5 fixed-position anchors — First, Previous, current,
+ * Next, Last, in that order; current has no href/click target of its own, just the page number).
+ * Classifying those 5 anchors in place and hiding only the genuinely redundant "current page" number
+ * is the one safe, reversible improvement that never touches Vue's own DOM ownership or listeners.
+ * Re-run on every mutation (the same observer `apply()` already uses) so a fresh `v-if` replacement
+ * gets reclassified; teardown sweeps by class/data-attribute, never by node reference, since Vue may
+ * have swapped the node many times by then. */
+function classifyVuePager(repoHost) {
+  const pager = repoHost.querySelector('.ui.borderless.pagination.menu');
+  if (!pager || pager.dataset.hghPagerBound) return;
+  const anchors = [...pager.querySelectorAll(':scope > a')];
+  // Count alone isn't identity: also require the real template's class shape (index 2 = "active",
+  // the rest = "navigation") before mutating, so a reordered/relabeled point-release pager is left
+  // untouched rather than having a genuinely usable link hidden from keyboard/screen-reader users.
+  if (anchors.length !== 5 || !anchors[2].classList.contains('active') || [0, 1, 3, 4].some((i) => !anchors[i].classList.contains('navigation'))) return;
+  pager.dataset.hghPagerBound = 'true';
+  const current = anchors[2];
+  current.classList.add('hgh-org-pager-current');
+  if (current.hasAttribute('aria-hidden')) current.dataset.hghPriorAriaHidden = current.getAttribute('aria-hidden');
+  if (current.hasAttribute('tabindex')) current.dataset.hghPriorTabindex = current.getAttribute('tabindex');
+  current.setAttribute('aria-hidden', 'true');
+  current.tabIndex = -1;
+}
 function watchRepoEnrichment(state, doc, win) {
   const apply = () => {
-    if (state.cancelled || !state.enrichment) return;
+    if (state.cancelled) return;
+    classifyVuePager(state.repoHost);
+    if (!state.enrichment) return;
     const rows = state.repoHost.querySelectorAll('.repo-owner-name-list > li');
     for (const row of rows) {
       if (row.dataset.hghChecked) continue;
@@ -171,7 +204,11 @@ function watchRepoEnrichment(state, doc, win) {
     }
     // `state.emptyConfirmed` (not the rendered status text) is the source of truth, so this stays
     // correct even if the message wording changes later.
-    if (state.emptyConfirmed) setStatus(state, rows.length === 0 ? 'No repositories match.' : '');
+    if (state.emptyConfirmed) {
+      const stillEmpty = rows.length === 0;
+      setStatus(state, stillEmpty ? 'No repositories match.' : '');
+      state.viewAll.hidden = stillEmpty; // a genuinely empty org has nothing for "View all" to reveal
+    }
   };
   state.enrichmentObserver = new win.MutationObserver(apply);
   state.enrichmentObserver.observe(state.repoHost, {childList: true, subtree: true});
@@ -182,6 +219,10 @@ function watchRepoEnrichment(state, doc, win) {
     state.emptyConfirmed = result !== null && result.repos.length === 0;
     setStatus(state, result === null ? 'Repository details are unavailable right now.' : '');
     apply();
+    // Independent of whether loadPeople's own sidebar render already ran (or hasn't yet, or there's
+    // no home link at all): repo-search enrichment is the only source of Top languages/Topics, so
+    // it must refresh the sidebar itself rather than relying on loadPeople's completion to do it.
+    renderSidebar(state, doc);
   });
 }
 
@@ -195,14 +236,20 @@ async function loadPeople(win, homeHref, signal) {
     if (!response.ok) return [];
     const html = await response.text();
     const doc = new win.DOMParser().parseFromString(html, 'text/html');
-    return [...doc.querySelectorAll('.segment.members > a')].map((a) => ({
-      href: a.getAttribute('href'), title: a.getAttribute('title') ?? '', avatar: a.querySelector('img')?.getAttribute('src') ?? '',
-    }));
+    return [...doc.querySelectorAll('.segment.members > a')]
+      .map((a) => {
+        const rawAvatar = a.querySelector('img')?.getAttribute('src') ?? '';
+        return {href: a.getAttribute('href') ? safeHref(a.getAttribute('href'), href) : null, title: a.getAttribute('title') ?? '', avatar: rawAvatar ? (safeHref(rawAvatar, href) ?? '') : ''};
+      })
+      .filter((person) => person.href);
   } catch {
     return [];
   }
 }
 
+function topEntries(map, n) {
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
+}
 function topLanguagesAndTopics(enrichment) {
   const languages = new Map();
   const topics = new Map();
@@ -210,8 +257,7 @@ function topLanguagesAndTopics(enrichment) {
     if (repo.language) languages.set(repo.language, (languages.get(repo.language) ?? 0) + 1);
     for (const topic of repo.topics ?? []) topics.set(topic, (topics.get(topic) ?? 0) + 1);
   }
-  const top = (map, n) => [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
-  return {languages: top(languages, 6), topics: top(topics, 8)};
+  return {languages: topEntries(languages, 6), topics: topEntries(topics, 8)};
 }
 
 function renderSidebar(state, doc) {
@@ -232,26 +278,7 @@ function renderSidebar(state, doc) {
     sidebar.append(section);
   }
   const {languages, topics} = topLanguagesAndTopics(state.enrichment);
-  if (languages.length) {
-    const section = el(doc, 'section', 'hgh-org-languages');
-    section.append(el(doc, 'h3', '', 'Top languages'));
-    const list = el(doc, 'ul', 'hgh-org-language-list');
-    for (const [name, count] of languages) {
-      const item = el(doc, 'li');
-      item.append(langDot(doc, name), doc.createTextNode(`${name} (${count})`));
-      list.append(item);
-    }
-    section.append(list);
-    sidebar.append(section);
-  }
-  if (topics.length) {
-    const section = el(doc, 'section', 'hgh-org-topics');
-    section.append(el(doc, 'h3', '', 'Topics'));
-    const list = el(doc, 'div', 'hgh-org-topic-list');
-    for (const [name] of topics) list.append(el(doc, 'span', 'hgh-org-topic', name));
-    section.append(list);
-    sidebar.append(section);
-  }
+  sidebar.append(...buildLanguageTopicSections(doc, languages, topics));
 }
 
 const TABS = [
@@ -378,6 +405,7 @@ function buildDashboardPage(root, doc, win) {
   const viewAll = el(doc, 'a', 'hgh-org-view-all', 'View all repositories');
   viewAll.href = '#repos';
   head.append(reposHeading, viewAll);
+  state.viewAll = viewAll;
   const status = el(doc, 'p', 'hgh-org-repos-status', '');
   status.setAttribute('role', 'status');
   status.hidden = true;
@@ -433,6 +461,14 @@ function restoreDashboard(state) {
   }
   for (const meta of state.repoHost.querySelectorAll('.hgh-org-repo-meta')) meta.remove();
   for (const row of state.repoHost.querySelectorAll('[data-hgh-checked]')) delete row.dataset.hghChecked;
+  for (const pager of state.repoHost.querySelectorAll('[data-hgh-pager-bound]')) delete pager.dataset.hghPagerBound;
+  for (const current of state.repoHost.querySelectorAll('.hgh-org-pager-current')) {
+    current.classList.remove('hgh-org-pager-current');
+    if (current.dataset.hghPriorAriaHidden !== undefined) { current.setAttribute('aria-hidden', current.dataset.hghPriorAriaHidden); delete current.dataset.hghPriorAriaHidden; }
+    else current.removeAttribute('aria-hidden');
+    if (current.dataset.hghPriorTabindex !== undefined) { current.setAttribute('tabindex', current.dataset.hghPriorTabindex); delete current.dataset.hghPriorTabindex; }
+    else current.removeAttribute('tabindex');
+  }
   if (state.heatmap && state.heatmapMarker) {
     restoreSlot(state.heatmapMarker, state.heatmap);
     if (state.heatmapDivider) state.heatmap.after(state.heatmapDivider);
@@ -441,21 +477,146 @@ function restoreDashboard(state) {
   if (state.homeLink && state.homeLinkMarker) restoreSlot(state.homeLinkMarker, state.homeLink);
   for (const {marker: m, node} of state.noticeSlots) restoreSlot(m, node);
   restoreSlot(state.repoHostMarker, state.repoHost);
-  if (state.page.isConnected) state.page.replaceWith(state.flex);
+  // parentNode, not isConnected: pruneDetached() calls this for a temporarily detached root
+  // (an htmx-style swap can detach `root` — and everything inside it, including our own
+  // `state.page` wrapper — before this runs), and isConnected is false there even though
+  // `state.page` is still a legitimate child of `root`. Checking it would leave our wrapper
+  // in place instead of restoring the native flex-container on reinsertion.
+  if (state.page.parentNode) state.page.replaceWith(state.flex);
   dashboards.delete(state.root);
 }
 
-/** Public `/<name>` org profile page: repositories, descriptions, stars/forks/topics and the
- * members segment are already fully server-rendered (`templates/org/home.tmpl` +
- * `templates/explore/repo_list.tmpl`), so this only needs consistent presentation, never a DOM
- * restructure — every native link, form and access-controlled section (members/teams only render
- * when the viewer is entitled to see them) is left exactly where the server put it. */
-function enhanceProfile(root) {
+/** Derives Top languages/Topics purely from the repo cards Forgejo already rendered on the current
+ * page (`.flex-item-trailing a[href*="language="]` + `.repo-topics > a.ui.label`) — no fetch, unlike
+ * the dashboard sidebar, since this is already public/permitted HTML sitting on the page. */
+function collectProfileLanguagesTopics(flexList) {
+  const languages = new Map();
+  const topics = new Map();
+  for (const item of flexList.querySelectorAll(':scope > .flex-item')) {
+    const name = item.querySelector('.flex-item-trailing a[href*="language="]')?.textContent?.trim();
+    if (name) languages.set(name, (languages.get(name) ?? 0) + 1);
+    for (const topicLink of item.querySelectorAll('.repo-topics > a.ui.label')) {
+      const label = topicLink.textContent.trim();
+      if (label) topics.set(label, (topics.get(label) ?? 0) + 1);
+    }
+  }
+  return {languages: topEntries(languages, 6), topics: topEntries(topics, 8)};
+}
+/** Shared by the dashboard sidebar (fetch-derived) and the profile sidebar (DOM-derived) — builds
+ * the section elements only, no DOM-appending side effect, so each caller controls where they land
+ * and whether they're tracked for restore. */
+function buildLanguageTopicSections(doc, languages, topics) {
+  const sections = [];
+  if (languages.length) {
+    const section = el(doc, 'section', 'hgh-org-languages');
+    section.append(el(doc, 'h3', '', 'Top languages'));
+    const list = el(doc, 'ul', 'hgh-org-language-list');
+    for (const [name, count] of languages) {
+      const item = el(doc, 'li');
+      item.append(langDot(doc, name), doc.createTextNode(`${name} (${count})`));
+      list.append(item);
+    }
+    section.append(list);
+    sections.push(section);
+  }
+  if (topics.length) {
+    const section = el(doc, 'section', 'hgh-org-topics');
+    section.append(el(doc, 'h3', '', 'Topics'));
+    const list = el(doc, 'div', 'hgh-org-topic-list');
+    for (const [name] of topics) list.append(el(doc, 'span', 'hgh-org-topic', name));
+    section.append(list);
+    sections.push(section);
+  }
+  return sections;
+}
+function buildProfileSidebarSections(doc, sidebarColumn, languages, topics) {
+  const sections = buildLanguageTopicSections(doc, languages, topics);
+  sidebarColumn.append(...sections);
+  return sections;
+}
+/** The native heading reads "Members"; the sidebar naming convention this skin uses everywhere else
+ * (dashboard + public profile) is "People" (matching GitHub) — relabel only the heading text node,
+ * never the segment itself (access-controlled content stays exactly where the server put it), and
+ * restore the exact original text on teardown. */
+function relabelMembersHeading(root) {
+  const segment = root.querySelector('.segment.members');
+  const heading = segment?.previousElementSibling;
+  const label = heading && [...heading.childNodes, heading].find((n) => n.textContent?.trim() === 'Members');
+  if (!label) return null;
+  const original = label.textContent;
+  // A bare Text node match may carry trailing/leading whitespace before an adjacent sibling (e.g.
+  // a member-count badge element); replace only the "Members" substring so that whitespace
+  // survives, rather than overwriting the whole node value and silently concatenating with it.
+  if (label.nodeType === label.TEXT_NODE) label.data = label.data.replace('Members', 'People');
+  else label.textContent = 'People';
+  return {node: label, original};
+}
+
+/** Public `/<name>` org profile page: repositories, descriptions, stars/forks/topics and (when the
+ * viewer is entitled) the members segment are already fully server-rendered
+ * (`templates/org/home.tmpl` + `templates/explore/repo_list.tmpl`) — every native link, form and
+ * access-controlled section is left exactly where the server put it. This adds presentation, a
+ * 10-row cap with a real "View all repositories" reveal (the repos already on this page, never a
+ * second fetch or fabricated rows — an org with more repos than fit on one page is reached via the
+ * existing native `.ui.borderless.pagination` at the bottom, never a fictional "all" list), and a
+ * Top languages/Topics sidebar computed from the repo cards already on the page — no invented data,
+ * no network call.
+ *
+ * Past bugs: an earlier version assumed the real template always renders a `.five.wide.column`
+ * Members sidebar beside an `.eleven.wide.column` repo list and did nothing but add a class. A live
+ * capture of the real page (`ultrabricks`, unauthenticated) shows the grid instead renders a single
+ * full-width column with no members block at all — member-list visibility is a per-org setting, so
+ * this must build its own sidebar column on demand and never assume one already exists. */
+function enhanceProfile(root, doc, win) {
   root.classList.add('hgh-org-profile');
-  return {root};
+  const state = {root, win, hashListener: null, viewAll: null, sidebarColumn: null, createdSidebar: false, sections: [], membersLabel: relabelMembersHeading(root)};
+  const grid = root.querySelector('.ui.mobile.reversed.stackable.grid');
+  const flexList = grid?.querySelector('.flex-list');
+  if (!grid || !flexList) return state; // unrecognized page shape: cosmetic class only, never guess
+
+  const {languages, topics} = collectProfileLanguagesTopics(flexList);
+  const reposColumn = flexList.closest('.column');
+  if ((languages.length || topics.length) && reposColumn) {
+    const otherColumns = [...grid.children].filter((child) => child.classList.contains('column') && child !== reposColumn);
+    let sidebarColumn = otherColumns.length === 1 ? otherColumns[0] : null;
+    if (!sidebarColumn) {
+      sidebarColumn = el(doc, 'div', 'ui column');
+      grid.append(sidebarColumn);
+      state.createdSidebar = true;
+    }
+    sidebarColumn.classList.add('hgh-org-sidebar');
+    state.sidebarColumn = sidebarColumn;
+    state.sections = buildProfileSidebarSections(doc, sidebarColumn, languages, topics);
+  } // else: can't tell the repos column from any other, or nothing to show — never guess, leave untouched
+
+  const items = flexList.querySelectorAll(':scope > .flex-item');
+  if (items.length > 10) {
+    const viewAll = el(doc, 'div', 'hgh-org-view-all-bottom');
+    const link = el(doc, 'a', 'hgh-org-view-all', 'View all repositories');
+    link.href = '#repos';
+    viewAll.append(link);
+    flexList.after(viewAll);
+    state.viewAll = viewAll;
+    const listener = () => { root.dataset.hghOrgView = win.location.hash === '#repos' ? 'repos' : 'overview'; };
+    win.addEventListener('hashchange', listener);
+    state.hashListener = listener;
+    listener();
+  }
+  return state;
 }
 function restoreProfile(state) {
   state.root.classList.remove('hgh-org-profile');
+  delete state.root.dataset.hghOrgView;
+  if (state.hashListener) state.win.removeEventListener('hashchange', state.hashListener);
+  if (state.membersLabel) state.membersLabel.node.textContent = state.membersLabel.original;
+  state.viewAll?.remove();
+  if (state.sidebarColumn) {
+    if (state.createdSidebar) state.sidebarColumn.remove();
+    else {
+      for (const section of state.sections) section.remove();
+      state.sidebarColumn.classList.remove('hgh-org-sidebar');
+    }
+  }
   profiles.delete(state.root);
 }
 
@@ -485,7 +646,7 @@ export function enhanceOrganization(doc = document) {
   pruneDetached(profiles, doc, restoreProfile);
   for (const root of doc.querySelectorAll('.page-content.organization.profile')) {
     if (profiles.has(root)) continue;
-    profiles.set(root, enhanceProfile(root));
+    profiles.set(root, enhanceProfile(root, doc, win));
   }
 }
 

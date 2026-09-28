@@ -1,5 +1,7 @@
 @import url('./universal-search.css');
 @import url('./repository-ui.css');
+@import url('./pagination.css');
+@import url('./organization.css');
 /* Native Forgejo DOM and semantics; every visual rule is scoped to an opt-in theme. */
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) {
   --fonts-regular: var(--hgh-font-sans);

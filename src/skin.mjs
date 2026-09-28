@@ -2,6 +2,8 @@ import {enhanceUniversalSearch, restoreUniversalSearch, openUniversalSearch} fro
 import {enhanceRepositoryControls, restoreRepositoryControls} from './repository-controls.mjs';
 import {enhanceNativeChrome, restoreNativeChrome} from './mobile-chrome.mjs';
 import {enhanceNativeListOptions, restoreNativeListOptions} from './list-options.mjs';
+import {enhancePagination, restorePagination} from './pagination.mjs';
+import {enhanceOrganization, restoreOrganization} from './organization.mjs';
 /** Progressive enhancements only: existing Forgejo links/forms remain authoritative. */
 import {themeEnabled, currentThemeStylesheet, acceptKey, safeHref, navigationAction, normalizeLine, isEditable} from './core.mjs';
 
@@ -355,7 +357,7 @@ function boot() {
 
   function enhance() {
     syncReleaseStyles();
-    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); enhanceUniversalSearch(document); }
+    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); enhanceUniversalSearch(document); enhancePagination(document); enhanceOrganization(document); }
     queued = false;
     if (!enabled()) return;
 
@@ -538,9 +540,11 @@ function boot() {
     syncBodyObserver();
     if (!enabled()) {
       restoreRepositoryControls(document);
+      restorePagination(document);
       restoreNativeListOptions(document);
       restoreNativeChrome(document);
       restoreUniversalSearch(document);
+      restoreOrganization(document);
       closeMenus();
       for (const menu of document.querySelectorAll('details.hgh-clone')) {
         const panel = menu.querySelector('.clone-panel');

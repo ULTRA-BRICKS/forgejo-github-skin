@@ -46,3 +46,25 @@ test('a removed description cannot crash a later mobile transition or strand nat
  await expect(page.locator('.repo-buttons')).toHaveCount(1);await expect(page.locator('.repo-buttons')).toBeVisible();
  await page.evaluate(()=>restoreRepositoryControls());await expect(page.locator('.repo-header>.repo-buttons')).toBeVisible();await expect(page.locator('.button-sequence>#add-native')).toBeVisible();expect(errors).toEqual([]);
 });
+
+test('a temporarily detached-but-reused row restores its exact original controls on reinsertion',async({page})=>{
+ await page.setViewportSize({width:320,height:956});
+ await prepare(page);
+ await expect(page.locator('.hgh-repo-more')).toBeVisible();
+ const result=await page.evaluate(()=>{
+  const row=document.querySelector('.repo-button-row');
+  const parent=row.parentNode,next=row.nextSibling;
+  row.remove(); // detach but keep a live reference — a framework reusing the same node
+  enhanceRepositoryControls(); // sees the detached row and tears down its state via cleanupDisconnected()
+  parent.insertBefore(row,next); // reinsert the SAME node
+  return {
+   addFilePresent: document.getElementById('add-native')===window.originalButton,
+   moreCount: document.querySelectorAll('.hgh-repo-more').length,
+  };
+ });
+ expect(result.addFilePresent).toBe(true); // original control restored to its exact original slot, not lost
+ expect(result.moreCount).toBe(0); // stale disclosure torn down, not leaked
+ await page.evaluate(()=>enhanceRepositoryControls());
+ await expect(page.locator('.hgh-repo-more')).toBeVisible();
+ await expect(page.locator('#add-native')).toHaveCount(1);
+});

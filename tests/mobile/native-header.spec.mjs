@@ -19,6 +19,43 @@ test('native repository brand exists only in footer; restoration retains origina
   expect(await page.evaluate(() => window.originalToggle === document.querySelector('#navbar-expand-toggle'))).toBe(true);
 });
 
+test('a temporarily detached-but-reused navbar restores its exact original moved controls on reinsertion', async ({ page }) => {
+  await page.setContent(`<html data-theme="hypergithub-light"><body><nav id="navbar"><div class="navbar-left"><a id="navbar-logo" href="/">Forgejo</a><div class="navbar-mobile-right"><button id="navbar-expand-toggle">Menu</button></div><a href="/explore/repos">Explore</a></div><div class="navbar-right"><details><summary><img class="avatar" width="24" height="24" alt="Account"></summary><p>Account menu</p></details></div></nav><div class="repo-header"><div class="flex-item-title"><a href="/owner">owner</a> / <a href="/owner/repo">repo</a></div></div><footer>Footer</footer></body></html>`);
+  await page.addStyleTag({ content: css });
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.addScriptTag({ content: source.replaceAll('export ', '') });
+  await page.evaluate(() => {
+    window.originalToggle = document.querySelector('#navbar-expand-toggle');
+    window.originalProfile = document.querySelector('.navbar-right > details');
+    enhanceNativeChrome();
+  });
+  // Mobile placement actually relocated both (before logo / into navbar-left) — a meaningful
+  // starting position for the detach/reinsert check below, not a same-place no-op.
+  await expect(page.locator('.hgh-native-toggle')).toHaveCount(1);
+  await expect(page.locator('.navbar-mobile-right #navbar-expand-toggle')).toHaveCount(0);
+  const result = await page.evaluate(() => {
+    const nav = document.querySelector('#navbar');
+    const parent = nav.parentNode, next = nav.nextSibling;
+    nav.remove(); // detach but keep a live reference — a framework reusing the same node
+    enhanceNativeChrome(); // sees the detached nav and tears down its state via cleanupDisconnected()
+    parent.insertBefore(nav, next); // reinsert the SAME node
+    return {
+      // Structural slot, not just identity-anywhere: the old `marker.isConnected` bug left the
+      // toggle/profile stranded at their mobile position (before logo / in navbar-left) because
+      // it has no `else` fallback to remove them either — identity-only checks would pass even
+      // on the buggy code, since nothing is ever lost, only mis-positioned.
+      toggleInSlot: document.querySelector('.navbar-mobile-right > #navbar-expand-toggle') === window.originalToggle,
+      profileInSlot: document.querySelector('.navbar-right > details') === window.originalProfile,
+      contextCount: document.querySelectorAll('.hgh-native-context').length,
+    };
+  });
+  expect(result.toggleInSlot).toBe(true); // toggle restored to its exact original slot, not left at the mobile position
+  expect(result.profileInSlot).toBe(true); // profile restored to its exact original slot
+  expect(result.contextCount).toBe(0); // stale state torn down, not leaked
+  await page.evaluate(() => enhanceNativeChrome());
+  await expect(page.locator('.hgh-native-toggle')).toHaveCount(1);
+});
+
 test('a page without a footer retains its native brand link', async ({ page }) => {
   await page.setContent('<html data-theme="hypergithub-light"><body><nav id="navbar"><div class="navbar-left"><a id="navbar-logo" href="/">Forgejo</a></div></nav><div class="repo-header"><div class="flex-item-title"><a href="/a/b">repo</a></div></div></body></html>');
   await page.addStyleTag({content:css});

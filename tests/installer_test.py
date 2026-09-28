@@ -46,11 +46,20 @@ class InstallerTests(unittest.TestCase):
    self.assertFalse((real/'asset.css').exists())
  def test_compat_helper_is_shared(self):
   self.assertEqual(installer.check_version('v16.0.3+build',{'testedForgejo':['16.0.3']}),'16.0.3')
+ def test_asset_names_include_pagination_and_organization_modules(self):
+  for name in ('pagination.mjs','pagination-model.mjs','pagination.css','organization.mjs','organization.css'):
+   self.assertIn(name,installer.ASSET_NAMES)
  def test_asset_set_accepts_current_and_previous_known_release(self):
   version='0.2.0'
   themes={pathlib.Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
   current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES}
   previous={pathlib.Path('hypergithub/0.1.9/skin.css'),pathlib.Path('hypergithub/0.1.9/skin.mjs')}
+  installer.validate_asset_set(themes|current|previous,version)
+ def test_asset_set_accepts_0_3_0_alongside_0_2_0_compatibility(self):
+  version='0.3.0'
+  themes={pathlib.Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
+  current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES}
+  previous={pathlib.Path('hypergithub/0.2.0/skin.css'),pathlib.Path('hypergithub/0.2.0/skin.mjs')}
   installer.validate_asset_set(themes|current|previous,version)
  def test_asset_set_rejects_unknown_versioned_file(self):
   version='0.2.0'
@@ -58,6 +67,14 @@ class InstallerTests(unittest.TestCase):
   current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES}
   with self.assertRaises(ValueError):
    installer.validate_asset_set(themes|current|{pathlib.Path('hypergithub/0.1.9/evil.js')},version)
+ def test_current_dist_plan_includes_0_3_0_pagination_and_organization(self):
+  with tempfile.TemporaryDirectory(dir=ROOT) as d:
+   root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')
+   planned=installer.plan(custom,ini,False)
+   names={str(path.relative_to(custom)) for path,_,_ in planned if path.is_relative_to(custom)}
+   self.assertIn('public/assets/hypergithub/0.3.0/organization.mjs',names)
+   self.assertIn('public/assets/hypergithub/0.3.0/pagination.mjs',names)
+   self.assertIn('public/assets/hypergithub/0.2.0/skin.mjs',names)
  def test_current_dist_plan_accepts_n_minus_one_and_universal_search(self):
   with tempfile.TemporaryDirectory(dir=ROOT) as d:
    root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')

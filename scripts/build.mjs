@@ -12,7 +12,7 @@ fs.mkdirSync(releases,{recursive:true});
 // Keep older versioned assets: non-versioned theme CSS can remain cached for
 // hours and must continue resolving its previous @import during a rollout.
 fs.mkdirSync(dir,{recursive:true});fs.mkdirSync(path.join(assets,'css'),{recursive:true});
-for(const file of ['skin.css','skin.mjs','core.mjs','list-options.mjs','repository-controls.mjs','mobile-chrome.mjs','repository-ui.css','universal-search.mjs','universal-search.css']) fs.copyFileSync(path.join(root,'src',file),path.join(dir,file));
+for(const file of ['skin.css','skin.mjs','core.mjs','list-options.mjs','repository-controls.mjs','mobile-chrome.mjs','repository-ui.css','universal-search.mjs','universal-search.css','pagination.mjs','pagination-model.mjs','pagination.css','organization.mjs','organization.css']) fs.copyFileSync(path.join(root,'src',file),path.join(dir,file));
 const map={
  'color-body':'canvas','color-box-body':'canvas','color-box-header':'subtle','color-box-body-highlight':'subtle',
  'color-text':'text','color-text-dark':'text','color-text-light':'muted','color-text-light-1':'muted','color-text-light-2':'muted','color-text-light-3':'muted',
@@ -39,5 +39,5 @@ for(const mode of ['light','dark','auto']){
 }
 const hooks=path.join(root,'dist/templates/custom');fs.mkdirSync(hooks,{recursive:true});
 fs.writeFileSync(path.join(hooks,'footer.tmpl'),`{{/* Hypergithub ${version}: external script; no inline JS, works with AppSubUrl. */}}\n<script type="module" src="{{AppSubUrl}}/assets/hypergithub/${version}/skin.mjs"></script>\n`);
-fs.writeFileSync(path.join(root,'dist/build.json'),JSON.stringify({version,tokenCount:tokens.size,files:['skin.css','skin.mjs','core.mjs','list-options.mjs','repository-controls.mjs','mobile-chrome.mjs','repository-ui.css','universal-search.mjs','universal-search.css'],format:'DTCG 2025.10',fontFiles:0},null,2)+'\n');
+fs.writeFileSync(path.join(root,'dist/build.json'),JSON.stringify({version,tokenCount:tokens.size,files:['skin.css','skin.mjs','core.mjs','list-options.mjs','repository-controls.mjs','mobile-chrome.mjs','repository-ui.css','universal-search.mjs','universal-search.css','pagination.mjs','pagination-model.mjs','pagination.css','organization.mjs','organization.css'],format:'DTCG 2025.10',fontFiles:0},null,2)+'\n');
 console.log(`Built ${tokens.size} validated tokens, three native themes, external enhancement module; no font files`);

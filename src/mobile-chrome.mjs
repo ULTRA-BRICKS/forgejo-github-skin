@@ -2,7 +2,8 @@
 const states=new Map();
 function releaseChrome(nav,state){
  state.media.removeEventListener('change',state.update);
- for(const {node,marker} of state.moving){if(marker.isConnected)marker.replaceWith(node);node.classList.remove('hgh-native-toggle','hgh-native-profile');}
+ // parentNode, not isConnected: a detached-but-reusable nav must still get its moved nodes back.
+ for(const {node,marker} of state.moving){if(marker.parentNode)marker.replaceWith(node);node.classList.remove('hgh-native-toggle','hgh-native-profile');}
  state.context.remove();state.search?.remove();state.footerMark?.remove();
  delete nav.ownerDocument.documentElement.dataset.hghRepositoryChrome;delete nav.ownerDocument.documentElement.dataset.hghMobileChrome;
  states.delete(nav);

@@ -1,6 +1,6 @@
 {
   "name": "@ultrabricks/forgejo-github-skin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Opt-in, GitHub-familiar Forgejo skin with measured design references",
@@ -37,5 +37,9 @@
   "engines": {
     "node": ">=22.12.0",
     "npm": ">=10"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }

@@ -575,6 +575,80 @@ test('a pending hover timer never fires after an htmx-style swap replaces the pa
   expect(errors).toEqual([]);
 });
 
+
+test('a temporarily detached-but-reused pagination region restores its exact original anchors and visibility on reinsertion', async ({page}) => {
+  await prepare(page, nativePagination({current: 6, total: 90}));
+  await page.evaluate(() => enhancePagination());
+  await expect(page.locator('.hgh-pagination')).toHaveCount(1);
+
+  const result = await page.evaluate(() => {
+    const container = document.querySelector('.center.page.buttons');
+    const parent = container.parentNode;
+    const next = container.nextSibling;
+    // Detach but keep a live reference — simulates a framework that temporarily removes a
+    // node from the document during reconciliation rather than discarding it outright.
+    container.remove();
+    enhancePagination(); // the real boot() loop's mutation-driven re-run sees the now-detached
+                         // menu/nav and tears down its state via cleanupDisconnected()
+    parent.insertBefore(container, next); // reinsert the SAME node, as a reused-node framework would
+    const menu = container.querySelector('.ui.borderless.pagination.menu');
+    return {
+      hidden: menu.hidden,
+      prevPresent: !!menu.querySelector('a[href="/repo/issues?page=5"]'),
+      nextPresent: !!menu.querySelector('a[href="/repo/issues?page=7"]'),
+      wrapperCount: document.querySelectorAll('.hgh-pagination').length,
+    };
+  });
+  expect(result.hidden).toBe(false); // native pager visible again, not stuck hidden forever
+  expect(result.prevPresent).toBe(true); // original Previous anchor restored to its exact slot, not removed
+  expect(result.nextPresent).toBe(true); // original Next anchor restored to its exact slot, not removed
+  expect(result.wrapperCount).toBe(0); // our own wrapper was torn down (state cleaned up), not duplicated or leaked
+
+  // Re-enhancing the reinserted, now-native-again markup works cleanly (idempotent).
+  await page.evaluate(() => enhancePagination());
+  await expect(page.locator('.hgh-pagination')).toHaveCount(1);
+  await expect(page.locator('.hgh-pg-prev')).toHaveAttribute('href', '/repo/issues?page=5');
+  await expect(page.locator('.hgh-pg-next')).toHaveAttribute('href', '/repo/issues?page=7');
+});
+
+test('teardown restores a pre-existing hidden attribute on the native menu instead of unconditionally clearing it', async ({page}) => {
+  await prepare(page, nativePagination({current: 6, total: 90}));
+  await page.evaluate(() => { document.querySelector('.ui.borderless.pagination.menu').hidden = true; }); // some other script already hid it
+  await page.evaluate(() => enhancePagination());
+  await page.evaluate(() => restorePagination());
+  const hidden = await page.locator('.ui.borderless.pagination.menu').evaluate((menu) => menu.hidden);
+  expect(hidden).toBe(true); // restore returns the exact prior state, not a hardcoded false
+});
+
+test('a pager enhanced while its container was hidden equalizes wing widths before the user could ever see it, with zero visible shift on reveal', async ({page}) => {
+  await page.setViewportSize({width: 1024, height: 800});
+  // Genuinely asymmetric wings (same fixture as "left and right wing columns end up the same
+  // pixel width even with asymmetric content" above): narrow "First 1" left wing, wide "3...90
+  // Last" right wing — equalizing them is what keeps the center pair centered.
+  await prepare(page, `<div id="wrapper" hidden>${nativePagination({current: 2, total: 90})}</div>`);
+  await page.evaluate(() => enhancePagination()); // enhanced while #wrapper is display:none — wings measure 0-width here, so equalization is skipped
+  await page.evaluate(() => { document.getElementById('wrapper').hidden = false; }); // now genuinely visible, still compact
+  const measureOffset = () => page.evaluate(() => {
+    const nav = document.querySelector('.hgh-pagination').getBoundingClientRect();
+    const center = document.querySelector('.hgh-pg-center').getBoundingClientRect();
+    return Math.abs((center.x + center.width / 2) - (nav.x + nav.width / 2));
+  });
+  // The decisive claim: correctly centered already, before any reveal interaction at all — a
+  // visible corrective snap at reveal time (equalizing only then) would be its own regression,
+  // not a fix. The ResizeObserver runs asynchronously off a layout pass, so poll for it briefly.
+  await expect.poll(measureOffset, {timeout: 2000}).toBeLessThan(1);
+
+  const before = await centerRect(page);
+  await page.locator('.hgh-pg-more').first().focus(); // pointer-events:none by design; keyboard is the trigger's real activation path
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
+  const after = await centerRect(page);
+  expect(after.center).toEqual(before.center); // zero movement through reveal, not just "close enough"
+  expect(after.prev).toEqual(before.prev);
+  expect(after.next).toEqual(before.next);
+  expect(await measureOffset()).toBeLessThan(1); // still centered after reveal
+});
+
 test('two pagination regions on one page (e.g. top and bottom) reveal together and bump the habit counter only once total', async ({page}) => {
   const top = nativePagination({current: 6, total: 90});
   const bottom = nativePagination({current: 6, total: 90});

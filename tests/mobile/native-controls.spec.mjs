@@ -23,6 +23,28 @@ test('native grouping retains node identity, delegated handlers and desktop rest
  expect(await page.evaluate(()=>window.nativeSort===document.querySelector('[data-native=sort]'))).toBe(true);
 });
 
+test('a temporarily detached-but-reused host restores its exact original controls on reinsertion',async({page})=>{
+ await page.setContent(fixture);await page.addStyleTag({content:css});
+ await page.addScriptTag({content:module.replaceAll('export ','')});
+ await page.evaluate(()=>{window.nativeSort=document.querySelector('[data-native=sort]');enhanceNativeListOptions();});
+ await expect(page.locator('[data-hgh-native-options]')).toHaveCount(1);
+ const result=await page.evaluate(()=>{
+  const host=document.querySelector('.page-content');
+  const parent=host.parentNode,next=host.nextSibling;
+  host.remove(); // detach but keep a live reference — a framework reusing the same node
+  enhanceNativeListOptions(); // sees the detached host and tears down its state via cleanupDisconnected()
+  parent.insertBefore(host,next); // reinsert the SAME node
+  return {
+   sortPresent: document.querySelector('.filter.menu [data-native=sort]')===window.nativeSort,
+   disclosureCount: document.querySelectorAll('[data-hgh-native-options]').length,
+  };
+ });
+ expect(result.sortPresent).toBe(true); // original control restored to its exact original slot, not lost
+ expect(result.disclosureCount).toBe(0); // stale disclosure torn down, not leaked
+ await page.evaluate(()=>enhanceNativeListOptions());
+ await expect(page.locator('[data-hgh-native-options]')).toHaveCount(1);
+});
+
 test('native list teardown releases listeners after content replacement',async({page})=>{
  await page.setContent(fixture);await page.addStyleTag({content:css});
  await page.evaluate(()=>{const original=window.matchMedia;window.mqlBalance=0;window.matchMedia=q=>{const m=original(q),add=m.addEventListener.bind(m),remove=m.removeEventListener.bind(m);m.addEventListener=(type,fn,...args)=>{if(type==='change')window.mqlBalance++;return add(type,fn,...args);};m.removeEventListener=(type,fn,...args)=>{if(type==='change')window.mqlBalance--;return remove(type,fn,...args);};return m;};});

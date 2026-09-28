@@ -18,7 +18,6 @@
 .hgh-pg-prev svg,.hgh-pg-next svg{display:none}
 
 .hgh-pg-number,.hgh-pg-edge{min-width:32px;justify-content:center;padding:0 8px}
-.hgh-pg-number.active,.hgh-pagination a.item.active{background:var(--hgh-color-primary,#1f883d);color:#fff;font-weight:600}
 .hgh-pg-edge-num{font-weight:600}
 .hgh-pg-edge .navigation_label{font-size:12px;opacity:.75}
 .hgh-pg-ellipsis{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:32px;color:var(--hgh-color-muted,#59636e)}
