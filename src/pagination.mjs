@@ -396,6 +396,22 @@ function cleanupDisconnected(doc) {
   }
 }
 
+/** Re-measures every already-built pager against doc's current CSS. Called from
+ *  skin.mjs's release-theme `<link>` `load` handler, never a guessed timer: the
+ *  very first applyResponsiveLayout() pass inside enhancePagination() can run
+ *  while that same stylesheet (pagination.css itself is bundled inside it via
+ *  skin.mjs's syncReleaseStyles()) is still being fetched, so the wrap decision
+ *  gets measured against whatever CSS happens to already be in effect at that
+ *  instant. Re-running here once the stylesheet's own load event actually fires
+ *  settles every existing pager onto the real geometry with no unrelated resize
+ *  needed to self-correct it. */
+export function refreshResponsiveLayout(doc = document) {
+  cleanupDisconnected(doc);
+  for (const [menu, state] of states) {
+    if (menu.ownerDocument === doc) applyResponsiveLayout(state);
+  }
+}
+
 /** Recomputes applyResponsiveLayout() whenever the pagination region's real
  *  DOM parent changes size — a narrow viewport resizing, a narrow embedding
  *  container resizing, or both — so a layout computed for one width never
