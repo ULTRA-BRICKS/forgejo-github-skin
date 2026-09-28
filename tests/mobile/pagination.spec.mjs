@@ -55,8 +55,9 @@ function cursorPagination({hasPrev, hasNext, prevHref = '/repo/commits?before=ab
     `</div></div>`;
 }
 
-function pageHtml(bodyHtml) {
-  return `<!doctype html><html lang="en"><head><meta charset="utf8"><style>${css}</style></head>` +
+function pageHtml(bodyHtml, {theme, head = ''} = {}) {
+  const themeAttr = theme ? ` data-theme="${theme}"` : '';
+  return `<!doctype html><html lang="en"${themeAttr}><head><meta charset="utf8">${head}<style>${css}</style></head>` +
     `<body>${bodyHtml}<script>${inlineModule}</script></body></html>`;
 }
 
@@ -67,17 +68,22 @@ test.beforeAll(async () => {
   server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
     const body = Buffer.from(url.searchParams.get('b') || '', 'base64').toString('utf8');
+    const theme = url.searchParams.get('t') || undefined;
+    const head = Buffer.from(url.searchParams.get('h') || '', 'base64').toString('utf8');
     res.setHeader('Content-Type', 'text/html');
-    res.end(pageHtml(body));
+    res.end(pageHtml(body, {theme, head}));
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
 test.afterAll(async () => { await new Promise((resolve) => server.close(resolve)); });
 
-async function prepare(page, bodyHtml) {
+async function prepare(page, bodyHtml, {theme, head} = {}) {
   const b = Buffer.from(bodyHtml, 'utf8').toString('base64');
-  await page.goto(base + '/?b=' + encodeURIComponent(b));
+  let url = base + '/?b=' + encodeURIComponent(b);
+  if (theme) url += '&t=' + encodeURIComponent(theme);
+  if (head) url += '&h=' + encodeURIComponent(Buffer.from(head, 'utf8').toString('base64'));
+  await page.goto(url);
 }
 
 async function centerRect(page) {
@@ -930,4 +936,90 @@ test('proof: measures exact before/after geometry and captures screenshots as te
       JSON.stringify({...proof, screenshots: {before: path.posix.join(...relSegments, 'proof-before.png'), after: path.posix.join(...relSegments, 'proof-after.png')}}, null, 2) + '\n',
     );
   }
+});
+
+// Regression (issue #6): the browser's implicit `[hidden]{display:none}` rule is a
+// user-agent-origin default. Forgejo's own Fomantic `.ui.menu{display:...}` rule is
+// author-origin, so it wins regardless of selector specificity the moment pagination.mjs
+// sets `hidden` on the native menu — production observed getComputedStyle(display) ==
+// 'inline-flex' on a menu with hidden=true. Reproduced here with that real competing
+// rule (Fomantic's actual `.ui.menu{display:...}` shape, injected as extra <head> content
+// ahead of pagination.css, exactly as production loads it) — not a naked hidden default,
+// which would pass trivially either way.
+const nativeMenuCascade = '<style>.ui.pagination.menu{display:inline-flex}</style>';
+
+for (const theme of ['hypergithub-light', 'hypergithub-dark', 'hypergithub-auto']) {
+  test(`hidden native pagination menu is actually not rendered despite the Fomantic cascade (${theme})`, async ({page}) => {
+    await prepare(page, nativePagination({current: 6, total: 90}), {theme, head: nativeMenuCascade});
+    await page.evaluate(() => enhancePagination());
+
+    const nativeMenu = page.locator('.center.page.buttons > .ui.borderless.pagination.menu');
+    await expect(nativeMenu).toHaveAttribute('hidden', '');
+    // The signals that actually matter in production: nothing to paint, nothing to
+    // hit-test, nothing exposed to assistive tech.
+    expect(await nativeMenu.evaluate((el) => getComputedStyle(el).display)).toBe('none');
+    expect(await nativeMenu.boundingBox()).toBeNull();
+    expect(await nativeMenu.evaluate((el) => el.checkVisibility())).toBe(false);
+    // AX tree directly: the original "First" link — relocated out of the native menu and
+    // into the compact bar's now-inert wing (a sibling of the menu, not nested inside it;
+    // wing-inert plus visibility:hidden is what removes it from the tree here) — is not
+    // exposed by role+name at all.
+    await expect(page.getByRole('link', {name: 'First', exact: true})).toHaveCount(0);
+
+    // Exactly one compact Previous/Next pair renders, from the enhancer's own centered bar.
+    await expect(page.locator('.hgh-pagination .hgh-pg-prev')).toBeVisible();
+    await expect(page.locator('.hgh-pagination .hgh-pg-next')).toBeVisible();
+
+    // The real production teardown path (skin.mjs's boot(), not this test) flips
+    // `data-theme` off and only then calls restorePagination() — reproduced here in that
+    // exact order, not just an isolated function call, so this proves the fix's scoping
+    // survives the real "skin switched off" transition, not merely a JS-level API call.
+    await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    await page.evaluate(() => restorePagination());
+    await expect(nativeMenu).not.toHaveAttribute('hidden');
+    expect(await nativeMenu.evaluate((el) => getComputedStyle(el).display)).toBe('inline-flex');
+    await expect(nativeMenu).toBeVisible();
+    await expect(page.locator('.hgh-pagination')).toHaveCount(0);
+    // The exact original anchor is back, restored to the AX tree by role+name.
+    await expect(page.getByRole('link', {name: 'First', exact: true})).toHaveCount(1);
+  });
+}
+
+test('a native menu without the hidden attribute is left completely alone, even under an active theme with the competing cascade present', async ({page}) => {
+  // Pins the selector's `[hidden]` requirement: dropping it (e.g. a future edit widening
+  // the rule to `.page.buttons>.pagination.menu{display:none!important}`) would force-hide
+  // every classic pager unconditionally. No `enhancePagination()` call here — this is the
+  // native menu exactly as Forgejo renders it, before any enhancement ever touches it.
+  await prepare(page, nativePagination({current: 6, total: 90}), {theme: 'hypergithub-auto', head: nativeMenuCascade});
+  const nativeMenu = page.locator('.center.page.buttons > .ui.borderless.pagination.menu');
+  await expect(nativeMenu).not.toHaveAttribute('hidden');
+  expect(await nativeMenu.evaluate((el) => getComputedStyle(el).display)).toBe('inline-flex');
+  await expect(nativeMenu).toBeVisible();
+  await expect(page.getByRole('link', {name: 'First', exact: true})).toHaveCount(1);
+});
+
+test('the hidden-source override is scoped to the classic .page.buttons wrapper and never reaches the Vue dashboard pager', async ({page}) => {
+  await prepare(
+    page,
+    '<div id="dashboard-repo-list"><div class="ui borderless pagination menu" hidden><a class="item navigation" href="/x">Previous</a></div></div>',
+    {theme: 'hypergithub-auto', head: nativeMenuCascade},
+  );
+  const vueMenu = page.locator('#dashboard-repo-list > .ui.borderless.pagination.menu');
+  await expect(vueMenu).toHaveAttribute('hidden', '');
+  // Not nested in `.page.buttons`, so the fix's !important selector never matches here —
+  // this menu is exactly as exposed to the Fomantic cascade as it always was, untouched
+  // by this change either way (organization.mjs/organization.css own its real behavior).
+  expect(await vueMenu.evaluate((el) => getComputedStyle(el).display)).toBe('inline-flex');
+});
+
+test('the override is gated on the active skin: with the skin off (no matching data-theme), a hidden classic menu follows the native cascade instead of being force-hidden', async ({page}) => {
+  // No `data-theme` at all here — the real "skin off" state. `syncReleaseStyles()` also
+  // disables the whole stylesheet `<link>` in that state, so this is defense in depth
+  // against a cached/still-enabled stylesheet, not the primary off switch.
+  await prepare(page, '<div class="center page buttons"><div class="ui borderless pagination menu" hidden></div></div>', {head: nativeMenuCascade});
+  const menu = page.locator('.center.page.buttons > .ui.borderless.pagination.menu');
+  await expect(menu).toHaveAttribute('hidden', '');
+  // With the skin's `data-theme` absent, our rule never matches; Fomantic's own cascade is
+  // exactly what production showed before this fix existed.
+  expect(await menu.evaluate((el) => getComputedStyle(el).display)).toBe('inline-flex');
 });

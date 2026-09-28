@@ -109,40 +109,16 @@ test('overview shows exactly 10 repositories with a View all link into #repos', 
   await expect(viewAll).toHaveAttribute('href', '#repos');
 });
 
-test('the Vue repo-list pager never shows a redundant current-page control, and restore reverts it exactly', async ({page}) => {
+test('enhanceOrganization() never touches the Vue repo-list pager DOM/ARIA at all — that decoration now belongs entirely to dashboard-pagination.mjs', async ({page}) => {
   await prepare(page);
   const pager = page.locator('#dashboard-repo-list .ui.borderless.pagination.menu');
   await expect(pager.locator(':scope > a')).toHaveCount(5); // First, Previous, current, Next, Last — matches the real v16.0.3 template
-  const current = pager.locator('a.hgh-org-pager-current');
-  await expect(current).toHaveCount(1);
-  await expect(current).toBeHidden();
-  await expect(current).toHaveAttribute('aria-hidden', 'true');
-  // Never relocated/cloned/removed — Vue keeps owning the exact same anchor and its listeners.
-  await expect(pager.locator(':scope > a').nth(2)).toHaveClass(/hgh-org-pager-current/);
-  await expect(pager.locator(':scope > a').nth(1)).not.toHaveClass(/hgh-org-pager-current/);
-
-  await page.evaluate(() => { window.restoreOrganization(); });
-  const restoredPager = page.locator('.flex-container-sidebar#dashboard-repo-list .ui.borderless.pagination.menu');
-  await expect(restoredPager.locator('a.hgh-org-pager-current')).toHaveCount(0);
-  await expect(restoredPager.locator(':scope > a').nth(2)).toBeVisible();
-  await expect(restoredPager.locator(':scope > a').nth(2)).not.toHaveAttribute('aria-hidden', 'true');
-});
-
-test('the Vue repo-list pager identity check leaves a reshaped anchor set untouched, never guessing which one is current', async ({page}) => {
-  await prepare(page);
-  await page.evaluate(() => { window.restoreOrganization(); });
-  await page.evaluate(() => {
-    // Simulate a point-release reshuffle: same 5-anchor count, but the "current" anchor no longer
-    // carries the real template's "active" class — an identity check must reject this, not just count.
-    const pager = document.querySelector('#dashboard-repo-list .ui.borderless.pagination.menu');
-    pager.querySelectorAll(':scope > a')[2].classList.remove('active');
-  });
-  await page.evaluate(() => { window.enhanceOrganization(); });
-  await expect.poll(() => page.locator('.hgh-org-repo-meta').count()).toBeGreaterThan(0);
-  const pager = page.locator('#dashboard-repo-list .ui.borderless.pagination.menu');
+  const current = pager.locator(':scope > a').nth(2);
+  await expect(current).toHaveClass(/active/);
+  await expect(current).not.toHaveClass(/hgh-org-pager-current/);
+  await expect(current).toBeVisible();
+  await expect(current).not.toHaveAttribute('aria-hidden', 'true');
   await expect(pager.locator('a.hgh-org-pager-current')).toHaveCount(0);
-  await expect(pager.locator(':scope > a').nth(2)).not.toHaveAttribute('aria-hidden', 'true');
-  await expect(pager.locator(':scope > a').nth(2)).toBeVisible();
 });
 
 test('shows a compact identity header reusing the native avatar/name and the real View-home link, restored exactly on teardown', async ({page}) => {

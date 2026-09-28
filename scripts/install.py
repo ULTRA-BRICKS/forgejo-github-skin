@@ -20,6 +20,7 @@ ASSET_NAMES = (
     'universal-search.mjs','universal-search.css',
     'pagination.mjs','pagination-model.mjs','pagination.css',
     'organization.mjs','organization.css',
+    'dashboard-pagination.mjs','dashboard-pagination.css',
 )
 VERSION_RE = re.compile(r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$')
 

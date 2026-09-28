@@ -81,10 +81,6 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
  * rules keep matching whatever node Vue currently owns, with zero DOM reads/writes/observers. */
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .tw-text-center { padding: 12px 0; border-top: 1px solid var(--hgh-color-border, #d1d9e0); }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .tw-text-center .divider { display: none; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .ui.borderless.pagination.menu { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 13px; color: var(--hgh-color-muted, #59636e); }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .ui.borderless.pagination.menu a.active.item { color: var(--hgh-color-text, #1f2328); font-weight: 600; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .ui.borderless.pagination.menu a.disabled { opacity: .4; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .hgh-org-pager-current { visibility: hidden; pointer-events: none; }
 /* Exactly 10 repository rows visible before "View all repositories" reveals the rest (#repos). */
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] #dashboard-repo-list .repo-owner-name-list > li:nth-child(n+11) { display: none; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .repo-owner-name-list > li { flex-wrap: wrap; }

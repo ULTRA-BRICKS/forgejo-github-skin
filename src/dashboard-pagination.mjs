@@ -40,31 +40,25 @@
  * matching src/pagination.mjs's own "classify by position... works in every
  * language Forgejo ships" rationale, applied consistently here.
  *
- * Reveal timing/session/habit-count state comes from pagination-model.mjs's
- * `createRevealController`, reading/writing the *same* real sessionStorage/
- * localStorage keys src/pagination.mjs uses (same module constants, same real
- * browser Storage — nothing new to keep in sync under normal, non-throwing
- * Storage). `arm()`'s existing already-revealed short-circuit means whichever
- * pager (classic or this one) reveals first writes the flag and bumps the habit
- * counter exactly once; the other simply observes the flag already set and
- * skips its own bump — verified in tests/dashboard-pagination.test.mjs and
- * tests/mobile/dashboard-pagination.spec.mjs for the normal-storage case.
- * KNOWN LIMITATION (a real Storage.setItem failure, e.g. private browsing):
- * each widget module keeps its own private in-memory fallback mirror (this
- * module's `memoryStore`/`failedRealWrites` below is a separate instance from
- * src/pagination.mjs's equivalent shim), so if both a classic pager and this
- * one are mounted in the same page load AND a real write throws, each can
- * independently re-reveal/re-bump instead of observing the other's flag. Not
- * fixable from here without moving the shim into the shared, not-owned-by-
- * this-branch pagination-model.mjs — reported to the file owner rather than
- * duplicated further; see integrations/dashboard-pagination/skin-integration.
- * patch and the result report for detail.
+ * Reveal timing/session/habit-count state, INCLUDING the in-memory fallback
+ * mirror used when a real Storage write throws (e.g. private browsing), comes
+ * from pagination-model.mjs's shared `createStorageBridge` — the same one
+ * src/pagination.mjs uses. Both widgets' bridges resolve the same real
+ * `sessionStorage`/`localStorage` object identity within one document, so
+ * their fallback mirrors converge on one shared view: whichever pager reveals
+ * first is the only one that bumps the habit counter, and the other correctly
+ * observes the flag already set, even when the real write throws — verified
+ * in tests/pagination-model.test.mjs's storage-bridge tests and
+ * tests/dashboard-pagination.test.mjs/tests/mobile/dashboard-pagination.spec.mjs
+ * for the normal-storage case. Two different documents (two tabs, two
+ * iframes) always resolve two different real Storage objects, so their
+ * fallback mirrors stay fully separate — no cross-document leakage.
  * Cross-widget *instant* reveal propagation on an already-rendered page (the way
  * src/pagination.mjs's private `revealAllRegions` syncs multiple classic regions)
  * is out of reach from here without editing that module's unexported `states`; not
  * implemented — see the result report for this limitation.
  */
-import {createRevealController} from './pagination-model.mjs';
+import {createRevealController, createStorageBridge} from './pagination-model.mjs';
 
 const HOST_SELECTOR = '#dashboard-repo-list';
 const PAGER_SELECTOR = '.ui.borderless.pagination.menu';
@@ -137,43 +131,10 @@ function trackInert(el, undo) {
   undo.push(() => { if (had) el.setAttribute('inert', ''); else el.removeAttribute('inert'); });
 }
 
-// The Vue pager remounts on every page change (see the file header), so
-// "revealed once per session" must survive real Storage write failures across
-// those remounts within one page load, not just a single decorate() call. This
-// mirrors src/pagination.mjs's own `storageOf`/`memoryStore` resilience layer
-// (that module is not in this branch's owned scope to import from — it exposes
-// no public API for it — so this is a small, deliberate, bounded duplicate of
-// an already-proven ~20-line pattern, not new logic).
-const memoryStore = new Map();
-function memoryGet(prefix, key) {
-  const full = prefix + key;
-  return memoryStore.has(full) ? memoryStore.get(full) : null;
-}
-function memorySet(prefix, key, value) {
-  memoryStore.set(prefix + key, String(value));
-}
-const failedRealWrites = new Set();
-function safeStorage(doc, name) {
-  const prefix = name + ':';
-  return {
-    getItem(key) {
-      const full = prefix + key;
-      if (!failedRealWrites.has(full)) {
-        try {
-          const value = doc.defaultView?.[name]?.getItem(key);
-          if (value !== null && value !== undefined) return value;
-        } catch {}
-      }
-      return memoryGet(prefix, key);
-    },
-    setItem(key, value) {
-      const full = prefix + key;
-      memorySet(prefix, key, value);
-      try { doc.defaultView?.[name]?.setItem(key, value); failedRealWrites.delete(full); }
-      catch { failedRealWrites.add(full); }
-    },
-  };
-}
+// Storage-failure fallback (memory mirror on a throwing/disabled real Storage)
+// is shared with every other widget in the page via pagination-model.mjs's
+// createStorageBridge — see its own comment for why that sharing matters,
+// and why it never leaks across two different documents.
 
 function retireTrigger(doc, trigger) {
   if (!trigger || trigger.hidden) return;
@@ -312,7 +273,7 @@ function decorate(doc, pager) {
   const prevNativeInert = prevEl.hasAttribute('inert');
   const nextNativeInert = nextEl.hasAttribute('inert');
 
-  const controller = createRevealController({session: safeStorage(doc, 'sessionStorage'), local: safeStorage(doc, 'localStorage')});
+  const controller = createRevealController({session: createStorageBridge(doc, 'sessionStorage'), local: createStorageBridge(doc, 'localStorage')});
   const alreadyRevealed = controller.isRevealed();
 
   const firstKbd = makeKeyboardOperable(firstEl, undo, {startHidden: !alreadyRevealed || firstNativeInert});

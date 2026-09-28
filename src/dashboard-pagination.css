@@ -12,16 +12,15 @@
    would LOSE that cascade fight regardless of source order (a 1-class selector
    never beats a 2-3-class one) — an ID selector reliably beats those.
    It does NOT, on its own, beat every possible higher-specificity selector on
-   this same element: src/organization.css targets this identical pager through
-   its own ID-anchored ancestor chain (`html:is(...) .hgh-org-page
+   this same element: src/organization.css used to target this identical pager
+   through its own ID-anchored ancestor chain (`html:is(...) .hgh-org-page
    #dashboard-repo-list .ui.borderless.pagination.menu`, six class-level
-   components deep) and previously won `display` outright. That conflict isn't
-   solved by CSS alone — see integrations/dashboard-pagination/skin-integration.
-   patch's cutover section, which removes organization.css's now-superseded
-   pager rules (and organization.mjs's now-superseded pager-decoration JS)
-   rather than trying to out-specificity a rule targeting the exact same
-   element; a real Chromium run with both stylesheets loaded together and both
-   enhancers run in production order confirms `display: grid` wins post-cutover.
+   components deep) and won `display` outright. That conflict was resolved in
+   the 0.3.1 cutover, not by CSS alone: organization.css's now-superseded pager
+   rules (and organization.mjs's now-superseded pager-decoration JS) were
+   removed rather than trying to out-specificity a rule targeting the exact same
+   element; a real Chromium run with both stylesheets loaded together (post-
+   cutover, organization.css's rules removed) confirmed `display: grid` wins.
 
    A 4-column grid, not flex: First/Last sit in `minmax(0,1fr)` tracks that are
    ALWAYS pixel-equal to each other by construction (equal `fr` shares of the

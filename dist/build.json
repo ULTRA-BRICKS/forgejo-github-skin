@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0",
+  "version": "0.3.1",
   "tokenCount": 98,
   "files": [
     "skin.css",
@@ -15,7 +15,9 @@
     "pagination-model.mjs",
     "pagination.css",
     "organization.mjs",
-    "organization.css"
+    "organization.css",
+    "dashboard-pagination.mjs",
+    "dashboard-pagination.css"
   ],
   "format": "DTCG 2025.10",
   "fontFiles": 0

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createRevealController, buildPaginationPlan, REVEAL_DELAY_MS, HABIT_THRESHOLD, REVEALED_KEY, HABIT_KEY} from '../src/pagination-model.mjs';
+import {createRevealController, createStorageBridge, buildPaginationPlan, REVEAL_DELAY_MS, HABIT_THRESHOLD, REVEALED_KEY, HABIT_KEY} from '../src/pagination-model.mjs';
 
 function fakeStorage(initial = {}) {
   const data = new Map(Object.entries(initial));
@@ -169,6 +169,74 @@ test('missing storage (null) degrades to a working, non-persistent 2s reveal', (
   controller.arm(() => { calls++; });
   t.mock.timers.tick(REVEAL_DELAY_MS);
   assert.equal(calls, 1);
+});
+
+// --- Shared storage-bridge fallback (two independently-owned widgets, one real Storage) ---
+
+// Simulates a real Storage whose reads always succeed (return null when unset)
+// but whose writes always throw — e.g. Safari private-browsing quota behavior —
+// shared by two *separately constructed* bridges the way pagination.mjs and
+// dashboard-pagination.mjs each build their own wrapper around the same
+// underlying window.sessionStorage/localStorage in one real page load.
+function writeThrowingRealStorage() {
+  const data = new Map();
+  return {
+    getItem: (key) => (data.has(key) ? data.get(key) : null),
+    setItem() { throw new Error('storage disabled'); },
+    removeItem: (key) => { data.delete(key); },
+  };
+}
+
+test('two independently-constructed storage bridges over the same write-throwing real Storage share one fallback mirror', () => {
+  const realSession = writeThrowingRealStorage();
+  const realLocal = writeThrowingRealStorage();
+  const doc = {defaultView: {sessionStorage: realSession, localStorage: realLocal}};
+  // Two separate call sites (as pagination.mjs and dashboard-pagination.mjs each do)
+  // building their own bridge instances against the same doc/window.
+  const widgetA = {session: createStorageBridge(doc, 'sessionStorage'), local: createStorageBridge(doc, 'localStorage')};
+  const widgetB = {session: createStorageBridge(doc, 'sessionStorage'), local: createStorageBridge(doc, 'localStorage')};
+  const controllerA = createRevealController({session: widgetA.session, local: widgetA.local});
+  const controllerB = createRevealController({session: widgetB.session, local: widgetB.local});
+
+  assert.equal(controllerA.isRevealed(), false);
+  assert.equal(controllerB.isRevealed(), false);
+
+  controllerA.reveal();
+
+  // The other widget's pager, mounted in the same document, must see the
+  // reveal immediately even though the real Storage write threw and neither
+  // bridge instance shares object identity.
+  assert.equal(controllerB.isRevealed(), true);
+  // Only the widget that actually revealed bumps the shared habit counter —
+  // never once per widget for what is the same user session.
+  assert.equal(widgetB.local.getItem(HABIT_KEY), '1');
+});
+
+test('storage-disabled (write-throwing) real Storage still lets navigation-independent reveal work per widget without crashing', () => {
+  const doc = {defaultView: {sessionStorage: writeThrowingRealStorage(), localStorage: writeThrowingRealStorage()}};
+  const bridge = {session: createStorageBridge(doc, 'sessionStorage'), local: createStorageBridge(doc, 'localStorage')};
+  const controller = createRevealController({session: bridge.session, local: bridge.local});
+  assert.doesNotThrow(() => controller.reveal());
+  assert.equal(controller.isRevealed(), true);
+});
+
+test('two SEPARATE documents each with their own write-throwing real Storage never leak session-revealed state into each other', () => {
+  // Two distinct real windows (e.g. two Playwright pages, two tabs, two iframes) —
+  // each has its own genuinely separate real sessionStorage/localStorage object,
+  // never shared at the JS-object level even on the same origin. The fallback
+  // mirror must follow that real-world boundary: it may unify two WIDGETS in
+  // the SAME document (see above), but never two different documents.
+  const docA = {defaultView: {sessionStorage: writeThrowingRealStorage(), localStorage: writeThrowingRealStorage()}};
+  const docB = {defaultView: {sessionStorage: writeThrowingRealStorage(), localStorage: writeThrowingRealStorage()}};
+  const bridgeA = {session: createStorageBridge(docA, 'sessionStorage'), local: createStorageBridge(docA, 'localStorage')};
+  const bridgeB = {session: createStorageBridge(docB, 'sessionStorage'), local: createStorageBridge(docB, 'localStorage')};
+  const controllerA = createRevealController({session: bridgeA.session, local: bridgeA.local});
+  const controllerB = createRevealController({session: bridgeB.session, local: bridgeB.local});
+
+  controllerA.reveal();
+
+  assert.equal(controllerB.isRevealed(), false);
+  assert.equal(bridgeB.local.getItem(HABIT_KEY), null);
 });
 
 // --- Plan / dedup logic (pure, no DOM) ---

@@ -163,36 +163,9 @@ function setStatus(state, text) {
   state.status.hidden = !text;
   state.status.textContent = text;
 }
-/** The dashboard repo-list's own pager (`DashboardRepoList.vue`, `v-if="showMoreReposLink"`) has no
- * hrefs — only `@click="changePage(...)"` — and Vue wholesale-replaces the node on every page change,
- * so it can never be relocated the way pagination.mjs treats real server-rendered pagers (confirmed
- * against the real v16.0.3 template: exactly 5 fixed-position anchors — First, Previous, current,
- * Next, Last, in that order; current has no href/click target of its own, just the page number).
- * Classifying those 5 anchors in place and hiding only the genuinely redundant "current page" number
- * is the one safe, reversible improvement that never touches Vue's own DOM ownership or listeners.
- * Re-run on every mutation (the same observer `apply()` already uses) so a fresh `v-if` replacement
- * gets reclassified; teardown sweeps by class/data-attribute, never by node reference, since Vue may
- * have swapped the node many times by then. */
-function classifyVuePager(repoHost) {
-  const pager = repoHost.querySelector('.ui.borderless.pagination.menu');
-  if (!pager || pager.dataset.hghPagerBound) return;
-  const anchors = [...pager.querySelectorAll(':scope > a')];
-  // Count alone isn't identity: also require the real template's class shape (index 2 = "active",
-  // the rest = "navigation") before mutating, so a reordered/relabeled point-release pager is left
-  // untouched rather than having a genuinely usable link hidden from keyboard/screen-reader users.
-  if (anchors.length !== 5 || !anchors[2].classList.contains('active') || [0, 1, 3, 4].some((i) => !anchors[i].classList.contains('navigation'))) return;
-  pager.dataset.hghPagerBound = 'true';
-  const current = anchors[2];
-  current.classList.add('hgh-org-pager-current');
-  if (current.hasAttribute('aria-hidden')) current.dataset.hghPriorAriaHidden = current.getAttribute('aria-hidden');
-  if (current.hasAttribute('tabindex')) current.dataset.hghPriorTabindex = current.getAttribute('tabindex');
-  current.setAttribute('aria-hidden', 'true');
-  current.tabIndex = -1;
-}
 function watchRepoEnrichment(state, doc, win) {
   const apply = () => {
     if (state.cancelled) return;
-    classifyVuePager(state.repoHost);
     if (!state.enrichment) return;
     const rows = state.repoHost.querySelectorAll('.repo-owner-name-list > li');
     for (const row of rows) {
@@ -461,14 +434,6 @@ function restoreDashboard(state) {
   }
   for (const meta of state.repoHost.querySelectorAll('.hgh-org-repo-meta')) meta.remove();
   for (const row of state.repoHost.querySelectorAll('[data-hgh-checked]')) delete row.dataset.hghChecked;
-  for (const pager of state.repoHost.querySelectorAll('[data-hgh-pager-bound]')) delete pager.dataset.hghPagerBound;
-  for (const current of state.repoHost.querySelectorAll('.hgh-org-pager-current')) {
-    current.classList.remove('hgh-org-pager-current');
-    if (current.dataset.hghPriorAriaHidden !== undefined) { current.setAttribute('aria-hidden', current.dataset.hghPriorAriaHidden); delete current.dataset.hghPriorAriaHidden; }
-    else current.removeAttribute('aria-hidden');
-    if (current.dataset.hghPriorTabindex !== undefined) { current.setAttribute('tabindex', current.dataset.hghPriorTabindex); delete current.dataset.hghPriorTabindex; }
-    else current.removeAttribute('tabindex');
-  }
   if (state.heatmap && state.heatmapMarker) {
     restoreSlot(state.heatmapMarker, state.heatmap);
     if (state.heatmapDivider) state.heatmap.after(state.heatmapDivider);
