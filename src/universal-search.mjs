@@ -46,12 +46,74 @@ function copy(doc){
   };
 }
 
-function context(doc){
+function stripSubUrl(pathname,subUrl){
+  const prefix=String(subUrl||'').replace(/\/+$/,'');
+  if(!prefix)return pathname;
+  if(pathname===prefix)return '/';
+  return pathname.startsWith(prefix+'/')?pathname.slice(prefix.length):pathname;
+}
+function segment(value){
+  if(typeof value!=='string')return null;
+  try{return decodeURIComponent(value);}catch{return null;}
+}
+// A hostile *path segment* (attacker-crafted link, e.g. `/org/%20owner%3Aevil/dashboard`) must
+// never inject/alter a `repo:`/`owner:` query qualifier — that is the actual, attacker-reachable
+// injection surface this fix closes. Native, already server-rendered DOM text (the repo header,
+// the org context switcher) is a different trust class — Forgejo's own backend already
+// constrains what it renders there — and is used as-is, matching this codebase's established
+// "render hostile text inertly via textContent, never validate it away" contract (see the
+// malicious-payload story/test).
+const NAME=/^[\w.-]{1,100}$/;
+function safeName(value){
+  return typeof value==='string'&&NAME.test(value)&&value!=='.'&&value!=='..'?value:null;
+}
+// The org context switcher's `.right.menu` "View home" button (`organization.mjs`'s own
+// `homeLink` selector) links to the bare `/<login>` org home — the canonical, URL-safe identity.
+// Its sibling `.truncated-item-name` text is NOT safe to read instead: Forgejo renders
+// `ContextUser.ShortName`, which is the org's FullName (free text, may contain spaces/unicode,
+// truncated with `…`) when one is set, and only falls back to the login otherwise. This switcher
+// is shared across every /org/<name>/* page — the dashboard, and the bare `/<name>/issues` /
+// `/<name>/pulls` cross-repo aggregate hand-off pages — so reading the button href, not the
+// pathname shape, is what makes trusting it here safe.
+function orgNavName(doc){
+  const win=doc.defaultView;
+  for(const nav of doc.querySelectorAll('.secondary-nav')){
+    const home=nav.querySelector('.right.menu a.ui.basic.button[href]');
+    if(!home)continue;
+    try{
+      const pathname=stripSubUrl(new URL(home.getAttribute('href'),win?.location?.href).pathname,win?.config?.appSubUrl);
+      const parts=pathname.split('/').filter(Boolean);
+      const name=parts.length===1?safeName(segment(parts[0])):null;
+      if(name)return name;
+    }catch{/* malformed href: fall through to the next nav, then the pathname fallback */}
+  }
+  return null;
+}
+// Owner/repo scope must come from native, already-access-controlled DOM state — `.repo-header`,
+// the org secondary-nav switcher, or `.page-content.organization.profile` (public org profile at
+// bare `/<name>`) — never from guessing arbitrary pathname segments (that previously mis-scoped
+// /org/<name>/dashboard, /explore/repos, /user/login, /notifications… as repo/owner hits). The
+// one pathname fallback kept is `/org/:owner/dashboard` exactly (mirrors
+// ops/handoff/slack/preview-core.mjs's own org-dashboard route shape) — a defense-in-depth net for
+// that one specific, unambiguous native route, should the DOM markers above ever miss it. Any
+// other `/org/<segment>` shape (e.g. the `/org/create` org-creation form) is deliberately left
+// global rather than guessed.
+export function parseSearchContext(doc){
   const title=doc.querySelector('.repo-header .flex-item-title');
   const links=title?[...title.querySelectorAll('a[href]')]:[];
-  if(links.length>=2)return {repo:links.at(-2).textContent.trim()+'/'+links.at(-1).textContent.trim(),owner:links.at(-2).textContent.trim()};
-  const parts=doc.defaultView.location.pathname.split('/').filter(Boolean);
-  return parts.length>=2?{repo:parts[0]+'/'+parts[1],owner:parts[0]}:{repo:null,owner:parts[0]||null};
+  if(links.length>=2){
+    const owner=links.at(-2).textContent.trim(),name=links.at(-1).textContent.trim();
+    if(owner&&name)return {repo:owner+'/'+name,owner};
+    return {repo:null,owner:null};
+  }
+  const navOwner=orgNavName(doc);
+  if(navOwner)return {repo:null,owner:navOwner};
+  const win=doc.defaultView;
+  const pathname=stripSubUrl(win?.location?.pathname||'/',win?.config?.appSubUrl);
+  const parts=pathname.split('/').filter(Boolean);
+  if(parts.length===1&&doc.querySelector('.page-content.organization.profile'))return {repo:null,owner:safeName(segment(parts[0]))};
+  if(parts.length===3&&parts[0]==='org'&&parts[2]==='dashboard')return {repo:null,owner:safeName(segment(parts[1]))};
+  return {repo:null,owner:null};
 }
 function scopeQuery(value,scope,ctx){
   if(/(^|\s)(?:repo|owner):\S+/i.test(value))return value;
@@ -214,7 +276,7 @@ export function openUniversalSearch(doc=document,{seed=''}={}){
   let state=states.get(doc);
   if(!state){enhanceUniversalSearch(doc);state=states.get(doc);}
   if(!state)return false;
-  state.ctx=context(doc);
+  state.ctx=parseSearchContext(doc);
   state.scope=state.ctx.repo?'repo':state.ctx.owner?'owner':'global';
   state.query=seed;
   setScopes(state);
@@ -247,7 +309,7 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
   let state=states.get(doc);
   if(!state){
     const dialog=create(doc);
-    state={doc,dialog,ctx:context(doc),scope:'repo',query:'',hits:[],selected:-1,
+    state={doc,dialog,ctx:parseSearchContext(doc),scope:'repo',query:'',hits:[],selected:-1,
       fetchImpl:fetchImpl||doc.defaultView.fetch.bind(doc.defaultView),timer:null,controller:null,lastTrigger:null,probe:null,mobileOriginals:new Map(),destroyed:false};
     states.set(doc,state);
     dialog.querySelector('.hgh-search-close').onclick=()=>dialog.close();
