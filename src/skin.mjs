@@ -2,7 +2,7 @@ import {enhanceUniversalSearch, restoreUniversalSearch, openUniversalSearch} fro
 import {enhanceRepositoryControls, restoreRepositoryControls} from './repository-controls.mjs';
 import {enhanceNativeChrome, restoreNativeChrome} from './mobile-chrome.mjs';
 import {enhanceNativeListOptions, restoreNativeListOptions} from './list-options.mjs';
-import {enhancePagination, restorePagination} from './pagination.mjs';
+import {enhancePagination, restorePagination, refreshResponsiveLayout} from './pagination.mjs';
 import {enhanceDashboardPagination, restoreDashboardPagination} from './dashboard-pagination.mjs';
 import {enhanceOrganization, restoreOrganization} from './organization.mjs';
 /** Progressive enhancements only: existing Forgejo links/forms remain authoritative. */
@@ -22,6 +22,12 @@ function boot() {
   let sequenceTimer;
   let queued = false;
   let shortcuts = true;
+  // Set only by the release theme stylesheet's own real `error` event (never a
+  // guessed timer). Gates the CSS-geometry-dependent enhancers below so a stylesheet
+  // that never loads can't leave a permanently mismeasured/unstyled compact pager
+  // sitting in place of the native one; native pagination stays authoritative until
+  // a later `load` (e.g. a subsequent version rollout href) clears it again.
+  let releaseCssBroken = false;
 
   try {
     shortcuts = localStorage.getItem('hypergithub.shortcuts') !== 'off';
@@ -34,8 +40,28 @@ function boot() {
     if(!href){if(link)link.disabled=true;return;}
     if(!link){
       link=document.createElement('link');link.rel='stylesheet';link.dataset.hghReleaseTheme='';
-      link.addEventListener('load',()=>{for(const menu of document.querySelectorAll('overflow-menu'))menu.updateItems?.();});
-      link.addEventListener('error',()=>console.warn('Current skin stylesheet could not load; native theme remains available'));
+      // The authoritative "this stylesheet's rules are now actually in effect"
+      // signal — pagination.css (and dashboard-pagination.css) are bundled inside
+      // this exact file via skin.css's @import chain, so this is the one real event
+      // that can settle a pagination measurement taken before it fired, without ever
+      // guessing a delay. Re-runs (not just refreshes) the build for any pager that
+      // was skipped while releaseCssBroken, then re-measures every existing one.
+      link.addEventListener('load',()=>{
+        releaseCssBroken=false;
+        for(const menu of document.querySelectorAll('overflow-menu'))menu.updateItems?.();
+        if(enabled()){enhancePagination(document);enhanceDashboardPagination(document);}
+        refreshResponsiveLayout(document);
+      });
+      link.addEventListener('error',()=>{
+        releaseCssBroken=true;
+        console.warn('Current skin stylesheet could not load; native theme remains available');
+        // Without this module's own layout CSS there is nothing to measure or
+        // render correctly; restoring native pagination keeps navigation usable
+        // instead of leaving a permanently hidden native menu behind an
+        // unstyled/mismeasured compact one.
+        restorePagination(document);
+        restoreDashboardPagination(document);
+      });
       document.head.append(link);
     }
     link.disabled=false;
@@ -358,7 +384,7 @@ function boot() {
 
   function enhance() {
     syncReleaseStyles();
-    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); enhanceUniversalSearch(document); enhancePagination(document); enhanceOrganization(document); enhanceDashboardPagination(document); }
+    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); enhanceUniversalSearch(document); if (!releaseCssBroken) enhancePagination(document); enhanceOrganization(document); if (!releaseCssBroken) enhanceDashboardPagination(document); }
     queued = false;
     if (!enabled()) return;
 
