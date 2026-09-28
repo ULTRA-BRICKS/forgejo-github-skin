@@ -47,9 +47,11 @@ export function linkActions(link, settingsReference, {limited=false}={}) {
     add(overflow,'Blame',link.repositoryUrl+'/blame/commit/'+link.sha+'/'+file,'forgejo_open_blame');
     add(overflow,'Commit',link.repositoryUrl+'/commit/'+link.sha,'forgejo_open_commit');
   } else if(link.kind==='organization') {
-    add(primary,'Repositories',link.dashboardUrl+'#repos','forgejo_open_repositories');
-    add(overflow,'Pull requests',link.dashboardUrl+'#prs','forgejo_open_pulls');
-    add(overflow,'Issues',link.dashboardUrl+'#issues','forgejo_open_issues');
+    // No public unauthenticated org-wide Issues/Pull requests aggregate exists in
+    // Forgejo, so those two actions are dropped for organizations (FJ-56; full
+    // rationale: docs/SLACK-NATIVE-PREVIEWS.md). Repositories keeps the one real
+    // public destination: the bare org profile's own `#repos` reveal.
+    add(primary,'Repositories',link.resourceUrl+'#repos','forgejo_open_repositories');
   }
   if(!['repository','organization'].includes(link.kind))add(overflow,'Repository',link.repositoryUrl,'forgejo_open_repository');
   if(/^[a-f0-9]{48}$/.test(settingsReference||'')) {

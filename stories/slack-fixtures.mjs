@@ -19,7 +19,7 @@ export function slackFixture(options={}){
  const orgRoot=origin+'/ultrabricks';
  const resourceUrl=kind==='organization'?orgRoot:repositoryUrl+path,originalUrl=kind==='organization'?orgRoot:resourceUrl+(kind==='file'?'#L12-L16':'');
  const link=kind==='organization'
-   ?{kind,owner:'ultrabricks',repo:null,repositoryUrl:orgRoot,resourceUrl:orgRoot,originalUrl:orgRoot,dashboardUrl:origin+'/org/ultrabricks/dashboard'}
+   ?{kind,owner:'ultrabricks',repo:null,repositoryUrl:orgRoot,resourceUrl:orgRoot,originalUrl:orgRoot}
    :{kind,owner:'ultrabricks',repo:'keyboard-lab',repositoryUrl,resourceUrl,originalUrl,...(['issue','pull'].includes(kind)?{number:kind==='pull'?23:42}:{}),...(['file','commit'].includes(kind)?{sha}:{}),...(kind==='file'?{path:'src/focus.js',lines:{start:12,end:16}}:{})};
  base.link=link;base.repository=kind==='organization'?'ultrabricks':'ultrabricks/keyboard-lab';base.private=!!options.private;base.updatedAt='2026-09-19T10:00:00Z';
  if(kind==='pull')base.title='PR #23: Keep focus stable when menus close';

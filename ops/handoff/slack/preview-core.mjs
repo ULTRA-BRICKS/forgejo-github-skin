@@ -52,21 +52,23 @@ export function parseForgejoLink(raw, configuredBase) {
     const [owner, repo, route, id, ...rest] = parts;
     // A bare `/<owner>` is the public organization profile; `/org/<name>/dashboard`
     // is the personal/authenticated dashboard with the coordinated hash tabs. Both
-    // resolve to the same canonical organization identity (`resourceUrl`/`dashboardUrl`),
+    // resolve to the same canonical organization identity (`resourceUrl`),
     // independent of which form was posted.
     if (parts.length === 1) {
       if (!validName(owner ?? '') || reserved.has(owner.toLowerCase()) || reservedNameSuffix.test(owner) || url.hash) return null;
       const orgRoot = `${base.origin}${prefix}${encodeURIComponent(owner)}`;
-      return parsed({originalUrl: raw, owner, repo: null, repositoryUrl: orgRoot, kind: 'organization',
-        resourceUrl: orgRoot, dashboardUrl: `${base.origin}${prefix}org/${encodeURIComponent(owner)}/dashboard`});
+      return parsed({originalUrl: raw, owner, repo: null, repositoryUrl: orgRoot, kind: 'organization', resourceUrl: orgRoot});
     }
     if (owner === 'org' && parts.length === 3 && route === 'dashboard') {
       const name = repo;
       if (!validName(name ?? '') || reserved.has(name.toLowerCase()) || reservedNameSuffix.test(name)) return null;
+      // Accepting a posted `#prs`/`#issues` hash here is independent of which actions a
+      // rendered card offers: this only validates a link shape someone may have pasted.
+      // The org card itself emits no PR/issue action (FJ-56) even though this allowlist
+      // still recognizes those two hash spellings.
       if (url.hash && !['#overview', '#repos', '#prs', '#issues', '#activity'].includes(url.hash)) return null;
       const orgRoot = `${base.origin}${prefix}${encodeURIComponent(name)}`;
-      return parsed({originalUrl: raw, owner: name, repo: null, repositoryUrl: orgRoot, kind: 'organization',
-        resourceUrl: orgRoot, dashboardUrl: `${base.origin}${prefix}org/${encodeURIComponent(name)}/dashboard`});
+      return parsed({originalUrl: raw, owner: name, repo: null, repositoryUrl: orgRoot, kind: 'organization', resourceUrl: orgRoot});
     }
     if (!validName(owner ?? '') || !validName(repo ?? '') || reserved.has(owner.toLowerCase()) || reservedNameSuffix.test(owner)) return null;
     const root = `${base.origin}${prefix}${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;

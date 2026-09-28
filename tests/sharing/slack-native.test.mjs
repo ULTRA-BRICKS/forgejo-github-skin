@@ -33,7 +33,7 @@ test('canonical PR action paths do not append files after a fragment or existing
 });
 test('organization actions are canonical for both posted forms; only app_unfurl_url preserves the exact posted spelling',()=>{
  const orgLink=parseForgejoLink(origin+'/ultrabricks',origin),dashLink=parseForgejoLink(origin+'/org/ultrabricks/dashboard#repos',origin);
- assert.equal(orgLink.dashboardUrl,dashLink.dashboardUrl);assert.equal(orgLink.resourceUrl,dashLink.resourceUrl);
+ assert.equal(orgLink.resourceUrl,dashLink.resourceUrl);
  assert.notEqual(orgLink.originalUrl,dashLink.originalUrl);
  let canonicalActions=null;
  for(const link of [orgLink,dashLink]){
@@ -49,9 +49,11 @@ test('organization actions are canonical for both posted forms; only app_unfurl_
   const actions=result.entity.entity_payload.actions,all=[...actions.primary_actions,...actions.overflow_actions];
   assert.equal(actions.primary_actions[0].text,'Open organization');
   assert.equal(actions.primary_actions[0].url,link.resourceUrl);
-  assert.equal(all.find(a=>a.text==='Repositories').url,link.dashboardUrl+'#repos');
-  assert.equal(all.find(a=>a.text==='Pull requests').url,link.dashboardUrl+'#prs');
-  assert.equal(all.find(a=>a.text==='Issues').url,link.dashboardUrl+'#issues');
+  assert.equal(all.find(a=>a.text==='Repositories').url,link.resourceUrl+'#repos');
+  // Forgejo has no public unauthenticated org-wide Issues/PR aggregate (FJ-56):
+  // both actions must be dropped entirely rather than offered as a dead end.
+  assert.ok(!all.some(a=>a.text==='Pull requests'));
+  assert.ok(!all.some(a=>a.text==='Issues'));
   assert.ok(!all.some(a=>a.action_id==='forgejo_open_repository'));
   assert.equal(result.card.blocks[0].elements[0].image_url,'https://links.example/icons/organization.png');
   assert.equal(result.entity.entity_payload.fields,undefined);
@@ -230,7 +232,7 @@ test('organization link_shared never consults the posting user\'s OAuth token fo
  const slack=new SlackIntegration(config,store,forgejo,{access:async()=>{oauthCalls++;return 'synthetic-token';},ticket:()=>null});
  try{
   const resolved=await slack.resolveShared({team_id:'T123',event:{user:'U123',channel:'C123',source:'conversations_history',message_ts:'1.1'}},orgUrl);
-  assert.deepEqual(Object.keys(resolved),['link']);
+  assert.deepEqual(resolved,{noUnfurl:true});
   assert.equal(oauthCalls,0);
   assert.equal(metadataCalls.length,1);
   assert.equal(metadataCalls[0].token,false);
@@ -262,6 +264,35 @@ test('a non-public organization is only ever revealed through the viewer\'s own 
   assert.equal(calls[0].payload.error.status,'custom_partial_view');
   assert.ok(!JSON.stringify(calls).includes('ORG SECRET BODY'));
   assert.ok(calls[0].payload.error.actions.some(a=>a.action_id==='forgejo_personal'));
+ }finally{store.close();}
+});
+test('FJ-55: a bare name that is not a real organization (a public user profile, a typo, or nothing at all) gets no unfurl at all, never the protected-account-connect card',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),bareUrl=origin+'/alex-mextner',calls=[];
+ // Forgejo's own /api/v1/orgs/{name} probe 404s identically whether the name belongs to a
+ // real public user, doesn't exist, or is a private org nobody here can see (by design,
+ // to avoid leaking which case it is) — so the public metadata probe below never resolves.
+ const error=new Error('Not Found');error.status=404;
+ const forgejo={parse:u=>parseForgejoLink(u,origin),metadata:async()=>{throw error;}};
+ const slack=new SlackIntegration(config,store,forgejo,{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{calls.push({method,payload});return {ok:true};};
+ try{
+  await slack.unfurl(envelope(bareUrl));
+  // No chat.unfurl call at all: Slack shows the plain link, exactly like before the
+  // organization feature existed, never a card offering to connect a Forgejo account.
+  assert.equal(calls.length,0);
+ }finally{store.close();}
+});
+test('FJ-55: a real upstream failure while checking an organization still shows the retryable unavailable card, not silence',async()=>{
+ const store=new Store(':memory:',randomBytes(32)),orgUrl=origin+'/ultrabricks',calls=[];
+ const error=new Error('Upstream HTTP 503');error.status=503;
+ const forgejo={parse:u=>parseForgejoLink(u,origin),metadata:async()=>{throw error;}};
+ const slack=new SlackIntegration(config,store,forgejo,{access:async()=>null,ticket:()=>null});
+ slack.call=async(method,payload)=>{calls.push({method,payload});return {ok:true};};
+ try{
+  await assert.rejects(slack.unfurl(envelope(orgUrl)),/Upstream HTTP 503/);
+  const unavailable=calls.find(call=>call.payload.unfurls)?.payload.unfurls[orgUrl];
+  assert.ok(unavailable,'a transient upstream failure must still produce a retryable card');
+  assert.match(JSON.stringify(unavailable),/temporarily unavailable/);
  }finally{store.close();}
 });
 test('unknown Work Object validation warnings degrade to the checked text card',async()=>{

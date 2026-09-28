@@ -74,20 +74,18 @@ test('private disclosure label is visible and mentions are plain text',()=> {
 });
 test('link parse results are immutable',()=>assert.throws(()=>{link.originalUrl='https://evil.invalid';}));
 
-test('organization root parses to a canonical dashboard-linked identity', () => {
+test('organization root parses to a public organization identity', () => {
   const org = parseForgejoLink(base+'ultrabricks', base);
   assert.equal(org.kind, 'organization');
   assert.equal(org.owner, 'ultrabricks');
   assert.equal(org.repo, null);
   assert.equal(org.resourceUrl, base+'ultrabricks');
-  assert.equal(org.dashboardUrl, base+'org/ultrabricks/dashboard');
 });
 test('organization dashboard route resolves to the same canonical identity as the public root', () => {
   const dash = parseForgejoLink(base+'org/ultrabricks/dashboard', base);
   assert.equal(dash.kind, 'organization');
   assert.equal(dash.originalUrl, base+'org/ultrabricks/dashboard');
   assert.equal(dash.resourceUrl, base+'ultrabricks');
-  assert.equal(dash.dashboardUrl, base+'org/ultrabricks/dashboard');
 });
 for (const hash of ['#overview', '#repos', '#prs', '#issues', '#activity'])
   test('organization dashboard accepts coordinated hash tab '+hash, () =>
