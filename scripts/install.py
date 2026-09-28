@@ -18,6 +18,8 @@ ASSET_NAMES = (
     'core.mjs','skin.css','skin.mjs','list-options.mjs',
     'repository-controls.mjs','mobile-chrome.mjs','repository-ui.css',
     'universal-search.mjs','universal-search.css',
+    'pagination.mjs','pagination-model.mjs','pagination.css',
+    'organization.mjs','organization.css',
 )
 VERSION_RE = re.compile(r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$')
 

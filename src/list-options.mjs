@@ -46,7 +46,11 @@ const nativeStates = new Map();
 function releaseState(host,state){
   state.media.removeEventListener('change',state.update);
   state.destroy();state.details.open=false;
-  for(const {node,marker} of state.slots)if(marker.isConnected)marker.replaceWith(node);
+  // parentNode, never isConnected: an htmx-style swap can detach the whole host (marker
+  // included) before cleanup runs, and isConnected is false there even though the marker's
+  // parent still exists — checking it would silently strand every relocated control instead
+  // of restoring it (same fix as pagination.mjs's relocate()/organization.mjs's restoreSlot).
+  for(const {node,marker} of state.slots)if(marker.parentNode)marker.replaceWith(node);
   state.details.remove();delete host.dataset.hghDensity;nativeStates.delete(host);
 }
 function cleanupDisconnected(doc){

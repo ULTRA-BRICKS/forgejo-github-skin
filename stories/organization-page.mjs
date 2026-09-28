@@ -39,7 +39,7 @@ function repoLi(fullName) {
 
 function activityFeedHtml(count) {
   const longComment = 'A very long pasted review comment reproducing exactly what the user flagged: giant, unsummarized text and a full-size pasted screenshot dominating the compact activity feed. '.repeat(3);
-  return Array.from({length: count}, (_, i) => `<div class="flex-item"><div class="flex-item-leading"><img class="ui avatar" alt="" width="16" height="16"></div><div class="flex-item-main"><div>alex commented on ${escapeHtml(REPOS[i % REPOS.length][0])}${i === 2 ? '' : ' #' + (i + 12)}</div>${
+  return Array.from({length: count}, (_, i) => `<div class="flex-item"><div class="flex-item-leading"><img class="ui avatar" alt="" src="${avatarDataUri('A', 20)}" width="16" height="16"></div><div class="flex-item-main"><div>alex commented on ${escapeHtml(REPOS[i % REPOS.length][0])}${i === 2 ? '' : ' #' + (i + 12)}</div>${
     i === 2 ? `<div class="markup tw-text-14"><p>${longComment}</p><img src="${placeholderScreenshotDataUri()}" width="640" height="360" alt="screenshot"></div>` : ''
   }</div><div class="flex-item-trailing"><svg viewBox="0 0 16 16" width="32" height="32"><circle cx="8" cy="8" r="6" fill="currentColor"/></svg></div></div>`).join('');
 }
@@ -59,8 +59,7 @@ function heatmapSvg() {
   }).join('')).join('');
   const legend = ['--color-secondary-alpha-60', '--color-primary-light-4', '--color-primary-light-2', '--color-primary', '--color-primary-dark-2', '--color-primary-dark-4']
     .map((v, i) => `<rect class="vch__legend" x="${i * step}" y="0" width="${cell}" height="${cell}" rx="2" fill="var(${v})"></rect>`).join('');
-  return `<div class="total-contributions">Heatmap cell/legend geometry fixture — no real contribution count in Storybook</div>
-    <div class="vch__wrapper"><div class="vch__container">
+  return `<div class="vch__wrapper"><div class="vch__container">
       <svg class="vch__month__wrapper" viewBox="0 0 ${weeks * step} ${7 * step}" width="${weeks * step}" height="${7 * step}">${squares}</svg>
     </div>
     <div class="vch__external-legend-wrapper"><span>Less</span><svg viewBox="0 0 ${6 * step} ${cell}" width="${6 * step}" height="${cell}">${legend}</svg><span>More</span></div></div>`;
@@ -85,10 +84,19 @@ function dashboardHtml({repoCount, activityCount, alert}) {
         <div id="activity-feed" class="flex-list">${activityCount ? activityFeedHtml(activityCount) : ''}<div class="base-paginate"></div></div>
       </div>
       <div id="dashboard-repo-list" class="flex-container-sidebar"><div><div class="ui tab active list dashboard-repos">
-        <div class="ui top attached segment repos-search"><div class="ui small fluid action left icon input"><input type="search" placeholder="Find a repository…"></div></div>
+        <div class="ui top attached segment repos-search">
+          <div class="ui small fluid action left icon input"><input type="search" placeholder="Find a repository…"><div class="ui dropdown icon button" title="Filter"><svg class="octicon-filter" viewBox="0 0 16 16" width="16" height="16"></svg></div></div>
+          <overflow-menu class="ui secondary pointing tabular borderless menu repos-filter"><div class="overflow-menu-items">
+            <a class="item active" tabindex="0">All<div class="ui circular mini grey label">${repoCount}</div></a>
+            <a class="item" tabindex="0">Sources</a>
+            <a class="item" tabindex="0">Forks</a>
+            <a class="item" tabindex="0">Mirrors</a>
+            <a class="item" tabindex="0">Collaborative</a>
+          </div></overflow-menu>
+        </div>
         <div class="ui attached table segment">
           <ul class="repo-owner-name-list">${REPOS.slice(0, repoCount).map(([name]) => repoLi(name)).join('')}</ul>
-          ${repoCount ? '<div class="tw-text-center"><div class="divider tw-my-0"></div><div class="ui borderless pagination menu narrow tw-my-2"><a class="active item">1</a></div></div>' : ''}
+          ${repoCount ? '<div class="tw-text-center"><div class="divider tw-my-0"></div><div class="ui borderless pagination menu narrow tw-my-2"><a class="item navigation disabled tw-py-1" title="First page"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M8 3 3 8l5 5M13 3 8 8l5 5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></a><a class="item navigation disabled tw-py-1" title="Previous page"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></a><a class="active item tw-py-1">1</a><a class="item navigation tw-py-1" title="Next page"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></a><a class="item navigation tw-py-1" title="Last page"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M3 3l5 5-5 5M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></a></div></div>' : ''}
         </div>
       </div></div></div>
     </div>
@@ -143,6 +151,11 @@ export function organizationDashboard({dark = false, view = 'overview', empty = 
   setupOrgFixture(container, {dark, empty, loading, errorState});
   window.config = {appSubUrl: '', pageData: {dashboardRepoList: {organizationId: 6, uid: 0, teamId: 0, searchLimit: 12}}};
   container.innerHTML = dashboardHtml({repoCount: empty ? 0 : 12, activityCount: empty ? 0 : 7, alert});
+  // No visible caption here on purpose: the fixture has no real contribution data, and any text —
+  // even an honest "0" — rendered where GitHub's real count normally sits reads as broken/fabricated
+  // native UI in a screenshot. `.total-contributions` is simply omitted from the fixture (see
+  // heatmapSvg() above); the geometry-only nature of this demo is documented in source comments
+  // only, never drawn into the canvas that gets screenshotted.
   queueMicrotask(() => {
     enhanceOrganization(document);
     // #prs/#issues never render a persisted view in production — they always hand off

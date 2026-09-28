@@ -2,7 +2,11 @@ import {createListOptions} from './list-options.mjs';
 const states=new Map();
 function restore(row,state){
  state.media.removeEventListener('change',state.update);state.destroy();state.details.open=false;
- for(const {node,marker}of state.slots){if(marker.isConnected){if(node.isConnected)marker.replaceWith(node);else marker.remove();}}
+ // Structural checks on both sides, never isConnected: an htmx-style swap can detach the
+ // whole row (marker AND node together) before this runs, so isConnected is false for both
+ // even though node is still legitimately parented (inside our detached panel) and should be
+ // restored. node.parentNode null is the real "independently removed elsewhere" signal.
+ for(const {node,marker}of state.slots){if(marker.parentNode){if(node.parentNode)marker.replaceWith(node);else marker.remove();}}
  for(const label of row.querySelectorAll('.hgh-control-label'))label.remove();
  state.details.remove();delete row.dataset.hghRepoControls;states.delete(row);
 }
