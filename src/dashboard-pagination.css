@@ -1,0 +1,151 @@
+/* Compact-by-default decoration for the Vue-owned dashboard/org repo-list pager.
+   Loaded by dashboard-pagination.mjs's added classes only; every selector below is
+   scoped to classes that module adds, so this file never touches the native
+   `.ui.borderless.pagination.menu` before enhancement or any other component.
+
+   Every rule below is additionally scoped under the stable `#dashboard-repo-list`
+   ID (the real Vue mount root, per templates/user/dashboard/repolist.tmpl —
+   already relied on by src/organization.mjs). This is NOT cosmetic scoping: it
+   restyles the native `.ui.pagination.menu`/`.item` elements Fomantic UI already
+   styles at real compound-class specificity (its own `.ui.menu`/`.ui.pagination.
+   menu`/`.ui.menu .item` rules), and a bare single-class `.hgh-vpg{display:grid}`
+   would LOSE that cascade fight regardless of source order (a 1-class selector
+   never beats a 2-3-class one) — an ID selector reliably beats those.
+   It does NOT, on its own, beat every possible higher-specificity selector on
+   this same element: src/organization.css targets this identical pager through
+   its own ID-anchored ancestor chain (`html:is(...) .hgh-org-page
+   #dashboard-repo-list .ui.borderless.pagination.menu`, six class-level
+   components deep) and previously won `display` outright. That conflict isn't
+   solved by CSS alone — see integrations/dashboard-pagination/skin-integration.
+   patch's cutover section, which removes organization.css's now-superseded
+   pager rules (and organization.mjs's now-superseded pager-decoration JS)
+   rather than trying to out-specificity a rule targeting the exact same
+   element; a real Chromium run with both stylesheets loaded together and both
+   enhancers run in production order confirms `display: grid` wins post-cutover.
+
+   A 4-column grid, not flex: First/Last sit in `minmax(0,1fr)` tracks that are
+   ALWAYS pixel-equal to each other by construction (equal `fr` shares of the
+   remaining space), regardless of "First" (5 chars) vs "Last" (4 chars) being
+   different natural widths — so the row as a whole is centered in its container
+   without drifting toward whichever edge text is wider, and Previous/Next (the
+   two middle, `auto`-sized columns) end up sitting at that row's own center as
+   a pair — not "the whole group looks roughly centered" by accident.
+   `minmax(0, …)` (not bare `1fr`) removes each track's content-based minimum,
+   which is what actually forces the two edge tracks to stay equal instead of
+   drifting toward whichever text is wider. */
+#dashboard-repo-list .hgh-vpg{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto minmax(0,1fr);align-items:center;column-gap:4px;font:14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+#dashboard-repo-list .hgh-vpg-first{justify-self:end}
+#dashboard-repo-list .hgh-vpg-last{justify-self:start}
+
+/* Vue never renders a text label on these anchors (icon-only: a single
+   `<svg-icon>` child, no `.navigation_label` span like base/paginate.tmpl has) —
+   unlike pagination.css, there is no existing text node to prepend/append a
+   chevron onto. The ghost "‹ Previous  Next ›" / "First" / "Last" labels are pure
+   CSS generated content: real pixels on screen for every user, but literally
+   invisible to the DOM/`Element.innerText`/Vue's own vdom — zero node insertion,
+   so there is no patch-interaction risk with Vue's ownership of these anchors.
+   The text comes straight from the `data-hgh-vpg-label` attribute JS sets (see
+   stringsFor() in dashboard-pagination.mjs) via plain `attr()` — no custom
+   property, no JSON/CSS-string encoding question, no style-attribute merging:
+   `trackAttr()` (already used for every other attribute here) is the entire
+   set/restore mechanism, so the visible label is localized the same way the
+   sr-only status text is, instead of being frozen to English in this file. */
+#dashboard-repo-list .hgh-vpg-prev svg,#dashboard-repo-list .hgh-vpg-next svg,#dashboard-repo-list .hgh-vpg-edge svg{display:none}
+#dashboard-repo-list .hgh-vpg-prev,#dashboard-repo-list .hgh-vpg-next,#dashboard-repo-list .hgh-vpg-first,#dashboard-repo-list .hgh-vpg-last{white-space:nowrap;padding-inline:10px}
+#dashboard-repo-list .hgh-vpg-prev::before,#dashboard-repo-list .hgh-vpg-next::after,#dashboard-repo-list .hgh-vpg-first::after,#dashboard-repo-list .hgh-vpg-last::after{content:attr(data-hgh-vpg-label)}
+
+/* Ghost edges: reserve their natural (small, fixed-text) width from first paint
+   via opacity, never display/width, so revealing them never shifts Previous/Next
+   or the document height. `inert` (set/cleared in JS) is the real interaction/AX
+   barrier; these two rules are the visual half of that same protection.
+   `transition:none` on this base (hidden) rule is NOT redundant with the
+   revealed rule below declaring its own `transition:opacity .15s ease`: CSS
+   resolves the `transition` property itself per normal cascade, independent of
+   which rule wins `opacity` — a real Fomantic UI `.item` rule (lower selector
+   specificity than our ID-scoped one, but the ONLY rule setting `transition` if
+   we don't set one here) can still win the `transition` property alone and
+   animate FROM the native browser default (opacity:1, an `<a>` has
+   no opacity override) the very first time these classes are applied, flashing
+   the edges briefly visible before fading to hidden — exactly the regression a
+   real WebKit run against production-shaped adversarial CSS caught. Declaring
+   `transition:none` here makes the initial hide instant regardless of any
+   ancestor/sibling stylesheet's own `.item` transition; only the deliberate
+   reveal (the rule below) ever animates opacity. */
+#dashboard-repo-list .hgh-vpg:not([data-hgh-vpg-revealed]) .hgh-vpg-edge{opacity:0;pointer-events:none;transition:none}
+#dashboard-repo-list .hgh-vpg[data-hgh-vpg-revealed] .hgh-vpg-edge{opacity:1;transition:opacity .15s ease}
+
+/* Shared sr-only visual-hide idiom for two different real elements: the native
+   current-page anchor (`<a class="active item">{{ page }}</a>`, no href, never a
+   click target — stays in the DOM for assistive tech but is pulled out of grid
+   flow entirely via `position:absolute`, so it never occupies a column) and the
+   separate `role="status"` announcement span this module appends. One class,
+   not two identical declaration blocks. */
+#dashboard-repo-list .hgh-vpg-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+
+/* Keyboard/touch escape hatch for the inert edges: non-Vue sibling buttons
+   overlaid at each end of the pager, adding no width of their own so they never
+   shift Previous/Next either.
+   On a fine (mouse) pointer with hover, this stays a skip-link pattern: opacity/
+   pointer-events only flip on :focus-visible, so it's reachable by Tab in normal
+   document order but never mouse-clickable at rest — hover timing stays the only
+   pointer-driven reveal path there (see the base rule below).
+   On a coarse pointer or a device with no hover (touch, `@media` below) that
+   skip-link approach doesn't work at all: a real tap's press-release round trip
+   is far shorter than the 2s hover delay, so the arm/cancel pointer listeners in
+   dashboard-pagination.mjs can never let that timer complete from touch alone,
+   and `pointer-events:none` at rest means a tap can't even reach this button's
+   own click listener to begin with. There, the button is made a real, visibly
+   discoverable, always-tappable target instead of an invisible hit-test-only
+   one — no bespoke gesture/timing logic needed; the existing native `click`
+   listener (shared with the keyboard/mouse activation path) just fires. */
+#dashboard-repo-list .hgh-vpg-more{position:absolute;top:0;bottom:0;width:40px;display:flex;align-items:center;justify-content:center;border:0;padding:0;margin:0;background:transparent;color:var(--hgh-color-muted,#59636e);font:12px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;opacity:0;pointer-events:none;cursor:pointer}
+/* Our own `display:flex` above is author-origin and beats the UA `[hidden]{display:
+   none}` rule regardless of specificity math (author always wins over UA) — so
+   `retireTrigger()`'s `trigger.hidden = true` would otherwise leave the retired
+   button laid out, focusable, and capable of fading back in on :focus-visible.
+   This restores the real hide; `[hidden]`'s higher-specificity attribute selector
+   wins over the plain-class coarse-pointer rule below too, so a retired trigger
+   stays hidden there as well. */
+#dashboard-repo-list .hgh-vpg-more[hidden]{display:none}
+#dashboard-repo-list .hgh-vpg-more-start{left:0}
+#dashboard-repo-list .hgh-vpg-more-end{right:0}
+#dashboard-repo-list .hgh-vpg-more:focus-visible{opacity:1;pointer-events:auto;outline:2px solid var(--hgh-color-link,#0969da);outline-offset:2px;background:var(--hgh-color-canvas,#fff)}
+@media (hover:none),(pointer:coarse){
+  /* Touch/stylus devices (no hover, or a coarse pointer): expose the trigger as
+     a genuine visible button at rest instead of only on keyboard focus. A subtle
+     background gives it real affordance without the focus outline (which stays
+     reserved for actual keyboard/AT focus, still applied by the rule above on
+     top of this one if a coarse-pointer device also has an attached keyboard).
+     docs/requirements.md: "Touch targets added by this skin target at least
+     44x44 CSS px when space allows." The base rule's 40px width and `top:0;
+     bottom:0` (stretched to the pager row's own, often-shorter, text height)
+     both fall short; width is widened directly, and height is decoupled from
+     the row via `top:50%`/`transform` + `min-height` so the tap target can
+     extend a little above/below the row without growing it for every pointer
+     type — a common, visually-inert touch-target-padding pattern (this child
+     is `position:absolute` under a `position:relative` parent, so the overflow
+     is purely visual and never affects the row's own layout/height). */
+  #dashboard-repo-list .hgh-vpg-more{opacity:1;pointer-events:auto;background:var(--hgh-color-subtle,#f6f8fa);width:44px;min-height:44px;top:50%;bottom:auto;transform:translateY(-50%)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  #dashboard-repo-list .hgh-vpg[data-hgh-vpg-revealed] .hgh-vpg-edge{transition:none}
+}
+
+/* Narrow viewports: reserve a second row for First/Last instead of shrinking or
+   overflowing. Long localized labels (Russian "Последняя"/"Первая" plus the
+   longer "‹ Пред."/"След. ›") no longer fit all four items on one 320px row —
+   verified failing before this rule, matching src/pagination.css's own
+   narrow-viewport row-reservation strategy for the same class of problem.
+   Previous/Next still end up adjacent and centered (they meet at the shared
+   boundary of two equal 1fr columns); First/Last flank the row below the same
+   way. Row 2 is always reserved once revealed (both cells always populated
+   when First/Last exist at all), so revealing never causes a height jump here
+   either. */
+@media (max-width:479px){
+  #dashboard-repo-list .hgh-vpg{grid-template-columns:1fr 1fr;grid-template-areas:"prev next" "first last";row-gap:4px}
+  #dashboard-repo-list .hgh-vpg-prev{grid-area:prev;justify-self:end}
+  #dashboard-repo-list .hgh-vpg-next{grid-area:next;justify-self:start}
+  #dashboard-repo-list .hgh-vpg-first{grid-area:first;justify-self:end}
+  #dashboard-repo-list .hgh-vpg-last{grid-area:last;justify-self:start}
+}
