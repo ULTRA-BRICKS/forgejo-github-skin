@@ -10,7 +10,11 @@ for(const id of ['organization','repository','pull-request','issue','commit','fi
  if(id==='organization') {
   await expect(page.locator('.wo-inline')).toContainText('ultrabricks');
   await expect(page.locator('.wo-card [data-action-id=forgejo_open_original]')).toHaveAttribute('href','https://forge.example/ultrabricks');
-  await expect(page.locator('.wo-card [data-action-id=forgejo_open_repositories]')).toHaveAttribute('href','https://forge.example/org/ultrabricks/dashboard#repos');
+  await expect(page.locator('.wo-card [data-action-id=forgejo_open_repositories]')).toHaveAttribute('href','https://forge.example/ultrabricks#repos');
+  // No public unauthenticated org-wide aggregate exists in Forgejo (FJ-56): these two
+  // actions must never render for an organization card.
+  await expect(page.locator('.wo-card [data-action-id=forgejo_open_pulls]')).toHaveCount(0);
+  await expect(page.locator('.wo-card [data-action-id=forgejo_open_issues]')).toHaveCount(0);
   await expect(page.locator('.wo-card [data-key=repository]')).toHaveCount(0);
  }
   if(id==='private-file')await expect(page.locator('[data-key=code_excerpt]')).toHaveCount(0);

@@ -13,6 +13,7 @@ The integration publishes Slack Work Objects for repository, pull request, issue
 | Issue, including comment anchors | Open issue | Repository, Preview settings |
 | Commit | Open commit, Browse files | Repository, Preview settings |
 | Immutable file and selected line range | Open file, Raw file | Blame, Commit, Repository, Preview settings |
+| Organization (bare `/name`, or `/org/name/dashboard`) | Open organization, Repositories | Preview settings |
 
 Every destination is built from the validated configured origin and resource. File ranges remain distinct external identities. Actions with URLs open directly. Settings are the only modal on new cards; previous personal-preview buttons remain readable for existing messages.
 
@@ -25,6 +26,23 @@ A repository activity time series may add a supplemental image. Image locators r
 ## Source and audience rules
 
 Public previews also work for users who have not connected Forgejo when an operator explicitly configures a linked public-only reader. Repository visibility is checked before fetching a private object, and only a positive public declaration can be shared through this reader.
+
+An organization card never offers Pull requests or Issues actions. Forgejo has no public,
+unauthenticated org-wide aggregate view for either — the whole `/org/{org}` route group,
+including its dashboard, requires a signed-in session for every caller, members included —
+so those two actions would silently fail for any non-member Slack recipient. Repositories
+instead points at the bare organization page's own public "view all" reveal, which needs no
+session.
+
+A bare `/name` link is parsed as an organization name, but that same shape also matches a
+public user profile, a typo, or a private organization no configured reader can see.
+Forgejo's own organization API answers all three cases with an identical 404 (by design, to
+avoid revealing which one it is), so this integration cannot tell them apart either. Rather
+than showing a misleading "connect your account" card for content that may not be protected
+at all, an organization link that does not resolve to a confirmed-public organization
+produces no unfurl: Slack shows the plain link, exactly as it did before organization links
+were supported. A genuine upstream failure (timeout, 5xx) is unaffected and still shows the
+existing retryable "temporarily unavailable" card.
 
 Private summaries require the posting user's linked access, an exact approved workspace/origin/owner rule, and freshly fetched channel flags that exclude externally shared, organization-shared, or pending Slack Connect conversations. They disclose title/status-level information only. Such a shared summary is a conversation-visible copy; it is not per-viewer access control or retroactive erasure. Detail-pane refresh follows the same audience policy because Slack may update the conversation card from that response.
 

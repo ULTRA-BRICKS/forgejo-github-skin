@@ -10,6 +10,12 @@ import { randomBytes } from "node:crypto";
 import {
   protectedCard,
 } from "../../ops/handoff/slack/preview-core.mjs";
+// The one shape resolveShared() returns for a freshly, explicitly public source,
+// whether that's an organization or a repository/issue/pull/commit/file: a verified
+// public resource never carries per-viewer/channel policy of its own.
+function publicResolution(link,meta) {
+  return {link,meta,facts:{resourceVerified:true,checkIsFresh:true,visibility:'public',sourceDeclaredPublic:true,resourceUrl:link.resourceUrl},policy:{}};
+}
 async function resolveBatch(values,resolve) {
   let next=0;const results=new Array(values.length);
   await Promise.all(Array.from({length:Math.min(3,values.length)},async()=>{
@@ -102,13 +108,18 @@ export class SlackIntegration {
       // only a freshly, explicitly public org (this anonymous/public-reader check) or a
       // viewer's own token in presentDetails()/openPersonal() may reveal organization
       // data. The posting user's OAuth token is never consulted for a non-public org.
-      return meta && meta.private===false
-        ? {link,meta,facts:{resourceVerified:true,checkIsFresh:true,visibility:'public',sourceDeclaredPublic:true,resourceUrl:link.resourceUrl},policy:{}}
-        : {link};
+      // publicMetadata() only ever returns a truthy value when it's already
+      // confirmed private===false, so a truthy check here is sufficient.
+      if(meta)return publicResolution(link,meta);
+      // A failed org probe never distinguishes not-found from private-and-hidden
+      // (Forgejo's own API hides that difference by design); a real upstream failure
+      // already threw above, so only that ambiguous case reaches here. No card is the
+      // only non-leaking response (FJ-55; full rationale: docs/SLACK-NATIVE-PREVIEWS.md).
+      return {noUnfurl:true};
     }
     if(!meta){token=await this.oauth.access(envelope.team_id,event.user,raw);if(token){try{meta=await this.forgejo.metadata(raw,token,{enrich:true});}catch(error){if(!isAccessDenied(error.status))throw error;}}}
     if(!meta)return {link};
-    if(meta.private===false)return {link,meta,facts:{resourceVerified:true,checkIsFresh:true,visibility:'public',sourceDeclaredPublic:true,resourceUrl:link.resourceUrl},policy:{}};
+    if(meta.private===false)return publicResolution(link,meta);
     if(meta.private!==true)return {link};
     const source=event.source||'conversations_history';
     const summaryOwners=Array.isArray(this.config.slack.summaryOwners)?this.config.slack.summaryOwners:[];
@@ -139,7 +150,7 @@ export class SlackIntegration {
     });
     for(const [index,posted] of links.entries()) {
       const resolved=resolutions[index];retryError ||= resolved?.retryError;
-      if(!resolved)continue;
+      if(!resolved || resolved.noUnfurl)continue;
       const {link,meta,facts,policy}=resolved,reference=this.reference(envelope.team_id,link.originalUrl);
       let card=protectedCard(reference,link);
       if(resolved.unavailable)card.blocks[0].text.text='Preview temporarily unavailable. You can still open the original in Forgejo. This card will retry automatically.';
