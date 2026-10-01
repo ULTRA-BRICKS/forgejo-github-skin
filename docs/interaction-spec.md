@@ -63,3 +63,28 @@ This document turns UI polish into explicit behavior. Native Forgejo permissions
 - A network timeout is an `unknown` outcome; do not auto-retry mutations.
 - Error copy distinguishes permission denial, validation errors, conflict/state changes and connectivity failures when Forgejo exposes that distinction.
 - Destructive confirmation dialogs identify the object/action and make Cancel the safe escape path.
+
+## Organization overview and repositories
+
+- Overview shows viewer-visible statistics and activity before a ten-row repository preview (or all rows when fewer exist), one View all repositories link, then recent activity. Repository pagination is hidden on Overview.
+- Profile activity loads once on the first Overview visit. The session-aware `/org/<name>/dashboard` supplies native activity markup and its embedded heatmap data; authenticated API tokens are neither requested nor stored. When that dashboard is inaccessible or redirects to login, the public activity endpoint supplies a clearly labelled public-only calendar bounded to the latest 100 events. Repository-only navigation requests neither source; unavailable calendar data does not discard usable activity links.
+- `#repos` keeps native repository search, filters, sorting, links and pagination while hiding overview statistics, activity and sidebar. `#overview` restores context; browser Back/Forward does not duplicate native nodes.
+- Native `q`, `page`, `sort`, `language`, `archived`, `fork`, `mirror`, `template` and `private` query parameters select the repository view when no hash is present. Tracking and Storybook parameters do not. An explicit overview hash takes precedence without discarding query state.
+
+## Activity disclosure
+
+- Organization and personal native activity keep their original order and links. Organization activity follows the repository preview; personal dashboards retain their native layout.
+- Event icons are 16px. Comments overflowing the browser-resolved `3lh` preview receive Show more/Show less with `aria-expanded`; images, media and download attachments stay completely hidden while collapsed.
+- Imported comment images use native lazy loading before insertion, retaining their original `src`/`srcset`, so collapsed screenshots do not download eagerly.
+- Clipped or attachment-only interactive descendants, including linked-image-only comments with zero-height previews, are inert until expansion. Protection transfers when a native control moves between collapsed comments. Visible preview links stay usable; expansion and teardown restore original native controls.
+- Re-enhancement decorates newly inserted or reinserted rows without resetting retained expanded comments or duplicating disclosures. A comment moved to another native row keeps its existing disclosure beside the body and retains its expanded state. Hidden comments are measured when shown; each body is observed so column-width changes also refresh initially short comments. Native details and layout, focusability or attachment attribute changes refresh clipping. Dirty rows are clamped together, measured together, then updated, without remeasuring unchanged rows on unrelated repository updates. Replaced bodies, removed rows and moved controls release their owned state; retired disclosures release their click handlers, and teardown restores original icon dimensions and focusability.
+- Removing an activity feed disposes its observers and decorations without requiring another enhancement pass; unrelated document mutations do not remeasure retained rows.
+
+## Compact pagination
+
+- Only centered Previous/Next appear initially. Wings reserve their complete geometry but are invisible, inert and pointer-disabled; no hidden More pages tab stops exist.
+- Pointer or keyboard-focus dwell reveals at 2000ms, not 1999ms. The countdown continues while either input remains inside; entering with another input does not restart it. Leaving with both inputs cancels; moving between controls preserves focus dwell. Touch long-press uses the same timer. Reveal changes visibility/opacity, never element rectangles or document height.
+- A revealed tab session stays revealed. Revealing one classic region cancels outstanding dwell in sibling regions. The local habit counter increments once per genuine session reveal; after three sessions a new session reveals immediately on hover. Storage failures fall back to the shared document-local mirror.
+- Current-page and duplicate destinations are omitted. The Vue adapter uses the current native page, active filtered count and configured native page size to recognize duplicate First/Last controls; it never invents totals when those inputs are unavailable. Delayed or corrected native counts refresh Last on the existing pager without resetting its reveal controller.
+- Classic activity/history/list pages relocate native anchors; dashboard repository pagination decorates Vue anchors in place. Organization Overview hides the repository pager; focused repositories retain its sole native/enhanced owner.
+- Dashboard `repo-search-*` queries select the focused repository view. When native Vue query updates replace the URL, an explicitly selected organization hash is retained in that same history entry without discarding filters or adding duplicate entries. A hashless view follows the updated native query on re-enhancement.

@@ -72,6 +72,7 @@
    reveal (the rule below) ever animates opacity. */
 #dashboard-repo-list .hgh-vpg:not([data-hgh-vpg-revealed]) .hgh-vpg-edge{opacity:0;pointer-events:none;transition:none}
 #dashboard-repo-list .hgh-vpg[data-hgh-vpg-revealed] .hgh-vpg-edge{opacity:1;transition:opacity .15s ease}
+#dashboard-repo-list .hgh-vpg .hgh-vpg-omitted{visibility:hidden;pointer-events:none}
 
 /* Shared sr-only visual-hide idiom for two different real elements: the native
    current-page anchor (`<a class="active item">{{ page }}</a>`, no href, never a
@@ -81,51 +82,6 @@
    not two identical declaration blocks. */
 #dashboard-repo-list .hgh-vpg-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 
-/* Keyboard/touch escape hatch for the inert edges: non-Vue sibling buttons
-   overlaid at each end of the pager, adding no width of their own so they never
-   shift Previous/Next either.
-   On a fine (mouse) pointer with hover, this stays a skip-link pattern: opacity/
-   pointer-events only flip on :focus-visible, so it's reachable by Tab in normal
-   document order but never mouse-clickable at rest — hover timing stays the only
-   pointer-driven reveal path there (see the base rule below).
-   On a coarse pointer or a device with no hover (touch, `@media` below) that
-   skip-link approach doesn't work at all: a real tap's press-release round trip
-   is far shorter than the 2s hover delay, so the arm/cancel pointer listeners in
-   dashboard-pagination.mjs can never let that timer complete from touch alone,
-   and `pointer-events:none` at rest means a tap can't even reach this button's
-   own click listener to begin with. There, the button is made a real, visibly
-   discoverable, always-tappable target instead of an invisible hit-test-only
-   one — no bespoke gesture/timing logic needed; the existing native `click`
-   listener (shared with the keyboard/mouse activation path) just fires. */
-#dashboard-repo-list .hgh-vpg-more{position:absolute;top:0;bottom:0;width:40px;display:flex;align-items:center;justify-content:center;border:0;padding:0;margin:0;background:transparent;color:var(--hgh-color-muted,#59636e);font:12px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;opacity:0;pointer-events:none;cursor:pointer}
-/* Our own `display:flex` above is author-origin and beats the UA `[hidden]{display:
-   none}` rule regardless of specificity math (author always wins over UA) — so
-   `retireTrigger()`'s `trigger.hidden = true` would otherwise leave the retired
-   button laid out, focusable, and capable of fading back in on :focus-visible.
-   This restores the real hide; `[hidden]`'s higher-specificity attribute selector
-   wins over the plain-class coarse-pointer rule below too, so a retired trigger
-   stays hidden there as well. */
-#dashboard-repo-list .hgh-vpg-more[hidden]{display:none}
-#dashboard-repo-list .hgh-vpg-more-start{left:0}
-#dashboard-repo-list .hgh-vpg-more-end{right:0}
-#dashboard-repo-list .hgh-vpg-more:focus-visible{opacity:1;pointer-events:auto;outline:2px solid var(--hgh-color-link,#0969da);outline-offset:2px;background:var(--hgh-color-canvas,#fff)}
-@media (hover:none),(pointer:coarse){
-  /* Touch/stylus devices (no hover, or a coarse pointer): expose the trigger as
-     a genuine visible button at rest instead of only on keyboard focus. A subtle
-     background gives it real affordance without the focus outline (which stays
-     reserved for actual keyboard/AT focus, still applied by the rule above on
-     top of this one if a coarse-pointer device also has an attached keyboard).
-     docs/requirements.md: "Touch targets added by this skin target at least
-     44x44 CSS px when space allows." The base rule's 40px width and `top:0;
-     bottom:0` (stretched to the pager row's own, often-shorter, text height)
-     both fall short; width is widened directly, and height is decoupled from
-     the row via `top:50%`/`transform` + `min-height` so the tap target can
-     extend a little above/below the row without growing it for every pointer
-     type — a common, visually-inert touch-target-padding pattern (this child
-     is `position:absolute` under a `position:relative` parent, so the overflow
-     is purely visual and never affects the row's own layout/height). */
-  #dashboard-repo-list .hgh-vpg-more{opacity:1;pointer-events:auto;background:var(--hgh-color-subtle,#f6f8fa);width:44px;min-height:44px;top:50%;bottom:auto;transform:translateY(-50%)}
-}
 
 @media (prefers-reduced-motion:reduce){
   #dashboard-repo-list .hgh-vpg[data-hgh-vpg-revealed] .hgh-vpg-edge{transition:none}

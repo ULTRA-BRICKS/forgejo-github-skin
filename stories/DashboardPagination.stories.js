@@ -54,6 +54,16 @@ export const Compact = {
   render: () => { clearStorage(); return shell(dashboardHtml({page: 6, finalPage: 90})); },
 };
 
+export const KeyboardDwell = {
+  name: 'Keyboard focus (2s dwell on native Previous or Next)',
+  render: () => {
+    clearStorage();
+    const root = shell(dashboardHtml({page: 6, finalPage: 90}));
+    queueMicrotask(() => root.querySelector('.hgh-vpg-prev')?.focus());
+    return root;
+  },
+};
+
 export const HoverPending = {
   name: 'Hover pending (live: hover 2s to reveal First/Last)',
   render: () => {

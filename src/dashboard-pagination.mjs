@@ -15,10 +15,10 @@
  *     <a class="item navigation" @click="changePage(finalPage)">Last</a>
  *   </div>
  * Unlike base/paginate.tmpl (src/pagination.mjs's target), Vue never renders a
- * numbered page list or real hrefs (no total is ever derivable from the DOM, only
- * from `finalPage` in Vue's private data) — so there is nothing to dedupe/merge and
- * nothing to infer a destination URL for; the only "wings" that can ever exist here
- * are the fixed First/Last edges.
+ * numbered page list or real hrefs. Only native filtered counts plus the native
+ * search limit can prove Last duplicates Next; unavailable totals are not guessed.
+ * First/Previous duplicates are identifiable on page two. The only wings are
+ * the fixed First/Last edges, and their native callbacks remain authoritative.
  *
  * `changePage()` unconditionally does `this.repos = []` before refetching, which
  * makes `v-if="repos.length"` — and therefore this whole pagination div — unmount
@@ -26,9 +26,9 @@
  * reading the component's `changePage`/`searchRepos` methods). This module never
  * relocates, clones, or reparents any node Vue rendered (no Vue subtree/ownership
  * violation): it only adds classes/attributes/inert to the five native anchors in
- * place, plus two small non-Vue sibling `<button>` triggers appended as extra
- * children of the pager div for keyboard access. Because the whole div is destroyed
- * every page change, those additions are destroyed right along with it — a bounded
+ * place, plus a non-Vue status span. Keyboard dwell uses the native Previous/Next
+ * controls, not additional hidden buttons. Because the whole div is destroyed
+ * every page change, that addition is destroyed right along with it — a bounded
  * MutationObserver on the stable `#dashboard-repo-list` mount root (never itself
  * torn down by Vue) notices the fresh div and re-decorates it once. Re-processing is
  * a no-op: `decorate()` bails immediately whenever a pager already carries
@@ -102,8 +102,8 @@ function stringsFor(doc) {
   // src/pagination.mjs does; this is the only path available to keep the visible
   // labels in the page's own language instead of hardcoding English into CSS.
   return ru
-    ? {label: 'Постраничная навигация', more: 'Ещё страницы', page: (n) => `Страница ${n}`, prev: '‹ Пред.', next: 'След. ›', first: 'Первая', last: 'Последняя'}
-    : {label: 'Pagination', more: 'More pages', page: (n) => `Page ${n}`, prev: '‹ Previous', next: 'Next ›', first: 'First', last: 'Last'};
+    ? {label: 'Постраничная навигация', page: (n) => `Страница ${n}`, prev: '‹ Пред.', next: 'След. ›', first: 'Первая', last: 'Последняя'}
+    : {label: 'Pagination', page: (n) => `Page ${n}`, prev: '‹ Previous', next: 'Next ›', first: 'First', last: 'Last'};
 }
 
 // --- Reversible decoration helpers: every call pushes its own exact inverse. ---
@@ -136,11 +136,6 @@ function trackInert(el, undo) {
 // createStorageBridge — see its own comment for why that sharing matters,
 // and why it never leaks across two different documents.
 
-function retireTrigger(doc, trigger) {
-  if (!trigger || trigger.hidden) return;
-  if (doc.activeElement === trigger) trigger.addEventListener('blur', () => { trigger.hidden = true; }, {once: true});
-  else trigger.hidden = true;
-}
 
 /** Forgejo/Vue's real anchors have no `href` and no `tabindex` at all — a bare
  *  `<a>` without `href` is outside the tab order, gets no browser-default
@@ -196,46 +191,6 @@ function makeKeyboardOperable(el, undo, {startHidden = false} = {}) {
   };
 }
 
-/** Returns `{btn, dispose}`: `dispose()` removes the click listener itself, not
- *  just the node from the DOM. `.remove()` alone detaches a node but leaves its
- *  listeners bound — if any stale code retained a reference to a torn-down
- *  trigger, calling `.click()` on it would still fire `onActivate()` (which
- *  mutates the pager via `applyRevealed`/`controller.reveal`) even after restore
- *  already put the native pager back to pristine. `dispose()` closes that hole. */
-function makeTrigger(doc, strings, side, onActivate) {
-  const btn = doc.createElement('button');
-  btn.type = 'button';
-  btn.className = 'hgh-vpg-more hgh-vpg-more-' + side;
-  btn.setAttribute('aria-label', strings.more);
-  btn.textContent = '…';
-  const onClick = (event) => {
-    event.preventDefault();
-    onActivate();
-    // `retireTrigger` (called synchronously inside `onActivate` -> `reveal` ->
-    // `applyRevealed`) defers hiding a still-focused trigger until it blurs —
-    // correct for keyboard (never yank focus out from under an active user),
-    // but on a coarse pointer this trigger is a real, always-visible 44px
-    // overlay (see the coarse-pointer CSS) sitting ON TOP of the just-revealed
-    // First control (positioned descendants paint over in-flow siblings
-    // regardless of DOM order). A pointer-driven activation (touch or mouse)
-    // DOES focus the button in Chromium (confirmed empirically; WebKit does
-    // not), so without this, the deferred hide never runs until some
-    // unrelated later blur — stranding the overlay over First indefinitely
-    // and silently absorbing every further tap there.
-    // `:focus-visible` — not `event.pointerType` — is the correct signal here:
-    // Firefox's `click` event carries no `pointerType` at all for either a
-    // real touch tap OR genuine keyboard Enter/Space, so `pointerType` alone
-    // can't tell them apart there and would silently miss the Firefox-touch
-    // case. `:focus-visible` is the platform's own already-correct heuristic
-    // for "was this focus keyboard-style" (matching the CSS `:focus-visible`
-    // rule above) — never true for touch/mouse, true for real keyboard
-    // navigation — so blurring on `!focus-visible` fixes every pointer
-    // modality uniformly without guessing from event properties.
-    if (!btn.matches(':focus-visible')) btn.blur();
-  };
-  btn.addEventListener('click', onClick);
-  return {btn, dispose: () => btn.removeEventListener('click', onClick)};
-}
 
 function decorate(doc, pager) {
   if (pager.dataset.hghVpgApplied === 'true') return;
@@ -262,7 +217,8 @@ function decorate(doc, pager) {
   trackAttr(lastEl, 'data-hgh-vpg-label', strings.last, undo);
   trackClass(currentEl, 'hgh-vpg-sr-only', undo);
   trackAttr(currentEl, 'aria-current', 'page', undo);
-
+  trackAttr(currentEl, 'tabindex', '-1', undo);
+  trackInert(currentEl, undo);
   // Read BEFORE anything below mutates `inert`: whether these were already inert
   // for some unrelated native reason, independent of our own reveal gating. Used
   // to keep keyboard operability honest (a natively inert control must start
@@ -272,20 +228,39 @@ function decorate(doc, pager) {
   const lastNativeInert = lastEl.hasAttribute('inert');
   const prevNativeInert = prevEl.hasAttribute('inert');
   const nextNativeInert = nextEl.hasAttribute('inert');
+  const currentPage = Number(currentEl.textContent.trim());
+  const shouldOmitLast = () => {
+    const countText = pager.closest(HOST_SELECTOR)?.querySelector('.repos-filter .active .label')?.textContent.trim();
+    const pageSize = Number(doc.defaultView.config?.pageData?.dashboardRepoList?.searchLimit);
+    const totalPages = /^\d+$/.test(countText ?? '') && pageSize > 0 ? Math.ceil(Number(countText) / pageSize) : null;
+    return lastEl.classList.contains('disabled') || (totalPages !== null && currentPage + 1 === totalPages);
+  };
+  const omitFirst = firstEl.classList.contains('disabled') || currentPage === 2;
+  let omitLast = shouldOmitLast();
+  const lastNativeOmitted = lastEl.classList.contains('hgh-vpg-omitted');
+  undo.push(() => {
+    lastEl.classList.toggle('hgh-vpg-omitted', lastNativeOmitted);
+    lastEl.toggleAttribute('inert', lastNativeInert);
+  });
+  for (const edge of [omitFirst && firstEl, omitLast && lastEl]) {
+    if (!edge) continue;
+    trackClass(edge, 'hgh-vpg-omitted', undo);
+    trackInert(edge, undo);
+  }
+
 
   const controller = createRevealController({session: createStorageBridge(doc, 'sessionStorage'), local: createStorageBridge(doc, 'localStorage')});
   const alreadyRevealed = controller.isRevealed();
 
-  const firstKbd = makeKeyboardOperable(firstEl, undo, {startHidden: !alreadyRevealed || firstNativeInert});
+  const firstKbd = makeKeyboardOperable(firstEl, undo, {startHidden: !alreadyRevealed || firstNativeInert || omitFirst});
   makeKeyboardOperable(prevEl, undo, {startHidden: prevNativeInert});
   makeKeyboardOperable(nextEl, undo, {startHidden: nextNativeInert});
-  const lastKbd = makeKeyboardOperable(lastEl, undo, {startHidden: !alreadyRevealed || lastNativeInert});
+  const lastKbd = makeKeyboardOperable(lastEl, undo, {startHidden: !alreadyRevealed || lastNativeInert || omitLast});
 
-  let triggerStart = null, triggerEnd = null;
   // May run once at decorate time (already-revealed session) or later, asynchronously,
   // from a hover/focus reveal — and, once revealed, `arm()`'s already-revealed
   // short-circuit can call this again on a later hover (including when the session
-  // was ALREADY revealed at decorate time and no trigger/inert was ever set up
+  // was ALREADY revealed at decorate time and no reveal-gating inert was set up
   // here at all — this still runs on that path's first real hover). The
   // `hasAttribute` guard keeps the attribute-undo push (and the redundant DOM
   // writes below) idempotent across repeat calls, exactly like decorate()'s own
@@ -294,7 +269,7 @@ function decorate(doc, pager) {
   // exact native state back regardless of anything reveal did.
   //
   // `pager.isConnected` guards the DOM mutations below (never touch a detached
-  // pager's `inert`/attributes/triggers). It does NOT, by itself, prevent the
+  // pager's `inert`/attributes). It does NOT, by itself, prevent the
   // shared session/habit storage writes: `createRevealController.reveal()`
   // (pagination-model.mjs) writes `REVEALED_KEY`/bumps `HABIT_KEY` BEFORE
   // invoking this callback, so a guard placed only here runs too late to stop
@@ -309,10 +284,8 @@ function decorate(doc, pager) {
       pager.setAttribute('data-hgh-vpg-revealed', 'true');
       undo.push(() => pager.removeAttribute('data-hgh-vpg-revealed'));
     }
-    if (!firstNativeInert) { firstEl.removeAttribute('inert'); firstKbd.reveal(); }
-    if (!lastNativeInert) { lastEl.removeAttribute('inert'); lastKbd.reveal(); }
-    retireTrigger(doc, triggerStart);
-    retireTrigger(doc, triggerEnd);
+    if (!firstNativeInert && !omitFirst) { firstEl.removeAttribute('inert'); firstKbd.reveal(); }
+    if (!lastNativeInert && !omitLast) { lastEl.removeAttribute('inert'); lastKbd.reveal(); }
   }
 
   if (alreadyRevealed) {
@@ -320,13 +293,6 @@ function decorate(doc, pager) {
   } else {
     trackInert(firstEl, undo);
     trackInert(lastEl, undo);
-    const startTrigger = makeTrigger(doc, strings, 'start', () => controller.reveal(applyRevealed));
-    const endTrigger = makeTrigger(doc, strings, 'end', () => controller.reveal(applyRevealed));
-    triggerStart = startTrigger.btn;
-    triggerEnd = endTrigger.btn;
-    pager.prepend(triggerStart);
-    pager.append(triggerEnd);
-    undo.push(() => { startTrigger.dispose(); endTrigger.dispose(); triggerStart.remove(); triggerEnd.remove(); });
   }
 
   const status = doc.createElement('span');
@@ -336,8 +302,10 @@ function decorate(doc, pager) {
   pager.append(status);
   undo.push(() => status.remove());
 
-  const onEnter = () => controller.arm(applyRevealed);
-  const onLeave = () => controller.cancel();
+  const onEnter = () => controller.arm(applyRevealed, 'pointer');
+  const onLeave = () => controller.cancel('pointer');
+  const onFocusIn = (event) => { if (!pager.contains(event.relatedTarget)) controller.arm(applyRevealed, 'focus'); };
+  const onFocusOut = (event) => { if (!pager.contains(event.relatedTarget)) controller.cancel('focus'); };
   // Mirrors src/pagination.mjs's non-mouse guard: mouse gets a correct arm/cancel
   // lifecycle from pointerenter/pointerleave alone; without the guard, clicking
   // (mousedown+mouseup) on Previous/Next mid-hover would reset then immediately
@@ -350,20 +318,33 @@ function decorate(doc, pager) {
   pager.addEventListener('pointerleave', onLeave);
   pager.addEventListener('pointerup', onNonMouseRelease);
   pager.addEventListener('pointercancel', onNonMouseRelease);
+  pager.addEventListener('focusin', onFocusIn);
+  pager.addEventListener('focusout', onFocusOut);
   undo.push(() => {
     pager.removeEventListener('pointerenter', onEnter);
     pager.removeEventListener('pointerdown', onNonMousePress);
     pager.removeEventListener('pointerleave', onLeave);
     pager.removeEventListener('pointerup', onNonMouseRelease);
     pager.removeEventListener('pointercancel', onNonMouseRelease);
+    pager.removeEventListener('focusin', onFocusIn);
+    pager.removeEventListener('focusout', onFocusOut);
   });
 
-  pagers.set(pager, {controller, undo});
+  const refreshCount = () => {
+    const omitted = shouldOmitLast();
+    if (omitted === omitLast) return;
+    omitLast = omitted;
+    lastEl.classList.toggle('hgh-vpg-omitted', omitLast);
+    const hidden = lastNativeInert || omitLast || pager.dataset.hghVpgRevealed !== 'true';
+    lastEl.inert = hidden;
+    lastEl.tabIndex = hidden ? -1 : 0;
+  };
+  pagers.set(pager, {controller, undo, refreshCount});
 }
 
 /** Full inverse of decorate(): destroys the controller (cancels any pending
  *  reveal timer), runs every pushed undo in reverse (classes/attrs/inert/
- *  keydown+pointer listeners/injected trigger+status nodes), and drops the
+ *  keydown/pointer/focus listeners and injected status), and drops the
  *  tracking entry. Used identically whether the pager is still connected
  *  (explicit restoreDashboardPagination()) or was silently detached by a Vue
  *  remount (cleanupDisconnected()) — a detached pager must never keep live
@@ -384,7 +365,9 @@ function cleanupDisconnected(doc) {
 function sweep(doc, host) {
   cleanupDisconnected(doc);
   for (const pager of host.querySelectorAll(PAGER_SELECTOR)) {
-    if (!pagers.has(pager)) decorate(doc, pager);
+    const state = pagers.get(pager);
+    if (state) state.refreshCount();
+    else decorate(doc, pager);
   }
 }
 
@@ -415,7 +398,7 @@ export function enhanceDashboardPagination(doc = document) {
       if (!host.isConnected) { onHostDetached(); return; }
       sweep(doc, host);
     });
-    observer.observe(host, {childList: true, subtree: true});
+    observer.observe(host, {childList: true, subtree: true, characterData: true});
     // The subtree observer above only fires on a mutation INSIDE host — a host
     // detached with no further mutation inside it (the exact shape a bare
     // `host.remove()` produces) would otherwise go unnoticed until something

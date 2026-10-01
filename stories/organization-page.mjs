@@ -40,7 +40,9 @@ function repoLi(fullName) {
 function activityFeedHtml(count) {
   const longComment = 'A very long pasted review comment reproducing exactly what the user flagged: giant, unsummarized text and a full-size pasted screenshot dominating the compact activity feed. '.repeat(3);
   return Array.from({length: count}, (_, i) => `<div class="flex-item"><div class="flex-item-leading"><img class="ui avatar" alt="" src="${avatarDataUri('A', 20)}" width="16" height="16"></div><div class="flex-item-main"><div>alex commented on ${escapeHtml(REPOS[i % REPOS.length][0])}${i === 2 ? '' : ' #' + (i + 12)}</div>${
-    i === 2 ? `<div class="markup tw-text-14"><p>${longComment}</p><img src="${placeholderScreenshotDataUri()}" width="640" height="360" alt="screenshot"></div>` : ''
+    i === 2 ? `<div class="markup tw-text-14"><p>${longComment}</p><img src="${placeholderScreenshotDataUri()}" width="640" height="360" alt="screenshot"></div>` :
+    i === 3 ? `<div class="markup"><a href="/ultrabricks/rig-cli/issues/15"><img src="${placeholderScreenshotDataUri()}" width="640" height="360" alt="Image-first attachment"></a><p>Screenshot context</p></div>` :
+    i === 4 ? '<div class="markup"><p>First line<br>Second line<br>Third line<br><a href="/ultrabricks/rig-cli/issues/16">Fourth-line discussion link</a></p></div>' : ''
   }</div><div class="flex-item-trailing"><svg viewBox="0 0 16 16" width="32" height="32"><circle cx="8" cy="8" r="6" fill="currentColor"/></svg></div></div>`).join('');
 }
 
@@ -111,11 +113,20 @@ function jsonResponse(body, extraHeaders = {}) {
  * session-aware routes the production module calls); anything else passes through unmocked.
  * Captures the true original `fetch` once under a fixed key so re-invoking a story's render
  * (Storybook Controls/HMR can do this without a full iframe reload) never wraps its own mock. */
-function installFetchMock({empty, errorState, loading}) {
+function installFetchMock({empty, errorState, loading, sessionActivity}) {
   window.__hghOrgNativeFetch ??= window.fetch?.bind(window);
   const native = window.__hghOrgNativeFetch;
   window.fetch = (input) => {
     const href = typeof input === 'string' ? input : input.url;
+    if (/\/org\/[^/]+\/dashboard$/.test(href)) {
+      if (!sessionActivity) return Promise.resolve(new Response('', {status: 401}));
+      const body = dashboardHtml({repoCount: 12, activityCount: 7}).replace('<div id="user-heatmap">', '<div id="user-heatmap" data-heatmap-data="[]">');
+      return Promise.resolve(new Response(body, {headers: {'content-type': 'text/html'}}));
+    }
+    if (href.includes('/api/v1/orgs/')) {
+      if (errorState) return Promise.resolve(new Response('', {status: 503}));
+      return Promise.resolve(jsonResponse([]));
+    }
     if (href.includes('/repo/search')) {
       if (href.includes('count_only=1')) return Promise.resolve(jsonResponse({}, {'X-Total-Count': String(empty ? 0 : REPOS.length)}));
       if (errorState) return Promise.resolve(new Response('', {status: 500}));
@@ -139,9 +150,9 @@ function installFetchMock({empty, errorState, loading}) {
 
 /** Shared by both exported mount functions: activates the opt-in skin gate (`data-theme`), the
  * demo-only dark override (`data-surface`, see organization-page.css), and the fetch stub. */
-function setupOrgFixture(container, {dark, empty, loading, errorState} = {}) {
+function setupOrgFixture(container, {dark, empty, loading, errorState, sessionActivity} = {}) {
   document.documentElement.dataset.theme = 'hypergithub-light';
-  installFetchMock({empty, errorState, loading});
+  installFetchMock({empty, errorState, loading, sessionActivity});
   container.className = 'hgh-org-story';
   container.dataset.surface = dark ? 'dark' : 'light';
 }
@@ -180,9 +191,9 @@ export function organizationDashboard({dark = false, view = 'overview', empty = 
   return container;
 }
 
-export function organizationProfile({dark = false} = {}) {
+export function organizationProfile({dark = false, sessionActivity = false} = {}) {
   const container = document.createElement('div');
-  setupOrgFixture(container, {dark});
+  setupOrgFixture(container, {dark, sessionActivity});
   const [rig, skin, ...rest] = REPOS;
   const card = ([name, language, description, topics]) => `<div class="flex-item"><div class="flex-item-leading"><svg class="octicon-repo" width="24" height="24"></svg></div><div class="flex-item-main"><div class="flex-item-header"><div class="flex-item-title"><a class="text primary name" href="/${escapeHtml(name)}">${escapeHtml(name.split('/')[1])}</a></div><div class="flex-item-trailing muted-links"><a href="?language=${escapeHtml(language)}"><i class="color-icon" style="background-color:#3572A5"></i>${escapeHtml(language)}</a><a href="/${escapeHtml(name)}/stars">${(name.length * 3) % 60} stars</a></div></div><div class="flex-item-body">${escapeHtml(description)}</div>${topics.length ? `<div class="repo-topics">${topics.map((t) => `<a class="ui label" href="/explore/repos?q=${escapeHtml(t)}&topic=1">${escapeHtml(t)}</a>`).join('')}</div>` : ''}<div class="flex-item-body">Updated <relative-time datetime="2026-09-27T12:00:00Z">2026-09-27</relative-time></div></div></div>`;
   container.innerHTML = `<div role="main" aria-label="ULTRA BRICKS" class="page-content organization profile">
