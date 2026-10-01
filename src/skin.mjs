@@ -6,7 +6,7 @@ import {enhancePagination, restorePagination, refreshResponsiveLayout} from './p
 import {enhanceDashboardPagination, restoreDashboardPagination} from './dashboard-pagination.mjs';
 import {enhanceOrganization, restoreOrganization} from './organization.mjs';
 /** Progressive enhancements only: existing Forgejo links/forms remain authoritative. */
-import {themeEnabled, currentThemeStylesheet, acceptKey, safeHref, navigationAction, normalizeLine, isEditable} from './core.mjs';
+import {themeEnabled, currentThemeStylesheet, acceptKey, safeHref, navigationAction, normalizeLine, isEditable, rendered, visible, usable} from './core.mjs';
 
 const BOOT = Symbol.for('hypergithub.bootstrap');
 if (!window[BOOT]) {
@@ -68,8 +68,13 @@ function boot() {
     if(link.href!==href)link.href=href;
   }
 
-  const visible = (element) => !!element && element.getClientRects().length > 0 && !element.closest('[hidden]');
-  const usable = (element) => visible(element) && !element.matches('[disabled],[aria-disabled="true"],.disabled');
+  const hasVisibleModal = () => [...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(element => element.matches('dialog:modal') ? !element.matches('[hidden],[inert]') && rendered(element) : visible(element));
+  const nativeEscapes = new WeakMap();
+  const fileActionSelectors = new Map([
+    ['t', '.repository .repo-button-row a[href*="/find/"]'],
+    ['b', '.non-diff-file-content a[href*="/blame/"], a.view_git_blame[href]'],
+    ['e', '.non-diff-file-content a[href*="/_edit/"], a[href*="/_edit/"]'],
+  ]);
 
   function navigateHref(href) {
     const safe = safeHref(href, location.href);
@@ -83,7 +88,38 @@ function boot() {
   }
 
   function firstUsable(selector, scope = document) {
-    return [...scope.querySelectorAll(selector)].find(usable) ?? null;
+    const first = scope.querySelector(selector);
+    if (!first || usable(first)) return first;
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_ELEMENT, {
+      acceptNode(element) {
+        if (element.matches('[hidden], [inert]') || getComputedStyle(element).display === 'none') return NodeFilter.FILTER_REJECT;
+        if (element.parentElement?.matches('details:not([open])') && !element.matches('summary')) return NodeFilter.FILTER_REJECT;
+        if (element.matches(selector) && usable(element)) return NodeFilter.FILTER_ACCEPT;
+        return element.querySelector(selector) ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_REJECT;
+      },
+    });
+    return walker.nextNode();
+  }
+
+  function fileActionTarget(key, reveal = false) {
+    const selector = fileActionSelectors.get(key);
+    if (!selector) return null;
+    for (const target of document.querySelectorAll(selector)) {
+      if (!safeHref(target.href, location.href)) continue;
+      if (usable(target)) return target;
+      const menu = target.closest('.hgh-repo-more');
+      if (!menu || menu.open || !usable(menu.querySelector('summary'))) continue;
+      menu.open = true;
+      const reachable = usable(target);
+      if (!reveal || !reachable) menu.open = false;
+      if (reachable) return target;
+    }
+    return null;
+  }
+
+  function branchTarget() {
+    const buttons = [...document.querySelectorAll('.js-branch-tag-selector .branch-dropdown-button')].filter(usable);
+    return buttons.find(button => button.closest('.js-branch-tag-selector')?.matches(':focus-within')) ?? (buttons.length === 1 ? buttons[0] : null);
   }
 
   function clickUsable(selector, scope = document) {
@@ -165,7 +201,7 @@ function boot() {
   function focusBestSearch() { return openUniversalSearch(document); }
 
   function goToLine() {
-    if (!document.querySelector('[data-line-number]')) return false;
+    if (!firstUsable('[data-line-number]')) return false;
     const dialog = makeDialog('hgh-line', t('Go to line', 'Перейти к строке'));
     if (!dialog.querySelector('form')) {
       const form = document.createElement('form');
@@ -185,8 +221,8 @@ function boot() {
         event.preventDefault();
         const number = normalizeLine(input.value);
         const line = number && document.getElementById(`L${number}`);
-        if (!line) {
-          message.textContent = t('That line does not exist.', 'Такой строки нет.');
+        if (!usable(line)) {
+          message.textContent = t('That line is not available.', 'Эта строка недоступна.');
           return;
         }
         dialog.close();
@@ -209,13 +245,7 @@ function boot() {
   }
 
   function createIssue() {
-    const direct = firstUsable('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]');
-    if (direct) return navigate(direct);
-    const issues = repositoryNav('issues');
-    if (!issues?.href) return false;
-    const url = new URL(issues.href);
-    url.pathname = url.pathname.replace(/\/issues\/?$/, '/issues/new');
-    return navigateHref(url.href);
+    return navigate(firstUsable('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]'));
   }
 
   function openFocusedIssue() {
@@ -307,26 +337,27 @@ function boot() {
       ['g n', 'notifications', t('Notifications', 'Уведомления')],
       ['g f', 'workflowFile', t('Workflow file', 'Файл workflow')],
     ]) {
-      if (repositoryNav(action)) rows.push([keys, label]);
+      const target = repositoryNav(action);
+      if (typeof target === 'string' ? safeHref(target, location.href) : usable(target)) rows.push([keys, label]);
     }
 
-    if (document.querySelector('.repository .repo-button-row a[href*="/find/"]')) rows.push(['t', t('Go to file', 'Перейти к файлу')]);
-    if (document.querySelector('.js-branch-tag-selector .branch-dropdown-button')) rows.push(['w', t('Switch branch/tag', 'Переключить ветку/тег')]);
-    if (document.querySelector('[data-line-number]')) rows.push(['l', t('Go to line', 'Перейти к строке')]);
-    if (document.querySelector('a.ui.mini.basic.button[href*="/src/commit/"]')) rows.push(['y', t('Permalink', 'Постоянная ссылка')]);
-    if (document.querySelector('.non-diff-file-content a[href*="/blame/"], a[href*="/blame/"]')) rows.push(['b', 'Blame']);
-    if (document.querySelector('.non-diff-file-content a[href*="/_edit/"], a[href*="/_edit/"]')) rows.push(['e', t('Edit file', 'Редактировать файл')]);
+    if (fileActionTarget('t')) rows.push(['t', t('Go to file', 'Перейти к файлу')]);
+    if (branchTarget()) rows.push(['w', t('Switch branch/tag', 'Переключить ветку/тег')]);
+    if (firstUsable('[data-line-number]')) rows.push(['l', t('Go to line', 'Перейти к строке')]);
+    if (firstUsable('a.ui.mini.basic.button[href*="/src/commit/"]')) rows.push(['y', t('Permalink', 'Постоянная ссылка')]);
+    if (fileActionTarget('b')) rows.push(['b', 'Blame']);
+    if (fileActionTarget('e')) rows.push(['e', t('Edit file', 'Редактировать файл')]);
 
     if (document.querySelector('.page-content.repository.issue-list')) {
       rows.push(['⌘/ Ctrl+/', t('Focus issue/PR search', 'Фокус на поиске issues/PR')]);
-      if (document.querySelector('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]')) rows.push(['c', t('Create issue', 'Создать issue')]);
+      if (firstUsable('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]')) rows.push(['c', t('Create issue', 'Создать issue')]);
       for (const [key, selector, label] of [
         ['u', '.list-header-author.dropdown', t('Filter by author', 'Фильтр по автору')],
         ['l', '.label-filter.dropdown', t('Filter labels', 'Фильтр labels')],
         ['m', '.list-header-milestone.dropdown', t('Filter milestones', 'Фильтр milestones')],
         ['a', '.list-header-assignee.dropdown', t('Filter assignee', 'Фильтр assignee')],
       ]) {
-        if (document.querySelector(selector)) rows.push([key, label]);
+        if (firstUsable(selector)) rows.push([key, label]);
       }
     }
 
@@ -337,7 +368,7 @@ function boot() {
         ['l', '.select-label.dropdown', 'Labels'],
         ['a', '.select-assignees-modify.dropdown', 'Assignee'],
       ]) {
-        if (document.querySelector(selector)) rows.push([key, label]);
+        if (firstUsable(selector)) rows.push([key, label]);
       }
     }
 
@@ -439,10 +470,54 @@ function boot() {
     requestAnimationFrame(enhance);
   }
 
+  function clearSequence() {
+    sequence = '';
+    clearTimeout(sequenceTimer);
+  }
+  document.addEventListener('compositionstart', clearSequence);
+  document.addEventListener('focusin', (event) => {
+    if (isEditable(event.target) || event.target.closest('dialog, [role="dialog"]')) clearSequence();
+  });
+  window.addEventListener('hashchange', clearSequence);
+  window.addEventListener('popstate', clearSequence);
+  document.addEventListener('htmx:beforeSwap', clearSequence);
+
+  document.addEventListener('keydown', (event) => {
+    if (!enabled() || event.defaultPrevented || event.key !== 'Escape' || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+    clearSequence();
+    if (hasVisibleModal()) return;
+    const dropdown = event.target.closest?.('.js-branch-tag-selector .dropdown, .list-header-author.dropdown, .label-filter.dropdown, .list-header-milestone.dropdown, .list-header-assignee.dropdown, .select-reviewers-modify.dropdown, .select-milestone.dropdown, .select-label.dropdown, .select-assignees-modify.dropdown');
+    const menu = dropdown && firstUsable('.menu.visible', dropdown);
+    if (!menu) return;
+    nativeEscapes.set(event, dropdown);
+    const trigger = dropdown.querySelector('.branch-dropdown-button') ?? dropdown;
+    requestAnimationFrame(() => {
+      if (!enabled() || hasVisibleModal() || !usable(trigger) || firstUsable('.menu.visible', dropdown)) return;
+      // Native Escape can cancel the key while losing focus; preserve any usable native focus choice.
+      const active = document.activeElement;
+      if (active !== document.body && (!dropdown.contains(active) || (usable(active) && !menu.contains(active)))) return;
+      trigger.focus({preventScroll: true});
+      // Native focus can reopen the menu and refocus its search field; finish that dismissal.
+      if (trigger === dropdown && firstUsable('.menu.visible', dropdown)) {
+        if (document.activeElement !== trigger) trigger.focus({preventScroll: true});
+        trigger.click();
+      }
+    });
+  }, true);
+
   document.addEventListener('keydown', (event) => {
     if (!enabled()) return;
 
     if (event.key === 'Escape') {
+      clearSequence();
+      if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (hasVisibleModal()) return;
+      const dropdown = nativeEscapes.get(event);
+      if (dropdown) {
+        if (!dropdown.querySelector('.branch-dropdown-button') && firstUsable('.menu.visible', dropdown)) dropdown.click();
+        event.preventDefault();
+        return;
+      }
       if (document.querySelector('.full.height > .action-view-right')) {
         if (actionMenuItem('localeShowFullScreen')) event.preventDefault();
         return;
@@ -453,11 +528,13 @@ function boot() {
 
     // All non-Escape shortcuts respect already-handled events, IME composition,
     // key repeat, editables, visible modal state, and the user's opt-out.
-    if (event.defaultPrevented || event.isComposing || event.repeat || isEditable(event.target)) return;
-    if ([...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(visible)) return;
+    if (event.defaultPrevented || event.isComposing || event.repeat || isEditable(event.target)) { clearSequence(); return; }
+    if (hasVisibleModal()) { clearSequence(); return; }
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) clearSequence();
 
     const key = event.key.toLowerCase();
-    if (key === '?') {
+    if (key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      clearSequence();
       event.preventDefault();
       help();
       return;
@@ -523,11 +600,10 @@ function boot() {
     }
 
     if (key === 'w') {
-      const buttons = [...document.querySelectorAll('.js-branch-tag-selector .branch-dropdown-button')].filter(usable);
-      const focused = buttons.find((button) => button.closest('.js-branch-tag-selector')?.matches(':focus-within'));
-      const button = focused ?? (buttons.length === 1 ? buttons[0] : null);
+      const button = branchTarget();
       if (button) {
         event.preventDefault();
+        button.focus({preventScroll: true});
         button.click();
       }
       return;
@@ -542,14 +618,7 @@ function boot() {
       return;
     }
 
-    const selectors = new Map([
-      ['t', '.repository .repo-button-row a[href*="/find/"]'],
-      ['b', '.non-diff-file-content a[href*="/blame/"], a.view_git_blame[href]'],
-      ['e', '.non-diff-file-content a[href*="/_edit/"], a[href*="/_edit/"]'],
-    ]);
-    const selector = selectors.get(key);
-    if(selector){const target=document.querySelector(selector),menu=target?.closest('.hgh-repo-more');if(menu&&usable(menu.querySelector('summary')))menu.open=true;}
-    if (selector && navigate(firstUsable(selector))) event.preventDefault();
+    if (navigate(fileActionTarget(key, true))) event.preventDefault();
   });
 
   document.addEventListener('click', (event) => {

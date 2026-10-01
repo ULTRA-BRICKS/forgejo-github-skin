@@ -1,6 +1,6 @@
 {
   "name": "@ultrabricks/forgejo-github-skin",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "type": "module",
   "description": "Opt-in, GitHub-familiar Forgejo skin with measured design references",
@@ -8,7 +8,7 @@
     "tokens": "node scripts/extract-tokens.mjs",
     "build": "node scripts/build.mjs",
     "test": "npm run check:generated && npm run check:code-example-fingerprint && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p '*_test.py'",
-    "test:browser": "node scripts/browser-tests.mjs",
+    "test:browser": "node scripts/browser-tests.mjs && node --test tests/browser/keyboard-parity.test.mjs",
     "capture": "node scripts/capture-github.mjs",
     "storybook": "node scripts/sharing/build-code-example.mjs && storybook dev -p 6006 --no-open",
     "storybook:build": "node scripts/sharing/build-code-example.mjs && storybook build -o storybook-static",
