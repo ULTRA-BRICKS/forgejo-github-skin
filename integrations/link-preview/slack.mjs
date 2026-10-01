@@ -210,10 +210,14 @@ export class SlackIntegration {
   async presentDetails(envelope) {
     const event=envelope.event;
     if(envelope.team_id!==this.config.slack.teamId||envelope.api_app_id!==this.config.slack.appId||event.type!=='entity_details_requested'||!/^U[A-Z0-9]+$/.test(event.user||''))return;
-    const raw=event.entity_url||event.link?.url,link=this.forgejo.parse(raw);
+    const entityLink=this.forgejo.parse(event.entity_url||event.link?.url);
+    const raw=event.app_unfurl_url??event.entity_url??event.link?.url,link=this.forgejo.parse(raw);
     const reply=payload=>this.call('entity.presentDetails',{trigger_id:event.trigger_id,...payload});
-    if(!link)return reply({error:{status:'not_found'}});
+    // Slack separates the canonical entity URL from the posted URL carrying file lines.
+    // Bind both to the same resource before using that range or checking its identity.
+    if(!link||!entityLink||link.kind!==entityLink.kind||link.resourceUrl!==entityLink.resourceUrl)return reply({error:{status:'not_found'}});
     const expected=externalReference(link);
+    if(link.kind==='file'&&(event.external_ref?.id!==expected.id||event.external_ref?.type!==expected.type))return reply({error:{status:'not_found'}});
     if((event.external_ref?.id&&event.external_ref.id!==expected.id)||(event.external_ref?.type&&event.external_ref.type!==expected.type))return reply({error:{status:'not_found'}});
     try {
       // Public-only reader never grants private access. Private details are fetched with THIS viewer's token.

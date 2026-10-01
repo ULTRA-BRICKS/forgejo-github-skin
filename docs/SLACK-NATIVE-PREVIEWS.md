@@ -17,9 +17,17 @@ The integration publishes Slack Work Objects for repository, pull request, issue
 
 Every destination is built from the validated configured origin and resource. File ranges remain distinct external identities. Actions with URLs open directly. Settings are the only modal on new cards; previous personal-preview buttons remain readable for existing messages.
 
+Slack detail events distinguish `entity_url` (the canonical resource) from
+`app_unfurl_url` (the exact posted link). Refresh uses the posted link only after
+both URLs parse to the same resource and kind, then checks the external identity.
+This preserves immutable file line ranges without accepting a different file,
+repository, or source. Files require a complete matching external identity. Missing
+`app_unfurl_url` uses the entity URL; a missing or mismatched file-range identity
+fails closed rather than silently showing another excerpt.
+
 ## Information density and images
 
-Compact is the default: a short description and up to four useful fields. Detailed mode adds source fields such as reviewers/branches/author where available. PR change counts and checks are native fields, not duplicate images. Code is native text; the Block Kit representation uses a preformatted block.
+Compact is the default: a short description and up to four useful fields. Detailed mode adds source fields such as reviewers/branches/author where available. PR change counts and checks are native fields, not duplicate images. Public File Work Objects may include a syntax-highlighted code-only image; text-only mode and Block Kit retain a native code excerpt. Private code is available only in a viewer-scoped personal window after a fresh source read with that person's linked identity, never through a public image URL.
 
 A repository activity time series may add a supplemental image. Image locators retain only a source URL for up to 30 days, and every fetch rechecks current public visibility before the bytes-only cache. Protected code and private descriptions are never included in that image path. Ordinary Open Graph pages retain full PNG rendering for other messengers; missing/protected data produces no placeholder PNG.
 
@@ -80,19 +88,25 @@ objects present, (b) `preview.title.text` is the compact reference, (c) a posted
 event never has an `unfurls` key, and (d) the real form serializer (`SlackIntegration.call`)
 JSON-encodes both `metadata` and `unfurls` correctly in the same `application/x-www-form-urlencoded` body.
 
-**Still not verified — requires a real Slack workspace, which this repo has no path to:**
-whether Slack's composer UI actually renders the resulting chip as expected once both
-parameters are present in one call. This fix supplies exactly the documented mechanism
-(the `preview` field, on the correct event, in the correct parameter shape) rather than
-guessing at undocumented behavior, but Slack's own rendering has not been observed live.
-Recommended before relying on it in production: paste a `git.hyperide.ai` link into the
-composer from a `format: "native"` account and confirm the compact title/icon chip appears
-in place of the generic link preview.
+**Real-client acceptance remains separate.** The documented composer preview is
+an unfurl preview, not permission to rewrite the author's message text. Neither
+`preview.title` nor Work Object metadata guarantees that a raw URL becomes an
+inline titled mention in the editor. A Work Object mention is a separate
+app-authored rich-text element requiring a Slack-issued entity ID; sending a bot
+message containing `<url|title>` does not test raw-paste behavior.
+
+In the authorized QA channel, paste a raw URL from a native-format account and
+record the editor, composer preview, sent message, and refreshed Work Object
+separately. Check both an issue/PR and a file line range. Preserve the two
+`link_shared` event sources and the detail event's canonical/posted URL pair in
+sanitized evidence. An API `ok` response, intercepted local payload, or Storybook
+screenshot is not proof of Slack's resulting UI.
 
 ## Official platform contracts
 
 - [Work Objects implementation](https://docs.slack.dev/messaging/work-objects-implementation/): entity types, fields, actions, refresh, and access boundaries.
 - [chat.unfurl](https://docs.slack.dev/reference/methods/chat.unfurl/): metadata form encoding, composer vs posted messages, and preview title/icon.
 - [entity.presentDetails](https://docs.slack.dev/reference/methods/entity.presentDetails/): refresh, authentication, and structured error responses.
+- [entity_details_requested](https://docs.slack.dev/reference/events/entity_details_requested/): canonical entity URL, original posted URL, and external identity in detail events.
 - [Work Object mention](https://docs.slack.dev/reference/block-kit/block-elements/work-object-mention-element/): compact references in app-authored rich text require a Slack-issued entity ID.
 - [Block Kit overflow](https://docs.slack.dev/reference/block-kit/block-elements/overflow-menu-element/): URL actions and interaction acknowledgement.
