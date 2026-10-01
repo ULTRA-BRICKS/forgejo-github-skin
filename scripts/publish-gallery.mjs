@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import {deployPrebuilt,readLinkedProject,hasUncommittedSource} from "./vercel-deploy.mjs";
 import {
   renderCodeExample,
   closeRenderer,
@@ -8,23 +9,16 @@ import {
 } from "./sharing/code-example-fingerprint.mjs";
 const root = path.resolve(import.meta.dirname, ".."),
   output = path.join(root, ".vercel/output");
-const project = JSON.parse(
-  await fs.readFile(path.join(root, ".vercel/project.json"), "utf8"),
-);
-if (project.projectName !== "forgejo-ui")
-  throw new Error("Only the existing Forgejo UI gallery may be updated");
+const project = readLinkedProject(root);
 // Checked BEFORE the build below (which regenerates assets/slack-examples/code.png and
 // therefore mutates the tree): otherwise this guard would spuriously fire whenever the
 // freshly-rendered PNG bytes differ from what's committed for a purely environmental
 // reason (see the cross-OS caveat in code-example-fingerprint.mjs), rejecting an
 // otherwise-clean publish for a reason unrelated to uncommitted work.
-if (
-  execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], {
-    cwd: root,
-    encoding: "utf8",
-  }).trim()
-)
+if (hasUncommittedSource(root))
   throw new Error("Publish committed sources and evidence only");
+const sourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {cwd: root, encoding: "utf8"}).trim();
+const sourceTree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], {cwd: root, encoding: "utf8"}).trim();
 try {
   // Always rebuilds storybook-static from the current working tree (which regenerates
   // assets/slack-examples/code.png first, see the `storybook:build` script) instead of
@@ -130,19 +124,11 @@ await fs.copyFile(
   path.join(root, "research/preview-renderer-parity.json"),
   path.join(output, "static/preview-v2/pixel-proof.json"),
 );
+await fs.writeFile(path.join(output, "static/publication.json"), JSON.stringify({
+  sourceCommit, sourceTree, projectId: project.projectId, orgId: project.orgId,
+  kind: "Static Storybook and curated evidence; not live native Forgejo acceptance",
+}, null, 2) + "\n");
 console.log(
   "Staged reviewed Storybook and tracked PNG evidence; no credentials, source tree, maps or font binaries.",
 );
-if (process.argv.includes("--deploy"))
-  execFileSync(
-    "vercel",
-    [
-      "deploy",
-      "--prebuilt",
-      "--prod",
-      "--yes",
-      "--scope",
-      "inventorems-projects",
-    ],
-    { cwd: root, stdio: "inherit" },
-  );
+if (process.argv.includes("--deploy")) deployPrebuilt(root);

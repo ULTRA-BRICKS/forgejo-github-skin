@@ -2,13 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {deployPrebuilt,readLinkedProject,hasUncommittedSource} from '../vercel-deploy.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const gallery=path.resolve(process.argv[2]||path.join(root,'../forgejo-github-skin-demo'));
-const project=JSON.parse(await fs.readFile(path.join(gallery,'.vercel/project.json'),'utf8'));
-if(project.projectName!=='forgejo-ui')throw new Error('Only the existing Forgejo UI gallery may be updated');
+readLinkedProject(gallery);
 const output=path.join(gallery,'.vercel/output/static');
 if(!(await fs.stat(output)).isDirectory())throw new Error('Build the existing static gallery first');
-if(execFileSync('git',['status','--porcelain','--untracked-files=no'],{cwd:root,encoding:'utf8'}).trim())throw new Error('Publish only committed evidence');
+if(hasUncommittedSource(root))throw new Error('Publish only committed evidence');
 const names=['slack-public-preview.png','slack-protected-preview.png','authorized-private-card.png','authorized-private-view.png','public-social.png','protected-social.png','walkthrough-desktop.png','walkthrough-mobile.png'];
 execFileSync('git',['ls-files','--error-unmatch','--',...names.map(name=>'research/screenshots/sharing/'+name)],{cwd:root,stdio:'pipe'});
 const destination=path.join(output,'sharing-evidence');
@@ -25,4 +25,4 @@ for(const name of names){
 }
 await fs.writeFile(path.join(destination,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 console.log('Staged '+names.length+' explicit synthetic PNGs into the existing reviewed static gallery; no sidecar config or source tree copied');
-if(process.argv.includes('--deploy'))execFileSync('vercel',['deploy','--prebuilt','--prod','--yes','--scope','inventorems-projects'],{cwd:gallery,stdio:'inherit'});
+if(process.argv.includes('--deploy'))deployPrebuilt(gallery);

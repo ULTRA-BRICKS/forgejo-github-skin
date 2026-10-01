@@ -31,6 +31,35 @@ Build Storybook with `npm run storybook:build`. `npm run storybook:screenshots` 
 
 The checked-in screenshots are evidence, not a claim of pixel-perfect completion. Raw diff includes unavoidable changing content, glyph and icon differences. See `research/pixel-diff/report.json` and `DESIGN.md` for scope.
 
+### Reproducible gallery publication
+
+Use a clean checkout of the full reviewed release commit, install dependencies with `npm ci`,
+then run `node scripts/publish-gallery.mjs` to rebuild and stage without deploying.
+The checkout must contain `.vercel/project.json` linked to `forgejo-ui`,
+project `prj_hxsrijXn3RG2SQt7AhAuyMASFvuW`, team `team_lKA0l5FGJudwmRlkdeF1h4VD`.
+The publisher refuses another link or uncommitted/untracked source inputs, including
+Git-ignored files. Only root dependencies, Vercel staging, rebuilt Storybook output and
+the scripts' Python bytecode caches are excluded. Use a clean checkout rather than a
+working folder with ignored local files; ordinary `git status` can hide those inputs.
+The staged `.vercel/output/static/publication.json` records the source commit/tree and
+linked project/team. Its scope is static Storybook and curated evidence, not native acceptance.
+
+Only the release owner publishes the combined reviewed revision:
+`node scripts/publish-gallery.mjs --deploy`.
+The default uses the linked project without forcing a team slug.
+An intentional `VERCEL_SCOPE=inventorems-projects` (or the linked team ID) is supported;
+conflicting scope, `VERCEL_PROJECT_ID` or `VERCEL_ORG_ID` overrides fail before deployment.
+CLI failures propagate without retrying against another account or project. No credential
+or global CLI configuration is changed. Evidence-only publication uses the same boundary:
+`node scripts/sharing/publish-evidence.mjs /absolute/linked-gallery-worktree --deploy`.
+
+The always-on native demo remains separate work: migrate only the synthetic demo using
+the installation guide, prove restart/reboot recovery, TLS, backups and native-theme rollback,
+then move demo-only DNS and retire the Mac instance only after migration approval.
+Neither the public Vercel gallery nor native production at `git.hyperide.ai` proves that
+the synthetic demo has moved to an always-on host.
+
+
 ## Current visual baseline
 
 Desktop reconstruction:
