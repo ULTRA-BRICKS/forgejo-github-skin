@@ -43,7 +43,8 @@ test('AST, file and backend error states explain themselves',async({page})=>{
   await expect(page.getByRole('status')).toContainText('FILE');
   await story(page,'search-universal-search--error');
   await expect(page.getByRole('status')).toContainText('temporarily unavailable');
-  await expect(page.locator('.code-search')).toBeVisible();
+  await expect(page.locator('.code-search')).toBeHidden();
+  await expect(page.locator('html')).toHaveAttribute('data-hgh-search-mounted','true');
 });
 
 test('dark search retains readable surface and pixel regression',async({page})=>{
@@ -83,12 +84,14 @@ test('malicious result URLs, lines and owner labels never become DOM or navigati
 });
 
 
-test('401 keeps native search fallback visible',async({page})=>{
+test('401 keeps universal header search as the sole visible search entry point',async({page})=>{
   await story(page,'search-universal-search--auth-required');
   const dialog=page.locator('#hgh-universal-search');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('status')).toContainText('Sign in');
-  await expect(page.locator('.code-search')).toBeVisible();
+  await expect(page.locator('.code-search')).toBeHidden();
+  await expect(page.locator('html')).toHaveAttribute('data-hgh-search-mounted','true');
+  expect(await page.locator('html').getAttribute('data-hgh-search-ready')).toBeNull();
 });
 
 test('Russian UI is localized and restore returns the original native label',async({page})=>{
@@ -99,8 +102,10 @@ test('Russian UI is localized and restore returns the original native label',asy
   await story(page,'search-universal-search--restored-russian');
   await expect(page.locator('#hgh-universal-search')).toHaveCount(0);
   await expect(page.locator('.hgh-native-search')).toHaveAttribute('aria-label','Поиск репозиториев');
+  await expect(page.locator('.code-search')).toBeVisible();
   await page.waitForTimeout(50);
   expect(await page.locator('html').getAttribute('data-hgh-search-ready')).toBeNull();
+  expect(await page.locator('html').getAttribute('data-hgh-search-mounted')).toBeNull();
 });
 
 test('arrow keys wrap and scope click issues a scoped re-search',async({page})=>{
