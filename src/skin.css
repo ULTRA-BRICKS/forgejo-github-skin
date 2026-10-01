@@ -20,7 +20,7 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
   background: var(--hgh-color-canvas);
 }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(button,input,select,textarea) { font-family: inherit; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(a,button,input,textarea,select,summary):focus-visible {
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(a,button,input,textarea,select,summary,.ui.dropdown[tabindex]):focus-visible {
   outline: var(--hgh-control-focusWidth) solid var(--hgh-color-focus);
   outline-offset: 2px;
 }

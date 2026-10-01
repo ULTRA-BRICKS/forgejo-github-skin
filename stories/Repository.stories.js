@@ -20,7 +20,7 @@ function repository({privateRepo=false,signedIn=true,folder=false,longName=false
   root.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>announce(b.dataset.toggle+' settings preview'));
   return root;
 }
-export default {title:'Screens/Repository',render:()=>repository()};
+export default {id:'screens-repository',title:'Reference reconstructions/Repository',parameters:{docs:{description:{component:'Synthetic repository reconstruction with shared production disclosure behavior and repository-ui.css. This is not native Forgejo DOM, authentication or server mutation proof.'}}},render:()=>repository()};
 export const Desktop={};
 export const Mobile={};
 export const Private={render:()=>repository({privateRepo:true})};
