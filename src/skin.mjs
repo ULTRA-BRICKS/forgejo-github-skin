@@ -68,8 +68,8 @@ function boot() {
     if(link.href!==href)link.href=href;
   }
 
-  const visible = (element) => !!element && element.getClientRects().length > 0 && !element.closest('[hidden]');
-  const usable = (element) => visible(element) && !element.matches('[disabled],[aria-disabled="true"],.disabled');
+  const visible = (element) => !!element && element.getClientRects().length > 0 && !element.closest('[hidden],[inert]') && getComputedStyle(element).visibility === 'visible';
+  const usable = (element) => visible(element) && !element.matches(':disabled,[disabled],[aria-disabled="true"],.disabled') && !element.closest('[aria-disabled="true"],fieldset[disabled]');
 
   function navigateHref(href) {
     const safe = safeHref(href, location.href);
@@ -209,13 +209,7 @@ function boot() {
   }
 
   function createIssue() {
-    const direct = firstUsable('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]');
-    if (direct) return navigate(direct);
-    const issues = repositoryNav('issues');
-    if (!issues?.href) return false;
-    const url = new URL(issues.href);
-    url.pathname = url.pathname.replace(/\/issues\/?$/, '/issues/new');
-    return navigateHref(url.href);
+    return navigate(firstUsable('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]'));
   }
 
   function openFocusedIssue() {
@@ -307,26 +301,27 @@ function boot() {
       ['g n', 'notifications', t('Notifications', 'Уведомления')],
       ['g f', 'workflowFile', t('Workflow file', 'Файл workflow')],
     ]) {
-      if (repositoryNav(action)) rows.push([keys, label]);
+      const target = repositoryNav(action);
+      if (typeof target === 'string' ? safeHref(target, location.href) : usable(target)) rows.push([keys, label]);
     }
 
-    if (document.querySelector('.repository .repo-button-row a[href*="/find/"]')) rows.push(['t', t('Go to file', 'Перейти к файлу')]);
-    if (document.querySelector('.js-branch-tag-selector .branch-dropdown-button')) rows.push(['w', t('Switch branch/tag', 'Переключить ветку/тег')]);
-    if (document.querySelector('[data-line-number]')) rows.push(['l', t('Go to line', 'Перейти к строке')]);
-    if (document.querySelector('a.ui.mini.basic.button[href*="/src/commit/"]')) rows.push(['y', t('Permalink', 'Постоянная ссылка')]);
-    if (document.querySelector('.non-diff-file-content a[href*="/blame/"], a[href*="/blame/"]')) rows.push(['b', 'Blame']);
-    if (document.querySelector('.non-diff-file-content a[href*="/_edit/"], a[href*="/_edit/"]')) rows.push(['e', t('Edit file', 'Редактировать файл')]);
+    if (firstUsable('.repository .repo-button-row a[href*="/find/"]')) rows.push(['t', t('Go to file', 'Перейти к файлу')]);
+    if ([...document.querySelectorAll('.js-branch-tag-selector .branch-dropdown-button')].filter(usable).length === 1) rows.push(['w', t('Switch branch/tag', 'Переключить ветку/тег')]);
+    if (firstUsable('[data-line-number]')) rows.push(['l', t('Go to line', 'Перейти к строке')]);
+    if (firstUsable('a.ui.mini.basic.button[href*="/src/commit/"]')) rows.push(['y', t('Permalink', 'Постоянная ссылка')]);
+    if (firstUsable('.non-diff-file-content a[href*="/blame/"], a.view_git_blame[href]')) rows.push(['b', 'Blame']);
+    if (firstUsable('.non-diff-file-content a[href*="/_edit/"], a[href*="/_edit/"]')) rows.push(['e', t('Edit file', 'Редактировать файл')]);
 
     if (document.querySelector('.page-content.repository.issue-list')) {
       rows.push(['⌘/ Ctrl+/', t('Focus issue/PR search', 'Фокус на поиске issues/PR')]);
-      if (document.querySelector('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]')) rows.push(['c', t('Create issue', 'Создать issue')]);
+      if (firstUsable('.page-content.repository.issue-list .issue-list-new:not(.new-pr-button)[href]')) rows.push(['c', t('Create issue', 'Создать issue')]);
       for (const [key, selector, label] of [
         ['u', '.list-header-author.dropdown', t('Filter by author', 'Фильтр по автору')],
         ['l', '.label-filter.dropdown', t('Filter labels', 'Фильтр labels')],
         ['m', '.list-header-milestone.dropdown', t('Filter milestones', 'Фильтр milestones')],
         ['a', '.list-header-assignee.dropdown', t('Filter assignee', 'Фильтр assignee')],
       ]) {
-        if (document.querySelector(selector)) rows.push([key, label]);
+        if (firstUsable(selector)) rows.push([key, label]);
       }
     }
 
@@ -337,7 +332,7 @@ function boot() {
         ['l', '.select-label.dropdown', 'Labels'],
         ['a', '.select-assignees-modify.dropdown', 'Assignee'],
       ]) {
-        if (document.querySelector(selector)) rows.push([key, label]);
+        if (firstUsable(selector)) rows.push([key, label]);
       }
     }
 
@@ -439,10 +434,44 @@ function boot() {
     requestAnimationFrame(enhance);
   }
 
+  function clearSequence() {
+    sequence = '';
+    clearTimeout(sequenceTimer);
+  }
+  document.addEventListener('compositionstart', clearSequence);
+  document.addEventListener('focusin', (event) => {
+    if (isEditable(event.target) || event.target.closest('dialog, [role="dialog"]')) clearSequence();
+  });
+  window.addEventListener('hashchange', clearSequence);
+  window.addEventListener('popstate', clearSequence);
+  document.addEventListener('htmx:beforeSwap', clearSequence);
+
+  document.addEventListener('keydown', (event) => {
+    if (!enabled() || event.defaultPrevented || event.key !== 'Escape' || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+    clearSequence();
+    const dropdown = event.target.closest?.('.js-branch-tag-selector .dropdown, .list-header-author.dropdown, .label-filter.dropdown, .list-header-milestone.dropdown, .list-header-assignee.dropdown, .select-reviewers-modify.dropdown, .select-milestone.dropdown, .select-label.dropdown, .select-assignees-modify.dropdown');
+    if (!dropdown || !firstUsable('.menu.visible', dropdown)) return;
+    const trigger = dropdown.querySelector('.branch-dropdown-button') ?? dropdown;
+    if (trigger === dropdown) {
+      trigger.focus({preventScroll: true});
+      trigger.click();
+      event.preventDefault();
+      // The outer mobile disclosure also listens on document; dismiss only this inner menu.
+      event.stopImmediatePropagation();
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (enabled() && usable(trigger) && !firstUsable('.menu.visible', dropdown) && (document.activeElement === document.body || dropdown.contains(document.activeElement))) trigger.focus({preventScroll: true});
+    });
+  }, true);
+
   document.addEventListener('keydown', (event) => {
     if (!enabled()) return;
 
     if (event.key === 'Escape') {
+      clearSequence();
+      if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if ([...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(visible)) return;
       if (document.querySelector('.full.height > .action-view-right')) {
         if (actionMenuItem('localeShowFullScreen')) event.preventDefault();
         return;
@@ -453,11 +482,13 @@ function boot() {
 
     // All non-Escape shortcuts respect already-handled events, IME composition,
     // key repeat, editables, visible modal state, and the user's opt-out.
-    if (event.defaultPrevented || event.isComposing || event.repeat || isEditable(event.target)) return;
-    if ([...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(visible)) return;
+    if (event.defaultPrevented || event.isComposing || event.repeat || isEditable(event.target)) { clearSequence(); return; }
+    if ([...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(visible)) { clearSequence(); return; }
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) clearSequence();
 
     const key = event.key.toLowerCase();
-    if (key === '?') {
+    if (key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      clearSequence();
       event.preventDefault();
       help();
       return;
@@ -528,6 +559,7 @@ function boot() {
       const button = focused ?? (buttons.length === 1 ? buttons[0] : null);
       if (button) {
         event.preventDefault();
+        button.focus({preventScroll: true});
         button.click();
       }
       return;
