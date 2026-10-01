@@ -108,6 +108,15 @@ Status: living specification. Every visual or behavioral change must map to a re
 - Editor formatting and quick-submit shortcuts already supplied by Forgejo remain native and must not be shadowed by the skin.
 - GitHub commands without equivalent Forgejo semantics remain explicit gaps rather than dangerous approximations: github.dev, Discussions/Security tabs in Forgejo 16.0.3, notification Done/unsubscribe, and product-excluded Wiki/Projects.
 
+## Universal header search
+
+- Once a header search action mounts, it is the only visible code/repository search entry point on repository and organization pages. Backend readiness, HTTP 401 and service failures must not reveal duplicate native fields.
+- Desktop search belongs in the right-side navbar actions; mobile uses the compact header actions, never an extra row between navigation and page content.
+- Repository pages initially search that repository; organization root and dashboard views initially search that organization. “Everywhere” explicitly removes the contextual scope.
+- Native `.code-search`, organization profile search inputs, and dashboard repository-search inputs remain intact and usable before mount and after `restoreUniversalSearch`. Native organization and dashboard filters remain available. An active organization `q` filter has a visible reset link that clears `q` and stale `page` while preserving other filters and the current view, including hash changes after mount. A populated native dashboard search has a reset button that clears its value through the native input event.
+- `Search/Universal search` includes header, organization scope, native fallback, signed-out, backend-error and restoration fixtures. Browser contracts exercise the production enhancer at 320/440/1280 pixels in light/dark Chromium and WebKit. Fixture checks are not deployment acceptance.
+
+
 ## 2026-09-18 delivery requirements
 
 - Retain the genuine Forgejo mark; graphite/gray palette only, no GitHub logo in candidate screens. Historical GitHub references stay unchanged.

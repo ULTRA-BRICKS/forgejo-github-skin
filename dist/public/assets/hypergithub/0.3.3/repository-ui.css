@@ -1,0 +1,95 @@
+/* Shared mobile controls: Storybook and the opt-in native skin use this exact file. */
+.hgh-reference-shell{--hgh-ui-surface:var(--hgh-color-subtle,#f6f8fa);--hgh-ui-canvas:var(--hgh-color-canvas,#fff);--hgh-ui-text:var(--hgh-color-text,#1f2328);--hgh-ui-muted:var(--hgh-color-muted,#59636e);--hgh-ui-border:var(--hgh-color-border,#d1d9e0);color:var(--hgh-ui-text);background:var(--hgh-ui-canvas);font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;min-width:0}
+.hgh-reference-shell *, .hgh-list-options *{box-sizing:border-box}
+.hgh-reference-shell svg,.hgh-control svg{display:block;flex:0 0 auto;fill:currentColor;vertical-align:middle}
+.hgh-control{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:32px;height:32px;padding:0 12px;border:1px solid var(--hgh-color-border,#d1d9e0);border-radius:6px;background:var(--hgh-color-subtle,#f6f8fa);color:var(--hgh-color-text,#1f2328);font:500 14px/20px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-decoration:none;white-space:nowrap;cursor:pointer;box-shadow:0 1px 0 rgb(31 35 40 / 4%);margin:0}
+.hgh-control:hover{background:var(--hgh-color-counter,#eaeef2)}
+.hgh-control:focus-visible,.hgh-disclosure a:focus-visible,.hgh-options-panel input:focus-visible,.hgh-options-panel select:focus-visible{outline:2px solid var(--hgh-color-link,#0969da);outline-offset:2px}
+.hgh-control:disabled{opacity:.55;cursor:not-allowed}.hgh-icon-control{width:32px;min-width:32px;padding:0;flex-shrink:0}
+.hgh-plain-control{border-color:transparent;box-shadow:none;background:transparent;color:var(--hgh-color-muted,#59636e)}
+.hgh-disclosure{position:relative;flex:0 0 auto;min-width:0}
+.hgh-disclosure>summary{list-style:none}.hgh-disclosure>summary::-webkit-details-marker{display:none}
+.hgh-options-panel{position:absolute;right:0;top:calc(100% + 8px);width:min(304px,calc(100vw - 32px));padding:12px;z-index:40;background:var(--hgh-color-canvas,#fff);color:var(--hgh-color-text,#1f2328);border:1px solid var(--hgh-color-border,#d1d9e0);border-radius:12px;box-shadow:0 8px 24px rgb(31 35 40 / 16%);max-height:min(560px,calc(100dvh - 160px));overflow-y:auto;text-align:left;white-space:normal}
+.hgh-disclosure:not([open])>.hgh-options-panel{display:none}
+.hgh-options-panel>a,.hgh-option{display:flex;align-items:center;gap:10px;padding:8px;border:0;border-radius:6px;width:100%;background:transparent;color:inherit;text-align:left;text-decoration:none;cursor:pointer;font:inherit;min-height:36px}
+.hgh-options-panel>a:hover,.hgh-option:hover{background:var(--hgh-color-subtle,#f6f8fa)}
+.hgh-options-panel hr{margin:10px -12px;border:0;border-top:1px solid var(--hgh-color-border,#d1d9e0)}
+.hgh-field{display:flex;flex-direction:column;gap:4px;margin:10px 0;font-size:13px;font-weight:600}
+.hgh-field :is(input,select){width:100%;min-width:0;height:36px;padding:6px 10px;border:1px solid var(--hgh-color-border,#d1d9e0);border-radius:6px;background:var(--hgh-color-canvas,#fff);color:inherit;font:400 14px/20px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
+.hgh-check{display:flex;gap:10px;align-items:center;min-height:36px}.hgh-options-panel fieldset{margin:12px 0;border:0;padding:0}.hgh-options-panel legend{font-size:13px;font-weight:600;margin-bottom:4px}
+.hgh-options-panel .hgh-radio{display:flex;align-items:center;gap:8px;min-height:32px}
+.hgh-app-header{height:64px;padding:16px;display:flex;align-items:center;gap:12px;background:var(--hgh-ui-surface);position:relative}
+.hgh-global-nav>.hgh-options-panel{left:0;right:auto}
+.hgh-site-mark{display:flex;color:#59636e;flex:0 0 32px;width:32px;height:32px;align-items:center;justify-content:center}
+.hgh-site-mark>svg{width:32px;height:32px}.hgh-context{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 0;border:0;background:transparent;font:600 14px/20px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:inherit;cursor:pointer}
+.hgh-context>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:40vw}
+.hgh-app-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.hgh-avatar{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--hgh-ui-border);border-radius:50%;background:#e6edf3;color:#59636e;font-size:12px;font-weight:600;cursor:pointer;flex:0 0 auto;list-style:none}
+.hgh-avatar::-webkit-details-marker{display:none}
+.hgh-header-search{position:absolute;z-index:50;right:16px;left:16px;top:58px;border:1px solid var(--hgh-ui-border);border-radius:8px;background:var(--hgh-ui-canvas);padding:12px;box-shadow:0 8px 24px #1f232826}
+.hgh-header-search[hidden]{display:none}.hgh-header-search label{display:block}.hgh-header-search input{width:100%;height:36px;margin:8px 0}
+.hgh-repo-nav{height:36px;display:flex;align-items:stretch;gap:12px;padding:0 16px;background:var(--hgh-ui-surface);border-bottom:1px solid var(--hgh-ui-border);min-width:0;position:relative}
+.hgh-repo-nav>a{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;padding:0 8px 8px;color:inherit;border-bottom:2px solid transparent;text-decoration:none;font-size:14px;min-width:0}
+.hgh-repo-nav>a[aria-current=page]{font-weight:600;border-bottom-color:#fd8c73}
+.hgh-more-nav{margin-left:auto}.hgh-more-nav>summary{border:0;box-shadow:none;background:transparent;padding:0 8px 8px;height:34px;font-weight:400}
+.hgh-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--hgh-color-counter,#eaeef2);font-size:12px;line-height:20px;font-weight:600}
+.hgh-visibility-badge{display:inline-flex;border:1px solid var(--hgh-ui-border);border-radius:999px;padding:0 7px;font-size:12px;font-weight:500;line-height:20px;white-space:nowrap;color:var(--hgh-ui-muted);vertical-align:middle}
+.hgh-page{max-width:1280px;margin:0 auto;padding:16px;min-width:0}
+.hgh-reference-shell.hgh-center-content .hgh-page{max-width:1000px}
+.hgh-desktop-title{font-size:20px;margin:0 0 16px;font-weight:600}.hgh-repo-about{padding-bottom:16px;margin-bottom:24px;border-bottom:1px solid var(--hgh-ui-border)}
+.hgh-repo-actions{display:flex;align-items:center;gap:8px;margin-bottom:16px}.hgh-description{font-size:16px;color:var(--hgh-ui-muted);margin:0 0 16px}
+.hgh-repo-facts{display:flex;flex-wrap:wrap;gap:12px 16px;color:var(--hgh-ui-muted)}
+.hgh-repo-facts>span:first-child{flex-basis:100%}
+.hgh-repo-facts>span,.hgh-repo-facts>a{display:inline-flex;align-items:center;gap:6px;color:inherit;white-space:nowrap}
+.hgh-visibility-line{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--hgh-ui-muted);font-size:14px}
+.hgh-repo-toolbar{display:flex;align-items:center;gap:8px;margin:0 0 16px;min-width:0}.hgh-toolbar-spacer{flex:1}
+.hgh-branch{min-width:0;max-width:min(calc(100% - 148px),320px)}.hgh-branch>summary{min-width:104px;max-width:100%;color:var(--hgh-ui-text)}.hgh-branch>summary>span{overflow:hidden;text-overflow:ellipsis}
+.hgh-branch>.hgh-options-panel{left:0;right:auto}.hgh-clone-control>summary{min-width:92px;color:#fff;background:var(--hgh-color-primary,#1f883d);border-color:#1f232826}
+.hgh-clone-control>summary:hover{background:var(--hgh-color-primaryHover,#1a7f37)}
+.hgh-file-table{border:1px solid var(--hgh-ui-border);border-radius:6px;overflow:hidden}
+.hgh-latest-commit{display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:52px;background:var(--hgh-ui-surface);border-bottom:1px solid var(--hgh-ui-border);font-size:14px}
+.hgh-small-avatar{width:24px;height:24px;font-size:10px}.hgh-commit-author{font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}.hgh-collaborator{font-weight:400}.hgh-commit-age{color:var(--hgh-ui-muted);margin-left:auto;white-space:nowrap}.hgh-commit-message{padding:12px;margin:0;border-bottom:1px solid var(--hgh-ui-border)}
+.hgh-file-table table{border-collapse:collapse;width:100%;table-layout:fixed}.hgh-file-table td{padding:10px 16px;line-height:20px;border-top:1px solid var(--hgh-ui-border);height:41px}
+.hgh-file-table tr:first-child td{border-top:0}.hgh-file-table td:last-child{text-align:right;width:36%;white-space:nowrap;color:var(--hgh-ui-muted)}
+.hgh-file-table th{background:var(--hgh-ui-surface);color:var(--hgh-ui-muted);text-align:left;padding:10px 16px;font-weight:600;border-bottom:1px solid var(--hgh-ui-border)}.hgh-file-table th:last-child{text-align:right;width:42%}
+.hgh-file-name{display:flex;gap:12px;align-items:center;min-width:0;color:inherit;text-decoration:none}.hgh-file-name>svg{color:#54aeff}.hgh-file-name>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hgh-table-footer{display:block;padding:8px;text-align:center;border-top:1px solid var(--hgh-ui-border);color:var(--hgh-color-link,#0969da)}
+.hgh-path{display:flex;align-items:center;gap:12px;font-size:16px;margin:0 0 16px}.hgh-back{display:flex;align-items:center;gap:8px;color:var(--hgh-ui-muted)}
+.hgh-live-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:767px){.hgh-desktop-title{display:none}.hgh-repo-nav>a:nth-of-type(3){display:none}.hgh-app-header{gap:12px}.hgh-repo-nav{gap:8px}.hgh-commit-author .hgh-collaborator{display:none}.hgh-repo-about{padding-bottom:18px}.hgh-latest-commit{gap:8px}.hgh-latest-commit>.hgh-plain-control{width:28px;min-width:28px}.hgh-branch>summary{min-width:104px}}
+@media(max-width:359px){.hgh-app-actions>[aria-label=Notifications]{display:none}.hgh-control{padding-inline:8px}.hgh-icon-control{padding:0}.hgh-repo-nav{gap:0}.hgh-latest-commit .hgh-commit-age{font-size:12px}}
+.hgh-sr-only{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+.hgh-list-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px}.hgh-list-heading h1{font-size:20px;font-weight:600;margin:0}
+.hgh-new-pr{background:var(--hgh-color-primary,#1f883d);color:#fff;border-color:#1f232826}.hgh-new-pr:hover{background:#1a7f37}
+.hgh-list-search{display:flex;border:1px solid var(--hgh-ui-border);border-radius:6px;height:32px;margin-bottom:24px;background:var(--hgh-ui-canvas)}
+.hgh-list-search>input{width:100%;min-width:0;border:0;background:transparent;padding:5px 12px;font:14px/20px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:inherit}.hgh-list-search>button{border-width:0 0 0 1px;border-radius:0 6px 6px 0;height:30px}
+.hgh-pr-table{border:1px solid var(--hgh-ui-border);border-radius:6px;overflow:visible;min-width:0}.hgh-list-head{display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--hgh-ui-surface);border-radius:6px 6px 0 0;position:relative}
+.hgh-list-counts{display:flex;flex-wrap:wrap;gap:8px 20px}.hgh-list-counts>button{display:flex;align-items:center;gap:8px;border:0;background:transparent;font:14px/20px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:var(--hgh-ui-muted);padding:0;cursor:pointer;white-space:nowrap}.hgh-list-counts>button[aria-pressed=true]{font-weight:600;color:var(--hgh-ui-text)}
+.hgh-list-head input[type=checkbox],.hgh-pr-row>input{width:16px;height:16px;accent-color:#0969da;margin:3px 0;flex-shrink:0}
+.hgh-pr-rows{padding:0;margin:0;list-style:none}.hgh-pr-row{padding:12px 16px;display:flex;align-items:flex-start;gap:12px;border-top:1px solid var(--hgh-ui-border);min-width:0}
+.hgh-pr-state{color:#1a7f37;padding-top:3px;flex-shrink:0}.hgh-pr-state.hgh-draft{color:var(--hgh-ui-muted)}.hgh-pr-row-main{min-width:0;flex:1}
+.hgh-pr-title{font-size:16px;line-height:1.5;font-weight:600;color:inherit;text-decoration:none;overflow-wrap:anywhere}.hgh-pr-title:hover{color:var(--hgh-color-link,#0969da)}
+.hgh-pr-meta{font-size:12px;line-height:1.5;margin-top:4px;color:var(--hgh-ui-muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.hgh-check-status{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.hgh-check-status>svg{color:#1a7f37;width:14px;height:14px}
+.hgh-pr-comments{display:inline-flex;align-items:center;gap:6px;color:var(--hgh-ui-muted);margin-top:4px;font-size:12px}
+.hgh-active-options{font-size:12px;color:var(--hgh-ui-muted);white-space:nowrap}.hgh-list-options>summary[data-active=true]::after{content:'';position:absolute;right:-2px;top:-2px;width:7px;height:7px;border:2px solid var(--hgh-ui-surface,#fff);border-radius:50%;background:#0969da;box-sizing:content-box}
+.hgh-empty-list{padding:24px;margin:0;border-top:1px solid var(--hgh-ui-border);color:var(--hgh-ui-muted)}
+.hgh-reference-shell[data-density=compact] .hgh-pr-row{padding-block:7px}.hgh-reference-shell[data-density=compact] .hgh-pr-title{font-size:14px}.hgh-reference-shell[data-density=compact] .hgh-pr-comments{display:none}
+[data-hgh-density=compact] .issue.list>.item{padding-block:6px!important}
+@media(max-width:767px){.hgh-list-counts{flex-direction:column;gap:6px}.hgh-list-head{gap:16px}.hgh-list-heading h1{font-size:20px}.hgh-pr-title{font-size:16px}.hgh-pr-row{gap:12px}.hgh-list-options .ui.dropdown{display:block;width:100%;margin:6px 0;padding:8px!important}.hgh-list-options .ui.dropdown>.menu{position:relative!important;inset:auto!important;min-width:0!important;max-width:100%;box-shadow:none!important}.hgh-list-options .hgh-options-panel{overflow-x:hidden}.issue-list-toolbar-right:has(>.hgh-list-options){min-width:32px}.issue-list-toolbar-right>.filter.menu:not(:has(>.dropdown)){display:none}}
+
+.hgh-list-options .filter.menu{display:block!important;margin:0!important}.hgh-list-options .filter.menu>.dropdown{display:block!important}
+.hgh-branch-tabs{display:flex;gap:8px;border-bottom:1px solid var(--hgh-ui-border);margin:24px 0 16px;overflow-x:auto}.hgh-branch-tabs>button{padding:12px;border:0;border-bottom:2px solid transparent;background:transparent;font:inherit;color:inherit;white-space:nowrap;cursor:pointer}.hgh-branch-tabs>button[aria-selected=true]{border-color:#fd8c73;font-weight:600}
+.hgh-branch-results{border:1px solid var(--hgh-ui-border);border-radius:6px;overflow:hidden;margin-top:20px}.hgh-branch-results table{width:100%;table-layout:fixed;border-collapse:collapse}.hgh-branch-results th{background:var(--hgh-ui-surface);color:var(--hgh-ui-muted);text-align:left;padding:12px 16px}.hgh-branch-results th:last-child{width:30%}.hgh-branch-results td{padding:12px 16px;border-top:1px solid var(--hgh-ui-border)}.hgh-branch-results td:first-child{display:flex;align-items:center;gap:8px}.hgh-branch-results code{display:inline-block;max-width:calc(100% - 40px);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#ddf4ff;border-radius:6px;padding:2px 7px;color:#0969da}.hgh-branch-results td:last-child{white-space:nowrap;color:var(--hgh-ui-muted);font-size:12px}
+.hgh-pr-detail h1{font-size:24px;line-height:1.35;font-weight:400;margin:16px 0}.hgh-muted{color:var(--hgh-ui-muted)}.hgh-pr-detail p code{display:inline-block;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;background:#ddf4ff;color:#0969da;border-radius:6px;padding:2px 6px}.hgh-state-pill{display:inline-flex;align-items:center;gap:6px;background:#1a7f37;color:white;padding:5px 12px;border-radius:999px;font-weight:600}.hgh-detail-tabs{display:flex;gap:0;overflow-x:auto;max-width:100%;margin-top:20px;border-bottom:1px solid var(--hgh-ui-border)}.hgh-detail-tabs>button{display:flex;align-items:center;gap:6px;padding:10px 12px;border:0;background:transparent;white-space:nowrap;font:inherit;color:inherit}.hgh-detail-tabs>button[aria-current=page]{border:1px solid var(--hgh-ui-border);border-bottom:0;border-radius:6px 6px 0 0}.hgh-conversation{margin-top:16px;border:1px solid #b6d7fe;border-radius:6px;overflow:hidden}.hgh-conversation>header{background:#ddf4ff;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.hgh-conversation>header>span:last-child{font-size:12px;color:var(--hgh-ui-muted)}.hgh-conversation>div{padding:16px}.hgh-conversation h2{font-size:20px;margin-top:0}
+
+/* Compact repository chrome: symbols are 16px while controls retain their 32px targets. */
+.hgh-app-header .hgh-icon-control > svg {width:16px;height:16px}
+.hgh-app-header .hgh-context > svg {width:14px;height:14px}
+.hgh-app-header .hgh-avatar {width:28px;height:28px}
+.hgh-app-header .hgh-context {flex:1;min-width:0}
+.hgh-app-header .hgh-context > span {max-width:none;min-width:0}
+.hgh-app-header .hgh-context > svg:last-child {width:12px;height:12px}
+.hgh-reference-shell .hgh-site-footer {padding:32px 16px 24px;color:var(--hgh-ui-muted);font-size:12px;text-align:center}
+.hgh-site-footer > a {display:inline-flex;align-items:center;gap:8px;color:inherit;text-decoration:none}
+.hgh-site-footer svg {width:20px;height:20px}

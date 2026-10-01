@@ -1,3 +1,6 @@
+/** Progressive header search, called by skin refresh and Storybook.
+ * Native controls stay intact; visibility follows a mounted action, never backend readiness.
+ */
 import {normalizeLine,safeHref} from './core.mjs';
 const states=new WeakMap();
 const SEARCH_ICON='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04a.75.75 0 0 1-1.06 1.06ZM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0Z"/></svg>';
@@ -15,8 +18,9 @@ function copy(doc){
     everywhere:'Везде',
     searching:'Ищу…',
     results:'результатов',
-    signIn:'Войдите, чтобы искать в доступных вам приватных репозиториях. Штатный поиск Forgejo остаётся доступен.',
-    unavailable:'Поиск временно недоступен. Ниже остаётся штатный поиск Forgejo.',
+    signIn:'Войдите, чтобы искать в доступных вам репозиториях.',
+    unavailable:'Поиск временно недоступен. Повторите попытку позже.',
+    clearFilter:'Сбросить фильтр репозиториев',
     noResults:'Ничего не найдено. Попробуйте убрать фильтры или искать имя символа/файла.',
     understands:'Поиск понимает намерение',
     files:'→ файлы',
@@ -34,8 +38,9 @@ function copy(doc){
     everywhere:'Everywhere',
     searching:'Searching…',
     results:'results',
-    signIn:'Sign in to search repositories you can access. Native Forgejo search remains available.',
-    unavailable:'Search is temporarily unavailable. Native Forgejo search is available below.',
+    signIn:'Sign in to search repositories you can access.',
+    unavailable:'Search is temporarily unavailable. Please try again later.',
+    clearFilter:'Clear repository filter',
     noResults:'No results. Try fewer scope filters or a symbol/file name.',
     understands:'Search understands intent',
     files:'→ files',
@@ -305,6 +310,40 @@ function bindMobile(state,node){
   node.title=c.search;
   node.addEventListener('click',onClick);
 }
+function syncNativeFilterReset(state,mounted){
+  const {doc}=state;
+  const field=doc.querySelector('#dashboard-repo-list .repos-search input[type="search"]');
+  if(mounted&&field?.value){
+    const reset=state.dashboardFilterReset ||= doc.createElement('button');
+    reset.type='button';
+    reset.className='ui tiny basic button hgh-native-filter-reset';
+    const label=copy(doc).clearFilter+': '+field.value;
+    if(reset.textContent!==label)reset.textContent=label;
+    reset.onclick=()=>{
+      field.value='';
+      field.dispatchEvent(new doc.defaultView.Event('input',{bubbles:true}));
+      syncNativeFilterReset(state,mounted);
+    };
+    const host=field.closest('.repos-search');
+    if(reset.nextSibling!==host)host.before(reset);
+  }else state.dashboardFilterReset?.remove();
+  const form=doc.querySelector('.page-content.organization.profile #repo-search-form');
+  const url=new URL(doc.defaultView.location.href);
+  const query=url.searchParams.get('q');
+  if(!mounted||!form||!query){
+    state.filterReset?.remove();
+    return;
+  }
+  const reset=state.filterReset ||= doc.createElement('a');
+  reset.className='hgh-native-filter-reset';
+  url.searchParams.delete('q');
+  url.searchParams.delete('page');
+  if(reset.href!==url.href)reset.href=url.href;
+  const label=copy(doc).clearFilter+': '+query;
+  if(reset.textContent!==label)reset.textContent=label;
+  const host=form.closest('.filter.menu')||form;
+  if(reset.nextSibling!==host)host.before(reset);
+}
 export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
   let state=states.get(doc);
   if(!state){
@@ -312,6 +351,20 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
     state={doc,dialog,ctx:parseSearchContext(doc),scope:'repo',query:'',hits:[],selected:-1,
       fetchImpl:fetchImpl||doc.defaultView.fetch.bind(doc.defaultView),timer:null,controller:null,lastTrigger:null,probe:null,mobileOriginals:new Map(),destroyed:false};
     states.set(doc,state);
+    state.media=doc.defaultView.matchMedia('(max-width:767px)');
+    state.placeTrigger=()=>{
+      const nav=doc.querySelector('#navbar');
+      const host=state.media.matches
+        ? nav?.querySelector('.navbar-mobile-right')||nav?.querySelector('.navbar-left')
+        : nav?.querySelector('.navbar-right');
+      if(host&&state.desktopTrigger&&state.desktopTrigger.parentNode!==host)host.prepend(state.desktopTrigger);
+      const mounted=state.desktopTrigger?.isConnected;
+      if(mounted)doc.documentElement.dataset.hghSearchMounted='true';
+      else delete doc.documentElement.dataset.hghSearchMounted;
+      syncNativeFilterReset(state,mounted);
+    };
+    state.media.addEventListener('change',state.placeTrigger);
+    doc.defaultView.addEventListener('hashchange',state.placeTrigger);
     dialog.querySelector('.hgh-search-close').onclick=()=>dialog.close();
     dialog.querySelector('form').addEventListener('submit',event=>event.preventDefault());
     dialog.addEventListener('close',()=>state.lastTrigger?.focus?.());
@@ -341,11 +394,12 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
     trigger.innerHTML=SEARCH_ICON+'<span>'+c.jump+'</span><kbd>/</kbd>';
     trigger.setAttribute('aria-label',c.search);
     trigger.onclick=()=>{state.lastTrigger=trigger;openUniversalSearch(doc);};
-    const explore=nav.querySelector('.navbar-left > a[href$="/explore/repos"]');
-    (explore?.parentNode||nav.querySelector('.navbar-left'))?.insertBefore(trigger,explore||null);
+    const host=nav.querySelector('.navbar-right');
+    host?.prepend(trigger);
     state.desktopTrigger=trigger;
   }
   for(const node of doc.querySelectorAll('.hgh-native-search'))bindMobile(state,node);
+  state.placeTrigger();
   if(!state.probe){
     state.probe=state.fetchImpl('/api/hypersearch?q=',{headers:{Accept:'application/json'}})
       .then(response=>{
@@ -361,9 +415,13 @@ export function restoreUniversalSearch(doc=document){
   const state=states.get(doc);
   if(!state)return;
   state.destroyed=true;
+  state.media.removeEventListener('change',state.placeTrigger);
+  doc.defaultView.removeEventListener('hashchange',state.placeTrigger);
   state.controller?.abort();
   clearTimeout(state.timer);
   state.desktopTrigger?.remove();
+  state.filterReset?.remove();
+  state.dashboardFilterReset?.remove();
   if(state.dialog.open)state.dialog.close();
   state.dialog.remove();
   for(const [node,original] of state.mobileOriginals){
@@ -376,5 +434,6 @@ export function restoreUniversalSearch(doc=document){
   }
   state.mobileOriginals.clear();
   delete doc.documentElement.dataset.hghSearchReady;
+  delete doc.documentElement.dataset.hghSearchMounted;
   states.delete(doc);
 }

@@ -26,21 +26,27 @@ function fakeFetch(mode='symbol'){
     return new Response(JSON.stringify(fixtures[mode]),{status:200,headers:{'Content-Type':'application/json'}});
   };
 }
-function shell(owner='ultrabricks',lang='en'){
-  const root=document.createElement('div');root.className='hgh-search-story repository';
-  root.innerHTML='<nav id="navbar"><div class="navbar-left ui menu"><a id="navbar-logo" href="/">F</a><button type="button" class="hgh-control hgh-icon-control hgh-native-search" aria-label="'+(lang==='ru'?'Поиск репозиториев':'Search repositories')+'">⌕</button><a href="/explore/repos">Explore</a></div><div class="navbar-right">A</div></nav><div class="repo-header"><div class="flex-item-title"><a href="/ultrabricks">ultrabricks</a> / <a href="/ultrabricks/forgejo-github-skin">forgejo-github-skin</a></div></div><div class="code-search">Legacy repository search is hidden when universal search is ready.</div><main><h1>Repository content</h1><p>Press / to search files, symbols, structure and text.</p></main>';
+function shell(owner='ultrabricks',lang='en',organization=false){
+  const root=document.createElement('div');root.className='hgh-search-story';
+  root.innerHTML='<style>.hgh-search-story #navbar,.hgh-search-story .navbar-left,.hgh-search-story .navbar-right,.hgh-search-story .navbar-mobile-right{display:flex;align-items:center;gap:8px}.hgh-search-story .navbar-right{margin-left:auto}.hgh-search-story .navbar-mobile-right{display:none}@media(max-width:767px){.hgh-search-story .navbar-left{width:100%}.hgh-search-story .navbar-mobile-right{display:flex;margin-left:auto}.hgh-search-story .navbar-right,.hgh-search-story .navbar-left>a[href$="/explore/repos"]{display:none}}</style><nav id="navbar"><div class="navbar-left ui menu"><a id="navbar-logo" href="/">F</a><div class="navbar-mobile-right"><button type="button" class="hgh-control hgh-icon-control hgh-native-search" aria-label="'+(lang==='ru'?'Поиск репозиториев':'Search repositories')+'">⌕</button></div><a href="/explore/repos">Explore</a></div><div class="navbar-right">A</div></nav><div class="repo-header"><div class="flex-item-title"><a href="/ultrabricks">ultrabricks</a> / <a href="/ultrabricks/forgejo-github-skin">forgejo-github-skin</a></div></div><form class="code-search"><input type="search" placeholder="Search code"></form><main><h1>Repository content</h1><p>Use the header to search files, symbols, structure and text.</p></main>';
   root.querySelector('.flex-item-title a').textContent=owner;
+  if(organization){
+    root.querySelector('.hgh-native-search').remove();
+    root.querySelector('.repo-header').outerHTML='<div class="secondary-nav"><div class="right menu"><a class="ui basic button" href="/ultrabricks">View home</a></div></div>';
+    root.querySelector('.code-search').outerHTML='<div class="page-content organization profile"><form id="repo-search-form"><input type="search" placeholder="Search repos…"></form></div>';
+    root.querySelector('h1').textContent='Organization repositories';
+  }
   return root;
 }
-function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,auth=false,owner='ultrabricks',lang='en'}={}){
+function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,auth=false,owner='ultrabricks',lang='en',organization=false,open=true,mount=true}={}){
   restoreUniversalSearch(document);
   document.documentElement.lang=lang;
   document.documentElement.dataset.theme=dark?'hypergithub-dark':'hypergithub-light';
-  const root=shell(owner,lang);
+  const root=shell(owner,lang,organization);
   queueMicrotask(()=>{
     const fetchImpl=auth?async()=>new Response('{}',{status:401}):error?async()=>new Response('{}',{status:503}):fakeFetch(mode);
-    enhanceUniversalSearch(document,{fetchImpl});
-    openUniversalSearch(document,{seed});
+    if(mount)enhanceUniversalSearch(document,{fetchImpl});
+    if(mount&&open)openUniversalSearch(document,{seed});
   });
   return root;
 }
@@ -53,6 +59,10 @@ export const FullText={render:()=>render({seed:'Forgejo',mode:'text'})};
 export const GlobalScope={render:()=>render({seed:'owner:ultrabricks restoreFocus',mode:'symbol'})};
 export const Error={render:()=>render({seed:'restoreFocus',error:true})};
 export const Dark={render:()=>render({dark:true,seed:'focusBestSearch'})};
+export const HeaderRepository={render:()=>render({open:false})};
+export const HeaderOrganization={render:()=>render({organization:true,open:false})};
+export const OrganizationScope={render:()=>render({organization:true})};
+export const NativeFallback={render:()=>render({mount:false,open:false})};
 
 export const MaliciousPayload={render:()=>render({seed:'attack',mode:'malicious',owner:'<img src=x onerror=alert(1)>'})};
 
