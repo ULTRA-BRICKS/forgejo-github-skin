@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {deployPrebuilt} from '../vercel-deploy.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const gallery=path.resolve(process.argv[2]||path.join(root,'../forgejo-github-skin-demo'));
 const project=JSON.parse(await fs.readFile(path.join(gallery,'.vercel/project.json'),'utf8'));
@@ -25,4 +26,4 @@ for(const name of names){
 }
 await fs.writeFile(path.join(destination,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 console.log('Staged '+names.length+' explicit synthetic PNGs into the existing reviewed static gallery; no sidecar config or source tree copied');
-if(process.argv.includes('--deploy'))execFileSync('vercel',['deploy','--prebuilt','--prod','--yes','--scope','inventorems-projects'],{cwd:gallery,stdio:'inherit'});
+if(process.argv.includes('--deploy'))deployPrebuilt(gallery);

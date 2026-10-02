@@ -33,7 +33,7 @@ Request: rich chat snippets and real Slack previews of Forgejo content behind lo
 - Actual Slack classic public AND protected-generic cards are verified; no authenticated app event delivery claim.
 - Awaiting the two app credentials in the local form; do not recreate apps or repeat blocked secret access.
 - Review performance/correctness spot-checks passed after indexes and safe rendered-byte cache fixes. A dedicated correctness reviewer repeatedly produced no output and timed out; future reviews should use an available alternative instead of restarting that same failing slot.
-- Publish curated synthetic proof PNGs with `node scripts/sharing/publish-evidence.mjs /absolute/gallery-worktree --deploy`; this is optional static evidence publication, not live sidecar deployment.
+- Publish curated synthetic proof PNGs with `node scripts/sharing/publish-evidence.mjs /absolute/gallery-worktree --deploy`; this is optional static evidence publication, not live sidecar deployment. The linked `.vercel/project.json` supplies the default project/team; only set `VERCEL_SCOPE=<team-slug>` when an explicit scope override is intentionally required.
 
 ## Preview v2 checkpoint
 

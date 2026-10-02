@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { deployPrebuilt } from "./vercel-deploy.mjs";
 import {
   renderCodeExample,
   closeRenderer,
@@ -133,16 +134,4 @@ await fs.copyFile(
 console.log(
   "Staged reviewed Storybook and tracked PNG evidence; no credentials, source tree, maps or font binaries.",
 );
-if (process.argv.includes("--deploy"))
-  execFileSync(
-    "vercel",
-    [
-      "deploy",
-      "--prebuilt",
-      "--prod",
-      "--yes",
-      "--scope",
-      "inventorems-projects",
-    ],
-    { cwd: root, stdio: "inherit" },
-  );
+if (process.argv.includes("--deploy")) deployPrebuilt(root);
