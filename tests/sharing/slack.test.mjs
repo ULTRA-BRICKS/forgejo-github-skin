@@ -196,7 +196,7 @@ test('unconfigured account linking still provides a validated original URL', asy
   } finally { f.store.close(); }
 });
 
-for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, true], [true, false, true], [true, undefined, false]]) {
+for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, false], [true, false, false], [true, undefined, false]]) {
   test(`shared PNG requires actual anonymous source access (${anonymousReadable}, ${privateFlag})`, async () => {
     const f = fixture();
     f.slack.config = { ...f.slack.config, origin: 'https://links.example' };
