@@ -1,6 +1,7 @@
 import {enhanceRepositoryControls, restoreRepositoryControls} from './repository-controls.mjs';
 import {enhanceNativeChrome, restoreNativeChrome} from './mobile-chrome.mjs';
 import {enhanceNativeListOptions, restoreNativeListOptions} from './list-options.mjs';
+import {enhanceUniversalSearch, restoreUniversalSearch} from './universal-search.mjs';
 /** Progressive enhancements only: existing Forgejo links/forms remain authoritative. */
 import {themeEnabled, currentThemeStylesheet, acceptKey, safeHref, navigationAction, normalizeLine, isEditable} from './core.mjs';
 
@@ -133,6 +134,7 @@ function boot() {
   }
 
   function focusBestSearch() {
+    if (window.__hyperSearchOpen) { window.__hyperSearchOpen(); return true; }
     const selectors = [
       '.issue-list-search input[type="search"]',
       '.issue-list-search input[name="q"]',
@@ -371,7 +373,7 @@ function boot() {
 
   function enhance() {
     syncReleaseStyles();
-    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); }
+    if (enabled()) { enhanceNativeListOptions(document); enhanceNativeChrome(document); enhanceUniversalSearch(document); }
     queued = false;
     if (!enabled()) return;
 
@@ -558,6 +560,7 @@ function boot() {
       restoreRepositoryControls(document);
       restoreNativeListOptions(document);
       restoreNativeChrome(document);
+      restoreUniversalSearch(document);
       closeMenus();
       for (const menu of document.querySelectorAll('details.hgh-clone')) {
         const panel = menu.querySelector('.clone-panel');

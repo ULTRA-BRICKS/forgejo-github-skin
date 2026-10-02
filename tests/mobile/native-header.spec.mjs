@@ -35,7 +35,7 @@ test('native chrome releases old navbar and avoids duplicated SVG ids',async({pa
  await page.addScriptTag({content:source.replaceAll('export ','')});
  await page.evaluate(()=>enhanceNativeChrome());
  await expect(page.locator('#original-search')).toHaveCount(1);await expect(page.locator('#original-path')).toHaveCount(1);
- await expect(page.locator('.hgh-native-search')).toHaveAttribute('aria-label','Поиск репозиториев');
+ await expect(page.locator('.hgh-native-search')).toHaveCount(0);
  await page.evaluate(()=>{document.querySelector('#navbar').remove();enhanceNativeChrome();});
  expect(await page.evaluate(()=>window.chromeBalance)).toBe(0);
  await expect(page.locator('.hgh-footer-brand')).toHaveCount(0);

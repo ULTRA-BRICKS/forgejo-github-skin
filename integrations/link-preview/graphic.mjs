@@ -54,10 +54,11 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
   const dim = name => previewTokens.preview[name].$value.value;
   const c = Object.fromEntries(Object.entries(baseTokens.color[mode === 'adaptive' ? 'light' : mode]).map(([k, v]) => [k, color(v)]));
   if (mode === 'adaptive') Object.assign(c, {
-    text: '#66707b', muted: '#6e7781', border: '#8c959f',
-    success: '#1a7f37', danger: '#cf222e', link: '#0969da',
+    text: '#717984', muted: '#7a828d', border: '#8c959f',
+    success: '#5a8262', danger: '#b35d59', link: '#3f7fca',
   });
-  const stroke = mode === 'adaptive' ? ' paint-order="stroke" stroke="white" stroke-opacity=".76" stroke-width=".8" stroke-linejoin="round"' : '';
+  // Transparent previews deliberately avoid text outlines; balanced mid-tones work on both chat surfaces.
+  const stroke = '';
   const text = (x, y, value, { size = dim('labelSize'), tone = 'text', weight = 400, anchor = 'start', attrs = '' } = {}) =>
     `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${stroke}${attrs}>${esc(value)}</text>`;
   const line = (x1, y1, x2, y2) => `<path d="M${x1},${y1}L${x2},${y2}" fill="none" stroke="${c.border}" stroke-opacity=".5"/>`;

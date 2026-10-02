@@ -1,13 +1,13 @@
 {
   "name": "@ultrabricks/forgejo-github-skin",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Opt-in, GitHub-familiar Forgejo skin with measured design references",
   "scripts": {
     "tokens": "node scripts/extract-tokens.mjs",
     "build": "node scripts/build.mjs",
-    "test": "npm run check:generated && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p '*_test.py'",
+    "test": "npm run check:generated && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p '*_test.py' && npm run test:search",
     "test:browser": "node scripts/browser-tests.mjs",
     "capture": "node scripts/capture-github.mjs",
     "storybook": "storybook dev -p 6006 --no-open",
@@ -23,7 +23,8 @@
     "test:mobile:update": "playwright test -c playwright.mobile.config.mjs --update-snapshots",
     "test:preview-layout": "node scripts/sharing/check-preview-layout.mjs",
     "test:slack-ui": "playwright test -c playwright.slack.config.mjs",
-    "slack:icons": "node scripts/sharing/build-slack-icons.mjs"
+    "slack:icons": "node scripts/sharing/build-slack-icons.mjs",
+    "test:search": "python3 -m unittest discover -s search/tests -p 'test_*.py' -v"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

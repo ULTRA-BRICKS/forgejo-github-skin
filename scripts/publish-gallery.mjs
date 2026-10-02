@@ -51,6 +51,7 @@ for (const [source, destination] of [
   ["mobile-parity", "mobile-parity"],
   ["layout-fixes", "layout-fixes"],
   ["slack-native", "slack-native"],
+  ["search", "search"],
 ]) {
   const directory = path.join(root, "research/screenshots", source);
   if (!(await fs.stat(directory).catch(() => null))?.isDirectory()) continue;
@@ -74,7 +75,7 @@ await fs.copyFile(
   path.join(root, "assets/forgejo-graphite.svg"),
   path.join(output, "static/forgejo-graphite.svg"),
 );
-for (const name of ["DANNY-INSTALL.md", "PREVIEW-V2-ACCEPTANCE.md"])
+for (const name of ["DANNY-INSTALL.md", "PREVIEW-V2-ACCEPTANCE.md", "UNIVERSAL-SEARCH.md"])
   await fs.copyFile(
     path.join(root, "docs", name),
     path.join(output, "static", name),

@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import fs from 'node:fs/promises';
+const packageVersion=JSON.parse(await fs.readFile(new URL('../../package.json',import.meta.url),'utf8')).version;
 const controls=await fs.readFile(new URL('../../src/repository-controls.mjs',import.meta.url),'utf8');
 const base=await fs.readFile(new URL('../../src/list-options.mjs',import.meta.url),'utf8');
 const css=(await fs.readFile(new URL('../../src/skin.css',import.meta.url),'utf8')).replace(/^@import.*$/mg,'')+await fs.readFile(new URL('../../src/repository-ui.css',import.meta.url),'utf8');

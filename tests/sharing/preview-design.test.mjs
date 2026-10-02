@@ -81,17 +81,18 @@ test("adaptive shared SVG is transparent, compact, and cross-surface neutral", (
   const svg = graphic(previewFixtures.pull, tokens, sizes, { mode: "adaptive" });
   assert.ok(svg.includes('viewBox="0 0 480 136"'));
   assert.ok(!svg.includes('<rect width="480" height="136"'));
-  assert.ok(svg.includes('fill="#66707b"'));
-  assert.ok(svg.includes('fill="#1a7f37"'));
-  assert.ok(svg.includes('fill="#cf222e"'));
+  assert.ok(svg.includes('fill="#717984"'));
+  assert.ok(svg.includes('fill="#5a8262"'));
+  assert.ok(svg.includes('fill="#b35d59"'));
+  assert.ok(!svg.includes('paint-order="stroke"'));
 });
 test("file snippets syntax-highlight code without changing the source text", () => {
   const f = structuredClone(previewFixtures.file);
   f.summary.code = ['const answer = "yes"; // note'];
   const svg = graphic(f, tokens, sizes);
-  assert.ok(svg.includes('fill="#0969da"'));
-  assert.ok(svg.includes('fill="#1a7f37"'));
-  assert.ok(svg.includes('fill="#6e7781"'));
+  assert.ok(svg.includes('fill="#3f7fca"'));
+  assert.ok(svg.includes('fill="#5a8262"'));
+  assert.ok(svg.includes('fill="#7a828d"'));
   assert.ok(svg.includes('>const</tspan>'));
 });
 test("literal code is XML-escaped, whitespace-preserving, and at most five lines", () => {
