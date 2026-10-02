@@ -331,6 +331,12 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
     });
   }else if(fetchImpl)state.fetchImpl=fetchImpl;
 
+  // Mounted means the universal-search UI itself is installed and owns search UX.
+  // Keep this distinct from backend readiness: 401/5xx belong inside the header dialog,
+  // while a genuine JS/enhancer failure (this function never mounted) leaves Forgejo's
+  // native repository search untouched as the last-resort fallback.
+  doc.documentElement.dataset.hghSearchMounted='true';
+
   const nav=doc.querySelector('#navbar');
   if(state.desktopTrigger&&!state.desktopTrigger.isConnected)state.desktopTrigger=null;
   if(nav&&!state.desktopTrigger){
@@ -376,5 +382,6 @@ export function restoreUniversalSearch(doc=document){
   }
   state.mobileOriginals.clear();
   delete doc.documentElement.dataset.hghSearchReady;
+  delete doc.documentElement.dataset.hghSearchMounted;
   states.delete(doc);
 }

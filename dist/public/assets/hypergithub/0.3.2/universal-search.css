@@ -1,4 +1,4 @@
-html[data-hgh-search-ready] .code-search{display:none!important}
+html[data-hgh-search-mounted] .code-search{display:none!important}
 .hgh-global-search-trigger{display:flex;align-items:center;gap:8px;width:min(280px,28vw);height:32px;margin:0 12px;padding:0 10px;border:1px solid var(--hgh-color-border);border-radius:6px;background:var(--hgh-color-canvas);color:var(--hgh-color-muted);font:14px/20px inherit;cursor:pointer}
 .hgh-global-search-trigger>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hgh-global-search-trigger>kbd{margin-left:auto;border:1px solid var(--hgh-color-border);border-radius:4px;padding:0 5px;background:var(--hgh-color-subtle);font:11px/18px ui-monospace,SFMono-Regular,Menlo,monospace}
