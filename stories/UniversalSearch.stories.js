@@ -1,6 +1,31 @@
+// Production search with captured responses; theme sheets belong to this story's lifetime.
 import {enhanceUniversalSearch,openUniversalSearch,restoreUniversalSearch} from '../src/universal-search.mjs';
+import coverageFixtures from './search-coverage-fixtures.json';
+import {flattenTokens,resolveToken,cssValue} from '../src/tokens.mjs';
+import tokenDocument from '../tokens.json';
+
+const themeTokens=flattenTokens(tokenDocument);
+const themeSheets=['light','dark'].map(mode=>{
+  const palette=[...themeTokens.keys()].filter(name=>name.startsWith(`color.${mode}.`))
+    .map(name=>`--hgh-color-${name.split('.').at(-1)}:${cssValue(resolveToken(name,themeTokens))}`).join(';');
+  return `:root[data-theme="hypergithub-${mode}"]{${palette};color-scheme:${mode}}`;
+}).join('');
+
+// Exact disposable-backend captures plus explicitly controlled engine/version variants.
+function engineFixture(status){
+  const payload=structuredClone(coverageFixtures.unavailable);
+  payload.coverage.ast.status=status;
+  if(status==='not_requested')payload.coverage.limits.ast_files.state='not_applicable';
+  return payload;
+}
 
 const fixtures={
+  ...coverageFixtures,
+  timeout:engineFixture('timeout'),
+  failed:engineFixture('failed'),
+  notRequested:{...engineFixture('not_requested'),query:'needle',mode:'text',inferred:'text'},
+  unsupported:{...coverageFixtures.enabled,coverage:{...coverageFixtures.enabled.coverage,version:2}},
+  malformed:{...coverageFixtures.enabled,coverage:{...coverageFixtures.enabled.coverage,ast:{status:'<img src=x onerror=alert(1)>'}}},
   symbol:{inferred:'symbol',elapsed_ms:8.4,results:[
     {repo:'ultrabricks/forgejo-github-skin',path:'src/skin.mjs',language:'javascript',line:136,kind:'definition',snippet:'function <mark>focusBestSearch</mark>() { … }',ref:'refs/heads/main'},
     {repo:'ultrabricks/forgejo-github-skin',path:'src/skin.mjs',language:'javascript',line:466,kind:'code',snippet:'if (<mark>focusBestSearch</mark>()) event.preventDefault()',ref:'refs/heads/main'}]},
@@ -43,6 +68,9 @@ function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,aut
   document.documentElement.lang=lang;
   document.documentElement.dataset.theme=dark?'hypergithub-dark':'hypergithub-light';
   const root=shell(owner,lang,organization);
+  const themeStyle=document.createElement('style');
+  themeStyle.textContent=themeSheets;
+  root.prepend(themeStyle);
   queueMicrotask(()=>{
     const fetchImpl=auth?async()=>new Response('{}',{status:401}):error?async()=>new Response('{}',{status:503}):fakeFetch(mode);
     if(mount)enhanceUniversalSearch(document,{fetchImpl});
@@ -80,3 +108,15 @@ export const RestoredRussian={render:()=>{
 }};
 
 export const MarkSafety={render:()=>render({seed:'safe',mode:'markSafety'})};
+
+export const CoverageEnabled={render:()=>render({seed:coverageFixtures.enabled.query,mode:'enabled'})};
+export const CoverageUnavailable={render:()=>render({seed:coverageFixtures.unavailable.query,mode:'unavailable'})};
+export const CoverageTimeout={render:()=>render({seed:coverageFixtures.unavailable.query,mode:'timeout'})};
+export const CoverageFailed={render:()=>render({seed:coverageFixtures.unavailable.query,mode:'failed'})};
+export const CoverageNoCandidates={render:()=>render({seed:coverageFixtures.denied.query,mode:'denied'})};
+export const CoverageTruncated={render:()=>render({seed:coverageFixtures.truncated.query,mode:'truncated'})};
+export const CoverageNotRequested={render:()=>render({seed:'needle',mode:'notRequested'})};
+export const CoverageUnsupported={render:()=>render({seed:'needle',mode:'unsupported'})};
+export const CoverageMalformed={render:()=>render({seed:'needle',mode:'malformed'})};
+export const EmptyQuery={render:()=>render({seed:'',mode:'enabled'})};
+export const CoverageTruncatedDark={render:()=>render({seed:coverageFixtures.truncated.query,mode:'truncated',dark:true})};
