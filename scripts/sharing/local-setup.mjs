@@ -12,6 +12,7 @@ export function createSetupServer({
   referrerPolicy = "same-origin",
   acceptBoundLegacyOrigin = true,
   progressive = true,
+  sessionTtlMs = 600000,
 }) {
   const sessions = new Map();
   const server = http.createServer(async (req, res) => {
@@ -58,10 +59,10 @@ export function createSetupServer({
           existing && sessions.get(existing) > Date.now()
             ? existing
             : randomBytes(32).toString("hex");
-        sessions.set(csrf, Date.now() + 600000);
+        sessions.set(csrf, Date.now() + sessionTtlMs);
         res.setHeader(
           "Set-Cookie",
-          `fj_setup=${csrf}; HttpOnly; SameSite=Strict; Path=/; Max-Age=600`,
+          `fj_setup=${csrf}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${Math.max(1, Math.floor(sessionTtlMs / 1000))}`,
         );
         res.setHeader("Content-Type", "text/html; charset=utf-8");
         return res.end(

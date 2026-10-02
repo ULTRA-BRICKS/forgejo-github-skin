@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-18T16:16:33.141Z",
+  "checkedAt": "2026-09-18T17:09:12.918Z",
   "scope": "Real browser with synthetic credentials and stub auth, not a live Slack connection",
   "retainedOnError": true,
   "retryVerified": true,

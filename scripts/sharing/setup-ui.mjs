@@ -2,6 +2,15 @@
 export const setupUi = `
 const form=document.querySelector('form[action="/configure"]');
 const feedback=document.getElementById('setup-feedback');
+async function refreshCsrf(){
+  try{
+    const response=await fetch('/',{credentials:'same-origin',signal:AbortSignal.timeout(8000)});
+    const html=await response.text();
+    const match=html.match(/name="csrf" value="([a-f0-9]{64})"/);
+    const csrfInput=form.querySelector('input[name="csrf"]');
+    if(match&&csrfInput)csrfInput.value=match[1];
+  }catch{}
+}
 form?.addEventListener('submit',async event=>{
   event.preventDefault();
   const submit=form.querySelector('button[type="submit"]');
@@ -18,6 +27,10 @@ form?.addEventListener('submit',async event=>{
     feedback.textContent='Saved locally. The service reloads its connection automatically. Event delivery must still be verified.';
     feedback.dataset.state='saved';submit.textContent='Connection saved';
   }catch(error){
+    // The CSRF token embedded in the form can go stale (session expiry, a
+    // reused/cleared cookie); without a fresh one every retry would repeat
+    // the same rejection forever, indistinguishable from a real Slack error.
+    await refreshCsrf();
     feedback.textContent=error.name==='TimeoutError'?'The check timed out. Your input is still here; retry.':error.message;
     feedback.dataset.state='error';submit.disabled=false;submit.textContent='Retry save';
   }
