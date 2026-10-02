@@ -1,0 +1,20 @@
+import skinCSS from '../src/skin.css?raw';
+import {shell,icon,escape} from './repository-shell.mjs';
+const marker='/* The diff grid may shrink;';
+const offset=skinCSS.indexOf(marker);if(offset<0)throw new Error('Native diff containment rules missing');
+const css=skinCSS.slice(offset).replaceAll('html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"])','.hgh-native-diff-fixture');
+function render({dark=false,split=false}={}){
+ const filename='packages/components/keyboard/very-long-file-name.ts';
+ const source='const destination = '+JSON.stringify('packages/components/'.repeat(10))+';';
+ const line=escape(source);
+ const root=shell(`<main class="hgh-native-diff-fixture"><h1>Files changed</h1><p class="hgh-muted">Synthetic source using the production diff layout rules.</p><div class="native-diff-main"><div id="diff-content-container"><div id="diff-file-boxes"><section class="diff-file-box"><h4 class="diff-file-header"><div class="diff-file-name"><button class="hgh-control hgh-icon-control fold-file" aria-label="Collapse file">${icon('chevron-down')}</button><span class="native-changes">+12 −2</span><span class="file"><a class="file-link" title="${filename}" href="#diff-example">${filename}</a><button class="hgh-control hgh-icon-control" aria-label="Copy path">${icon('copy')}</button></span></div><div class="diff-file-header-actions"><a class="hgh-control" href="/?path=/story/screens-workflows--file" target="_top">View file</a><label><input type="checkbox"> Viewed</label></div></h4><div class="diff-file-body"><div class="file-body code-diff ${split?'split':'unified'}"><table><tbody><tr class="native-line-old"><td>12</td><td>−</td><td><code>${line}</code></td>${split?'<td>12</td><td>+</td><td><code>'+line.replace('destination','nextDestination')+'</code></td>':''}</tr><tr class="native-line-new"><td>13</td><td>+</td><td><code>${line.replace('destination','nextDestination')}</code></td></tr></tbody></table></div></div></section></div></div></div></main>`,{active:'pulls'});
+ if(dark)root.dataset.surface='dark';
+ const style=document.createElement('style');style.textContent='.hgh-native-diff-fixture .native-diff-main{display:flex}.hgh-native-diff-fixture h1{font-size:24px}.hgh-native-diff-fixture #diff-file-boxes{display:flex;flex-direction:column}.hgh-native-diff-fixture .diff-file-box{border:1px solid var(--hgh-ui-border);border-radius:6px}.hgh-native-diff-fixture .diff-file-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--hgh-ui-surface);margin:0;padding:8px;font-weight:400}.hgh-native-diff-fixture .diff-file-name{display:flex;flex:1;align-items:center;gap:4px;min-width:100px}.hgh-native-diff-fixture .diff-file-name>.file{display:flex;flex:1;min-width:0;align-items:center}.hgh-native-diff-fixture .diff-file-header-actions{display:flex;align-items:center;gap:8px}.hgh-native-diff-fixture .native-changes{white-space:nowrap;font-size:12px}.hgh-native-diff-fixture table{border-collapse:collapse;white-space:pre;min-width:100%;font:12px/20px ui-monospace,monospace}.hgh-native-diff-fixture td{padding:3px 6px}.hgh-native-diff-fixture .native-line-old{background:var(--hgh-color-removed,#ffebe9)}.hgh-native-diff-fixture .native-line-new{background:var(--hgh-color-added,#dafbe1)}'+css;
+ root.append(style);const fold=root.querySelector('.fold-file'),body=root.querySelector('.diff-file-body');fold.onclick=()=>{body.hidden=!body.hidden;fold.setAttribute('aria-label',body.hidden?'Expand file':'Collapse file');};
+ root.querySelector('[aria-label="Copy path"]').onclick=async()=>{try{await navigator.clipboard.writeText(filename);root.querySelector('[role=status]').textContent='Path copied';}catch{root.querySelector('[role=status]').textContent=filename;}};
+ return root;
+}
+export default {title:'Screens/Native diffs'};
+export const Unified={render:()=>render()};
+export const SideBySide={render:()=>render({split:true})};
+export const Dark={render:()=>render({dark:true})};

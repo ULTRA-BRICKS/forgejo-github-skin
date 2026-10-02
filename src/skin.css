@@ -449,3 +449,17 @@ html[data-hgh-ready] #repo-files-table tbody>tr:not(.commit-list) {box-shadow:in
  html[data-hgh-ready] #repo-files-table tr:not(.commit-list)>td.name {display:table-cell;width:auto}
  html[data-hgh-ready] #repo-files-table td.name>a {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
 }
+
+/* The diff grid may shrink; long source lines scroll inside the code pane, never the page. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #diff-content-container {min-width:0;max-width:100%;flex:1 1 0}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) #diff-file-boxes {min-width:0;max-width:100%}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-box {min-width:0;max-width:100%}
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-body>.file-body {max-width:100%;overflow-x:auto}
+@media(max-width:767px){
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-header {display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;padding:8px!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-name {display:contents!important}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-name>.file {grid-column:1/-1;grid-row:2;min-width:0;gap:4px}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-name .file-link {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-name .file>:is(button,.label) {flex:0 0 auto}
+ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .diff-file-header-actions {grid-column:3;grid-row:1;margin-left:auto;gap:6px;max-width:100%}
+}
