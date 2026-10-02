@@ -14,6 +14,7 @@ research/observations/*
 research/browser-test-results.json
 research/storybook-screenshots.json
 research/preview-report.json
+research/screenshots/pagination/proof.json
 
 .transfer/
 .demo/
