@@ -1,6 +1,31 @@
+// Production search with captured responses; theme sheets belong to this story's lifetime.
 import {enhanceUniversalSearch,openUniversalSearch,restoreUniversalSearch} from '../src/universal-search.mjs';
+import coverageFixtures from './search-coverage-fixtures.json';
+import {flattenTokens,resolveToken,cssValue} from '../src/tokens.mjs';
+import tokenDocument from '../tokens.json';
+
+const themeTokens=flattenTokens(tokenDocument);
+const themeSheets=['light','dark'].map(mode=>{
+  const palette=[...themeTokens.keys()].filter(name=>name.startsWith(`color.${mode}.`))
+    .map(name=>`--hgh-color-${name.split('.').at(-1)}:${cssValue(resolveToken(name,themeTokens))}`).join(';');
+  return `:root[data-theme="hypergithub-${mode}"]{${palette};color-scheme:${mode}}`;
+}).join('');
+
+// Exact disposable-backend captures plus explicitly controlled engine/version variants.
+function engineFixture(status){
+  const payload=structuredClone(coverageFixtures.unavailable);
+  payload.coverage.ast.status=status;
+  if(status==='not_requested')payload.coverage.limits.ast_files.state='not_applicable';
+  return payload;
+}
 
 const fixtures={
+  ...coverageFixtures,
+  timeout:engineFixture('timeout'),
+  failed:engineFixture('failed'),
+  notRequested:{...engineFixture('not_requested'),query:'needle',mode:'text',inferred:'text'},
+  unsupported:{...coverageFixtures.enabled,coverage:{...coverageFixtures.enabled.coverage,version:2}},
+  malformed:{...coverageFixtures.enabled,coverage:{...coverageFixtures.enabled.coverage,ast:{status:'<img src=x onerror=alert(1)>'}}},
   symbol:{inferred:'symbol',elapsed_ms:8.4,results:[
     {repo:'ultrabricks/forgejo-github-skin',path:'src/skin.mjs',language:'javascript',line:136,kind:'definition',snippet:'function <mark>focusBestSearch</mark>() { … }',ref:'refs/heads/main'},
     {repo:'ultrabricks/forgejo-github-skin',path:'src/skin.mjs',language:'javascript',line:466,kind:'code',snippet:'if (<mark>focusBestSearch</mark>()) event.preventDefault()',ref:'refs/heads/main'}]},
@@ -26,6 +51,31 @@ function fakeFetch(mode='symbol'){
     return new Response(JSON.stringify(fixtures[mode]),{status:200,headers:{'Content-Type':'application/json'}});
   };
 }
+// NDJSON v1 over a genuine ReadableStream, driven by timers that stop when the consumer cancels.
+// `loading` sends `started` and then stays idle (no recurring writes, so it can never exhaust the record cap);
+// the others reach their terminal record.
+const encoder=new TextEncoder();
+const frame=(...records)=>encoder.encode(records.map(record=>JSON.stringify(record)).join('\n')+'\n');
+const startedRecord={v:1,type:'started'};
+function streamFetch(kind,mode='enabled'){
+  return async url=>{
+    document.body.dataset.lastSearchUrl=String(url);
+    if(!new URL(url,location.href).searchParams.get('q'))return new Response('{}',{status:200,headers:{'Content-Type':'application/json'}});
+    const timers=[];
+    const body=new ReadableStream({
+      start(controller){
+        const later=(ms,fn)=>timers.push(setTimeout(fn,ms));
+        controller.enqueue(frame(startedRecord));
+        if(kind==='result')later(250,()=>{controller.enqueue(frame({v:1,type:'heartbeat'},{v:1,type:'result',data:fixtures[mode]},{v:1,type:'done'}));controller.close();});
+        if(kind==='interrupted')later(150,()=>{controller.enqueue(frame({v:1,type:'result',data:fixtures[mode]}));controller.error(new TypeError('network error'));});
+        if(kind==='deadline')later(150,()=>{controller.enqueue(frame({v:1,type:'error',code:'deadline_exceeded',status:504}));});
+        if(kind==='auth')later(150,()=>{controller.enqueue(frame({v:1,type:'error',code:'authentication_required',status:401}));});
+      },
+      cancel(){timers.forEach(clearTimeout);}
+    });
+    return new Response(body,{status:200,headers:{'Content-Type':'application/x-ndjson'}});
+  };
+}
 function shell(owner='ultrabricks',lang='en',organization=false){
   const root=document.createElement('div');root.className='hgh-search-story';
   root.innerHTML='<style>.hgh-search-story #navbar,.hgh-search-story .navbar-left,.hgh-search-story .navbar-right,.hgh-search-story .navbar-mobile-right{display:flex;align-items:center;gap:8px}.hgh-search-story .navbar-right{margin-left:auto}.hgh-search-story .navbar-mobile-right{display:none}@media(max-width:767px){.hgh-search-story .navbar-left{width:100%}.hgh-search-story .navbar-mobile-right{display:flex;margin-left:auto}.hgh-search-story .navbar-right,.hgh-search-story .navbar-left>a[href$="/explore/repos"]{display:none}}</style><nav id="navbar"><div class="navbar-left ui menu"><a id="navbar-logo" href="/">F</a><div class="navbar-mobile-right"><button type="button" class="hgh-control hgh-icon-control hgh-native-search" aria-label="'+(lang==='ru'?'Поиск репозиториев':'Search repositories')+'">⌕</button></div><a href="/explore/repos">Explore</a></div><div class="navbar-right">A</div></nav><div class="repo-header"><div class="flex-item-title"><a href="/ultrabricks">ultrabricks</a> / <a href="/ultrabricks/forgejo-github-skin">forgejo-github-skin</a></div></div><form class="code-search"><input type="search" placeholder="Search code"></form><main><h1>Repository content</h1><p>Use the header to search files, symbols, structure and text.</p></main>';
@@ -38,13 +88,16 @@ function shell(owner='ultrabricks',lang='en',organization=false){
   }
   return root;
 }
-function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,auth=false,owner='ultrabricks',lang='en',organization=false,open=true,mount=true}={}){
+function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,auth=false,stream=null,owner='ultrabricks',lang='en',organization=false,open=true,mount=true}={}){
   restoreUniversalSearch(document);
   document.documentElement.lang=lang;
   document.documentElement.dataset.theme=dark?'hypergithub-dark':'hypergithub-light';
   const root=shell(owner,lang,organization);
+  const themeStyle=document.createElement('style');
+  themeStyle.textContent=themeSheets;
+  root.prepend(themeStyle);
   queueMicrotask(()=>{
-    const fetchImpl=auth?async()=>new Response('{}',{status:401}):error?async()=>new Response('{}',{status:503}):fakeFetch(mode);
+    const fetchImpl=stream?streamFetch(stream,mode):auth?async()=>new Response('{}',{status:401}):error?async()=>new Response('{}',{status:503}):fakeFetch(mode);
     if(mount)enhanceUniversalSearch(document,{fetchImpl});
     if(mount&&open)openUniversalSearch(document,{seed});
   });
@@ -80,3 +133,25 @@ export const RestoredRussian={render:()=>{
 }};
 
 export const MarkSafety={render:()=>render({seed:'safe',mode:'markSafety'})};
+
+export const CoverageEnabled={render:()=>render({seed:coverageFixtures.enabled.query,mode:'enabled'})};
+export const CoverageUnavailable={render:()=>render({seed:coverageFixtures.unavailable.query,mode:'unavailable'})};
+export const CoverageTimeout={render:()=>render({seed:coverageFixtures.unavailable.query,mode:'timeout'})};
+export const CoverageFailed={render:()=>render({seed:coverageFixtures.unavailable.query,mode:'failed'})};
+export const CoverageNoCandidates={render:()=>render({seed:coverageFixtures.denied.query,mode:'denied'})};
+export const CoverageTruncated={render:()=>render({seed:coverageFixtures.truncated.query,mode:'truncated'})};
+export const CoverageNotRequested={render:()=>render({seed:'needle',mode:'notRequested'})};
+export const CoverageUnsupported={render:()=>render({seed:'needle',mode:'unsupported'})};
+export const CoverageMalformed={render:()=>render({seed:'needle',mode:'malformed'})};
+export const EmptyQuery={render:()=>render({seed:'',mode:'enabled'})};
+export const CoverageTruncatedDark={render:()=>render({seed:coverageFixtures.truncated.query,mode:'truncated',dark:true})};
+
+export const StreamLoading={render:()=>render({seed:'restoreFocus',stream:'loading'})};
+export const StreamLoadingDark={render:()=>render({seed:'restoreFocus',stream:'loading',dark:true})};
+export const StreamResult={render:()=>render({seed:coverageFixtures.enabled.query,stream:'result',mode:'enabled'})};
+export const StreamResultTruncatedDark={render:()=>render({seed:coverageFixtures.truncated.query,stream:'result',mode:'truncated',dark:true})};
+export const StreamInterrupted={render:()=>render({seed:'restoreFocus',stream:'interrupted',mode:'enabled'})};
+export const StreamInterruptedDark={render:()=>render({seed:'restoreFocus',stream:'interrupted',mode:'enabled',dark:true})};
+export const StreamDeadline={render:()=>render({seed:'restoreFocus',stream:'deadline'})};
+export const StreamAuthRequired={render:()=>render({seed:'restoreFocus',stream:'auth'})};
+export const StreamInterruptedRussian={render:()=>render({seed:'restoreFocus',stream:'interrupted',mode:'enabled',lang:'ru'})};

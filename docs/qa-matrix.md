@@ -94,6 +94,27 @@ The task's durable external evidence directory is
 The source-controlled test command is portable; the external directory is a
 workstation evidence receipt, not an application dependency.
 
+### Search streaming consumer (0.3.5)
+
+The source release is 0.3.5 because main is 0.3.4; all earlier versioned assets,
+including 0.3.4, remain byte-for-byte unchanged. The imported `search-stream.mjs`
+module ships in the build, installer and native-fixture allowlists; a test fails
+if any local module import is missing from the installer asset set.
+
+| Contract | Surface | Evidence in source |
+|---|---|---|
+| NDJSON v1 parser and reader | `tests/search-stream.test.mjs` with genuine `ReadableStream` byte fixtures | Every byte and Unicode split, CRLF, many records per chunk, fatal UTF-8, 2 MiB / 8 MiB / 256 caps, EOF without terminal, duplicate and misordered records, error after a withheld result, abort and cancel cleanup |
+| Real chunked HTTP transport | `tests/mobile/universal-search-stream.spec.mjs`, Chromium and WebKit | Early `started` and heartbeats observable with no DOM churn, result staged until `done`, same-response JSON fallback, rejected Content-Type, 401/503, dropped connection, rapid replacement and close observed as a network abort, manual Retry, native mounted fallback |
+| Stale and late work | Same spec with a controlled `fetchImpl` that ignores `AbortSignal` | Late fetch, late stream, late JSON decode and late failure are discarded and their bodies cancelled |
+| Storybook parity | `tests/mobile/universal-search-stream-stories.spec.mjs` | Loading, result, interrupted, deadline, signed-out and Russian stories through the same production consumer at 320/440/1280 in light and dark |
+
+The stream, stream-story and coverage specs set their own 320/440/1280 viewports, so
+`playwright.mobile.config.mjs` runs them in the WebKit 440 and Chromium 440 projects
+only; the extra Chromium viewport projects would repeat identical geometry.
+
+Harness timing is not proxy timing: first-byte behaviour through the real ingress
+with its 15 s idle timeout is a deployed acceptance gate, not a source claim.
+
 ### Gates that remain live-only
 
 - Authenticated PR comment/review submission, confirmed saved state viewed by a

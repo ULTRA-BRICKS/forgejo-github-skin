@@ -1,5 +1,5 @@
 {
-  "version": "0.3.4",
+  "version": "0.3.5",
   "tokenCount": 98,
   "files": [
     "skin.css",
@@ -10,6 +10,7 @@
     "mobile-chrome.mjs",
     "repository-ui.css",
     "universal-search.mjs",
+    "search-stream.mjs",
     "universal-search.css",
     "pagination.mjs",
     "pagination-model.mjs",
