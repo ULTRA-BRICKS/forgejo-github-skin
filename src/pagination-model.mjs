@@ -117,6 +117,7 @@ function bumpHabitCount(storage) {
 export function createRevealController({session = null, local = null, delayMs = REVEAL_DELAY_MS, habitThreshold = HABIT_THRESHOLD} = {}) {
   let revealed = readRevealed(session);
   let timer = null;
+  const activeInputs = new Set();
 
   // Once true, stays true (no more reads needed). While false, re-checks storage
   // each time: a sibling controller for another pagination region on the same
@@ -130,12 +131,22 @@ export function createRevealController({session = null, local = null, delayMs = 
     return readHabitCount(local) >= habitThreshold ? 0 : delayMs;
   }
 
-  function cancel() {
+  function stopTimer() {
     if (timer !== null) { clearTimeout(timer); timer = null; }
   }
 
-  function reveal(onReveal) {
+  function cancel(input) {
+    if (input === undefined) activeInputs.clear();
+    else activeInputs.delete(input);
+    if (!activeInputs.size) stopTimer();
+  }
+
+  function destroy() {
     cancel();
+  }
+
+  function reveal(onReveal) {
+    stopTimer();
     const firstRevealThisSession = !currentlyRevealed();
     revealed = true;
     writeRevealed(session);
@@ -143,15 +154,17 @@ export function createRevealController({session = null, local = null, delayMs = 
     onReveal?.();
   }
 
-  function arm(onReveal) {
-    cancel();
+  function arm(onReveal, input = 'default') {
+    const alreadyActive = activeInputs.size > 0;
+    activeInputs.add(input);
+    if (alreadyActive) return;
     if (currentlyRevealed()) { onReveal?.(); return; }
     const delay = hoverDelay();
     if (delay <= 0) { reveal(onReveal); return; }
     timer = setTimeout(() => { timer = null; reveal(onReveal); }, delay);
   }
 
-  return {isRevealed: currentlyRevealed, hoverDelay, arm, cancel, reveal, destroy: cancel};
+  return {isRevealed: currentlyRevealed, hoverDelay, arm, cancel, reveal, destroy};
 }
 
 function parseHref(href) {
@@ -239,14 +252,23 @@ export function buildPaginationPlan(native) {
   // current page number *is* the total. Never guessed for cursor pagination.
   const total = last.disabled ? currentNum : pageNumberFromHref(last.href);
 
+  const destinations = [previous, next].filter(edge => !edge.disabled).map(edge => edge.href);
+  const unique = (item) => {
+    if (item.kind === 'ellipsis') return true;
+    if (destinations.some(href => sameDestination(href, item.href, {missingPageMeansOne: true}))) return false;
+    destinations.push(item.href);
+    return true;
+  };
+  const leftWing = left.filter(unique);
+  const rightWing = right.filter(unique);
   return {
-    left,
-    right,
+    left: leftWing,
+    right: rightWing,
     previous: {href: previous.href, disabled: previous.disabled},
     next: {href: next.href, disabled: next.disabled},
     currentNum,
     total,
-    hasExpandable: left.length > 0 || right.length > 0,
+    hasExpandable: leftWing.length > 0 || rightWing.length > 0,
   };
 }
 

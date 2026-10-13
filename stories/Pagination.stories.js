@@ -10,7 +10,7 @@ function nativePagination({current, total, lang = 'en', params = ''}) {
   const link = (page) => `/ultrabricks/forgejo-github-skin/issues?page=${page}${amp}`;
   const isFirst = current === 1, isLast = current === total;
   const hasPrev = current > 1, hasNext = current < total;
-  const nums = new Set([1, total, current - 1, current, current + 1].filter((n) => n >= 1 && n <= total));
+  const nums = new Set([1, total, current - 2, current - 1, current, current + 1, current + 2].filter((n) => n >= 1 && n <= total));
   const sorted = [...nums].sort((a, b) => a - b);
   const labels = lang === 'ru'
     ? {first: 'Первая', previous: 'Пред.', next: 'След.', last: 'Последняя'}
@@ -70,6 +70,16 @@ export default {title: 'Screens/Pagination'};
 
 export const Compact = {
   render: () => { clearPaginationStorage(); return shell(nativePagination({current: 6, total: 90})); },
+};
+
+export const KeyboardDwell = {
+  name: 'Keyboard focus (2s dwell on Previous or Next)',
+  render: () => {
+    clearPaginationStorage();
+    const root = shell(nativePagination({current: 6, total: 90}));
+    queueMicrotask(() => root.querySelector('.hgh-pg-prev')?.focus());
+    return root;
+  },
 };
 
 export const HoverPending = {

@@ -134,3 +134,33 @@ test('mark highlighting cannot unescape executable HTML',async({page})=>{
   await expect(dialog.locator('script,img')).toHaveCount(0);
   await expect(dialog).toContainText('<script>alert(1)</script>');
 });
+
+for(const id of ['many-results-native-type','many-results-native-type-dark']){
+  test(`${id}: kinds stay whole words and scope tabs keep full height while only results scroll`,async({page})=>{
+    await story(page,'search-universal-search--'+id);
+    await expect(page.locator('#hgh-universal-search').getByRole('option')).toHaveCount(30);
+    const report=await page.evaluate(()=>{
+      const dialog=document.querySelector('#hgh-universal-search'),scopes=dialog.querySelector('.hgh-search-scopes');
+      const lines=node=>{const range=document.createRange();range.selectNodeContents(node);return new Set([...range.getClientRects()].filter(r=>r.width>0).map(r=>Math.round(r.top))).size;};
+      const scrollable=value=>value==='auto'||value==='scroll';
+      return {
+        splitKinds:[...dialog.querySelectorAll('.hgh-search-kind')].filter(pill=>lines(pill)!==1||pill.scrollWidth>pill.clientWidth).map(pill=>pill.textContent),
+        clippedScopes:scopes.scrollHeight>scopes.clientHeight||[...scopes.children].some(button=>button.getBoundingClientRect().bottom>scopes.getBoundingClientRect().bottom+0.5),
+        scrollers:[dialog,...dialog.querySelectorAll('*')].filter(node=>{const style=getComputedStyle(node);return (scrollable(style.overflowY)&&node.scrollHeight>node.clientHeight+1)||(scrollable(style.overflowX)&&node.scrollWidth>node.clientWidth+1);}).map(node=>node.className),
+        overflow:document.documentElement.scrollWidth-innerWidth,
+      };
+    });
+    expect(report.splitKinds).toEqual([]);
+    expect(report.clippedScopes).toBe(false);
+    expect(report.scrollers).toEqual(['hgh-search-results']);
+    expect(report.overflow).toBeLessThanOrEqual(1);
+  });
+}
+
+test('an instance opt-out leaves the native search as the only entry point',async({page})=>{
+  await story(page,'search-universal-search--instance-opt-out');
+  await expect(page.locator('.code-search')).toBeVisible();
+  await expect(page.locator('.hgh-global-search-trigger')).toHaveCount(0);
+  await expect(page.locator('#hgh-universal-search')).toHaveCount(0);
+  expect(await page.locator('html').getAttribute('data-hgh-search-mounted')).toBeNull();
+});

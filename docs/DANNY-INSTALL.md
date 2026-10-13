@@ -70,6 +70,14 @@ Verify login/logout; public and private repository permissions; branches; file a
 
 Demo Forgejo image used: `codeberg.org/forgejo/forgejo@sha256:cf5f5ae6acf2ababca0ee3d255705b83a47f35b25e07fc931d694d60664053fe`. Verify architecture and version locally. No production backup, SSH keys or runner should be attached. `scripts/demo-local.py` and `scripts/seed-demo.py` reproduce Alex's isolated Mac fixture; they are not a production provisioning tool. The Mac Docker wrapper ignores `exec --user`; its seed script uses `su-exec git` explicitly. Standard Docker supports `--user git` normally.
 
+**Demo without a search backend:** the header search expects HyperSearch at `/api/hypersearch`. An instance that deliberately has no such backend (the isolated demo) opts out explicitly with one inert tag in `custom/templates/custom/header.tmpl` (rendered inside `<head>`):
+
+```html
+<meta name="hypergithub-search" content="disabled">
+```
+
+The skin then never mounts the header search, never probes the backend and leaves native code/repository search fields and the `s`, `/`, `Ctrl/Cmd+K` and `Ctrl/Cmd+/` keys to Forgejo and the browser. Only that exact value in `<head>` opts out; a missing tag, any other value and backend 401/404/5xx responses keep the header search (a signed-out or failed search shows its own message). Never set it on an instance that has HyperSearch.
+
 ## 6. Rollback and upgrades
 
 For a cosmetic issue, restore the canary account's native theme. If necessary remove only the managed footer include and restore affected UI config/custom assets from your private backup; restart normally. Do not roll back databases or delete volumes for a theme problem. Do not overwrite unrelated administrator edits with a stale full app.ini. Keep previous versioned assets until no browsers reference them.

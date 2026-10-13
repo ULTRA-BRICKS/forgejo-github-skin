@@ -34,7 +34,7 @@ import fs from 'node:fs/promises';
  * skin.mjs's own href-swap-then-measure sequencing at all.
  */
 const base = 'https://theme-ready.test/git';
-const MODULE_FILES = ['skin.mjs', 'core.mjs', 'mobile-chrome.mjs', 'list-options.mjs', 'repository-controls.mjs', 'universal-search.mjs', 'pagination.mjs', 'pagination-model.mjs', 'organization.mjs', 'dashboard-pagination.mjs'];
+const MODULE_FILES = ['skin.mjs', 'core.mjs', 'mobile-chrome.mjs', 'list-options.mjs', 'repository-controls.mjs', 'universal-search.mjs', 'search-stream.mjs', 'pagination.mjs', 'pagination-model.mjs', 'organization.mjs', 'dashboard-pagination.mjs'];
 const paginationCss = await fs.readFile(new URL('../../src/pagination.css', import.meta.url), 'utf8');
 
 // Real base/paginate.tmpl shape (First/Previous/windowed numbers/Next/Last),

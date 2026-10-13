@@ -1,7 +1,11 @@
 /** Progressive header search, called by skin refresh and Storybook.
  * Native controls stay intact; visibility follows a mounted action, never backend readiness.
+ * Transport: requests ask for NDJSON v1 (search-stream.mjs) and fall back to the legacy JSON document when the
+ * SAME response says application/json. A result is rendered only once its stream is complete; every failure
+ * clears results and offers a manual retry.
  */
 import {normalizeLine,safeHref} from './core.mjs';
+import {SEARCH_STREAM_ACCEPT,SearchStreamError,isSearchEnvelope,readSearchStream,searchResponseKind} from './search-stream.mjs';
 const states=new WeakMap();
 const SEARCH_ICON='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04a.75.75 0 0 1-1.06 1.06ZM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0Z"/></svg>';
 
@@ -20,6 +24,7 @@ function copy(doc){
     results:'результатов',
     signIn:'Войдите, чтобы искать в доступных вам репозиториях.',
     unavailable:'Поиск временно недоступен. Повторите попытку позже.',
+    retry:'Повторить',
     clearFilter:'Сбросить фильтр репозиториев',
     noResults:'Ничего не найдено. Попробуйте убрать фильтры или искать имя символа/файла.',
     understands:'Поиск понимает намерение',
@@ -40,6 +45,7 @@ function copy(doc){
     results:'results',
     signIn:'Sign in to search repositories you can access.',
     unavailable:'Search is temporarily unavailable. Please try again later.',
+    retry:'Retry',
     clearFilter:'Clear repository filter',
     noResults:'No results. Try fewer scope filters or a symbol/file name.',
     understands:'Search understands intent',
@@ -51,6 +57,86 @@ function copy(doc){
   };
 }
 
+/** Safe coverage view model reached through universal search in production and Storybook.
+ * Only the version 1 allowlist becomes display text; stage completeness is never global.
+ * Contract: forgejo-search 0018d4b6, docs/search-coverage.schema.json.
+ */
+const stageKeys=['repository_hits','file_hits','symbol_hits','lexical_candidates','ast_files','results'];
+const stageStates=['not_applicable','complete','truncated','unknown'];
+const astStates=['not_requested','no_candidates','ran','unavailable','timeout','failed'];
+function exactKeys(value,keys){
+  return value!==null&&typeof value==='object'&&!Array.isArray(value)&&
+    Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
+}
+function validCoverage(value){
+  if(!exactKeys(value,['version','scope','completeness','semantics','ast','limits'])||
+    value.version!==1||value.scope!=='authorized_indexed_default_branch'||value.completeness!=='bounded'||
+    !exactKeys(value.semantics,['definitions','references'])||
+    value.semantics.definitions!=='pattern_based'||value.semantics.references!=='lexical'||
+    !exactKeys(value.ast,['status'])||!astStates.includes(value.ast.status)||
+    !exactKeys(value.limits,stageKeys))return false;
+  for(const key of stageKeys){
+    const stage=value.limits[key];
+    if(!exactKeys(stage,['limit','state'])||!Number.isInteger(stage.limit)||
+      stage.limit<1||stage.limit>100||!stageStates.includes(stage.state))return false;
+  }
+  return value.limits.repository_hits.limit<=12&&value.limits.lexical_candidates.limit>=40&&value.limits.ast_files.limit===20;
+}
+const english={
+  title:'Search details',partialLabel:'Partial results',
+  scope:'Search covers authorized, indexed default branches. It is bounded, not exhaustive.',
+  semantics:'Definitions are pattern-based. References are lexical, not semantic.',
+  labels:['Repository hits','File hits','Symbol hits','Lexical candidates','Structural candidate files','Results'],
+  states:{complete:'Within limit',truncated:'Limit reached; more candidates exist',unknown:'Coverage unknown'},
+  engines:{
+    not_requested:'Structural refinement was not requested.',
+    no_candidates:'No eligible candidates for structural refinement; engine availability was not checked.',
+    ran:'Structural refinement ran within the listed bounds.',
+    unavailable:'Structural refinement is unavailable.',
+    timeout:'Structural refinement timed out.',
+    failed:'Structural refinement failed.'
+  },
+  fallback:'Showing lexical/token fallback matches, not exhaustive structural results.',
+  noFallback:'No fallback matches; this is not an exhaustive no-match result.'
+};
+const russian={
+  title:'Подробности поиска',partialLabel:'Неполные результаты',
+  scope:'Поиск по доступным вам индексированным веткам по умолчанию. Охват ограничен и не является исчерпывающим.',
+  semantics:'Определения найдены по шаблонам. Ссылки — лексические, а не семантические.',
+  labels:['Репозитории','Файлы','Символы','Лексические кандидаты','Файлы для структурного поиска','Результаты'],
+  states:{complete:'В пределах лимита',truncated:'Лимит достигнут; есть ещё кандидаты',unknown:'Полнота охвата неизвестна'},
+  engines:{
+    not_requested:'Структурный поиск не запрашивался.',
+    no_candidates:'Нет подходящих кандидатов для структурного поиска; доступность движка не проверялась.',
+    ran:'Структурный поиск выполнен в указанных пределах.',
+    unavailable:'Структурный поиск недоступен.',
+    timeout:'Время структурного поиска истекло.',
+    failed:'Структурный поиск завершился с ошибкой.'
+  },
+  fallback:'Показаны лексические/токеновые совпадения, а не исчерпывающие структурные результаты.',
+  noFallback:'Резервный поиск не дал совпадений; это не означает исчерпывающего отсутствия результатов.'
+};
+const isRussian=lang=>String(lang).toLowerCase().startsWith('ru');
+export function describeSearchCoverage(coverage,{query='',mode='',hasResults=false,lang='en'}={}){
+  if(!query.trim()||!validCoverage(coverage))return null;
+  const c=isRussian(lang)?russian:english;
+  const stages=stageKeys.flatMap((key,index)=>{
+    const {limit,state}=coverage.limits[key];
+    return state==='not_applicable'?[]:[{key,label:c.labels[index],limit,state,description:c.states[state]}];
+  });
+  let engine=c.engines[coverage.ast.status];
+  if(['unavailable','timeout','failed'].includes(coverage.ast.status))engine+=' '+(hasResults?c.fallback:c.noFallback);
+  const semanticQuery=['symbol','reference'].includes(mode)||/(^|\s)(?:def|ref):/i.test(query)||coverage.limits.symbol_hits.state!=='not_applicable';
+  return {
+    title:c.title,partialLabel:c.partialLabel,scope:c.scope,engine,
+    semantics:semanticQuery?c.semantics:null,stages,
+    partial:stages.some(stage=>stage.state==='truncated'||stage.state==='unknown')
+  };
+}
+export function searchTiming(totalMs,lang='en'){
+  return typeof totalMs==='number'&&Number.isFinite(totalMs)&&totalMs>=0
+    ? totalMs+(isRussian(lang)?' мс всего':' ms total'):'';
+}
 function stripSubUrl(pathname,subUrl){
   const prefix=String(subUrl||'').replace(/\/+$/,'');
   if(!prefix)return pathname;
@@ -149,7 +235,7 @@ function create(doc){
   const c=copy(doc),dialog=doc.createElement('dialog');
   dialog.id='hgh-universal-search';
   dialog.className='hgh-search-dialog';
-  dialog.innerHTML='<form method="dialog" class="hgh-search-box"><div class="hgh-search-input-row">'+SEARCH_ICON+'<input type="search" autocomplete="off" spellcheck="false"><button type="button" class="hgh-search-close">×</button></div><div class="hgh-search-scopes" role="radiogroup"></div><div class="hgh-search-status" role="status" aria-live="polite"></div><div class="hgh-search-results" role="listbox">'+emptyHelp(doc)+'</div></form>';
+  dialog.innerHTML='<form method="dialog" class="hgh-search-box"><div class="hgh-search-input-row">'+SEARCH_ICON+'<input type="search" autocomplete="off" spellcheck="false"><button type="button" class="hgh-search-close">×</button></div><div class="hgh-search-scopes" role="radiogroup"></div><div class="hgh-search-status" role="status" aria-live="polite"></div><div class="hgh-search-coverage" hidden></div><div class="hgh-search-results" role="listbox">'+emptyHelp(doc)+'</div></form>';
   const input=dialog.querySelector('input');
   input.setAttribute('aria-label',c.search); input.placeholder=c.placeholder;
   dialog.querySelector('.hgh-search-close').setAttribute('aria-label',c.close);
@@ -182,16 +268,74 @@ function setScopes(state){
   }
 }
 
+/** Transport state for styling and tests: loading (request sent), streaming (started received), done, error. */
+function setSearchState(state,value){
+  const results=state.dialog.querySelector('.hgh-search-results');
+  if(value)state.dialog.dataset.hghSearchState=value;
+  else delete state.dialog.dataset.hghSearchState;
+  if(value==='loading'||value==='streaming')results.setAttribute('aria-busy','true');
+  else results.removeAttribute('aria-busy');
+}
+function clearResults(state,help=false){
+  state.hits=[];
+  state.selected=-1;
+  setSearchState(state,null);
+  state.dialog.querySelector('.hgh-search-results').innerHTML=help?emptyHelp(state.doc):'';
+  state.dialog.querySelector('.hgh-search-status').replaceChildren();
+  const coverage=state.dialog.querySelector('.hgh-search-coverage');
+  coverage.hidden=true;
+  coverage.replaceChildren();
+}
+function renderCoverage(state,payload,mode){
+  const host=state.dialog.querySelector('.hgh-search-coverage');
+  const lang=state.doc.documentElement.lang;
+  const view=describeSearchCoverage(payload.coverage,{query:state.query,mode,hasResults:state.hits.length>0,lang});
+  host.replaceChildren();
+  host.hidden=!view;
+  if(!view)return;
+  const details=state.doc.createElement('details'),summary=state.doc.createElement('summary');
+  summary.textContent=view.title;
+  details.append(summary);
+  const body=state.doc.createElement('div');
+  body.className='hgh-search-details-body';
+  for(const [kind,text] of [['scope',view.scope],['engine',view.engine],['semantics',view.semantics]]){
+    if(!text)continue;
+    const paragraph=state.doc.createElement('p');
+    paragraph.className='hgh-search-'+kind;
+    paragraph.textContent=text;
+    body.append(paragraph);
+  }
+  const stages=state.doc.createElement('ul');
+  for(const stage of view.stages){
+    const row=state.doc.createElement('li');
+    row.dataset.state=stage.state;
+    row.textContent=stage.label+' · '+(isRussian(lang)?'лимит ':'limit ')+stage.limit+' — '+stage.description;
+    stages.append(row);
+  }
+  if(view.stages.length)body.append(stages);
+  details.append(body);
+  host.append(details);
+  if(view.partial){
+    const indicator=state.doc.createElement('span');
+    indicator.className='hgh-search-partial';
+    indicator.textContent=view.partialLabel;
+    state.dialog.querySelector('.hgh-search-status').append(' · ',indicator);
+  }
+}
+
 function render(state,payload){
   const host=state.dialog.querySelector('.hgh-search-results');
   const status=state.dialog.querySelector('.hgh-search-status');
   const raw=Array.isArray(payload.results)?payload.results:[];
-  state.hits=raw.filter(hit=>resultHref(hit,state.doc));
+  state.hits=raw.filter(hit=>hit&&typeof hit==='object'&&resultHref(hit,state.doc));
   state.selected=state.hits.length?0:-1;
-  const mode=payload.inferred||payload.mode||'text',c=copy(state.doc);
+  const rawMode=payload.inferred||payload.mode;
+  const mode=typeof rawMode==='string'?rawMode:'text',c=copy(state.doc);
+  const timing=searchTiming(payload.total_ms,state.doc.documentElement.lang);
   status.textContent=state.query
-    ? mode.toUpperCase()+' · '+state.hits.length+' '+c.results+' · '+(payload.elapsed_ms??'—')+' ms'
+    ? mode.toUpperCase()+' · '+state.hits.length+' '+c.results+(timing?' · '+timing:'')
     : '';
+  renderCoverage(state,payload,mode);
   if(!state.hits.length){
     host.innerHTML=state.query
       ? '<div class="hgh-search-empty">'+c.noResults+'</div>'+emptyHelp(state.doc)
@@ -246,35 +390,90 @@ function select(state,index,scroll=true){
   state.selected=next;
   if(scroll)current?.scrollIntoView({block:'nearest'});
 }
+function cancelSearch(state){
+  clearTimeout(state.timer);
+  state.timer=null;
+  state.controller?.abort();
+  state.controller=null;
+}
+function discardBody(response){
+  try{response?.body?.cancel()?.catch?.(()=>{});}catch{/* locked or already released */}
+}
+/** Fail closed: stale results and coverage are already gone; 401 keeps the signed-out UI, everything else offers a
+ * manual retry. Never an empty success, never an automatic replay. */
+function showFailure(state,signedOut){
+  const status=state.dialog.querySelector('.hgh-search-status'),c=copy(state.doc);
+  delete state.doc.documentElement.dataset.hghSearchReady;
+  clearResults(state);
+  setSearchState(state,'error');
+  if(signedOut){
+    status.textContent=c.signIn;
+    return;
+  }
+  const retry=state.doc.createElement('button');
+  retry.type='button';
+  retry.className='hgh-search-retry';
+  retry.textContent=c.retry;
+  retry.onclick=()=>{
+    state.dialog.querySelector('input[type="search"]').focus();
+    schedule(state,true);
+  };
+  status.replaceChildren(c.unavailable+' ',retry);
+}
+/** One search request. `current()` is the request identity: it must hold after every await (fetch, each stream
+ * read and decode, JSON decode) before anything touches state or DOM, so superseded work can only be discarded. */
 async function run(state){
   state.timer=null;
-  const query=state.query.trim();
-  if(!query){render(state,{results:[]});return;}
-  state.controller?.abort();
-  state.controller=new AbortController();
-  state.dialog.querySelector('.hgh-search-status').textContent=copy(state.doc).searching;
+  const controller=new AbortController();
+  state.controller=controller;
+  const current=()=>!state.destroyed&&state.controller===controller;
   try{
-    const url='/api/hypersearch?q='+encodeURIComponent(scopeQuery(query,state.scope,state.ctx))+'&limit=30';
+    const url='/api/hypersearch?q='+encodeURIComponent(scopeQuery(state.query.trim(),state.scope,state.ctx))+'&limit=30';
     const response=await state.fetchImpl(url,{
-      signal:state.controller.signal,
-      headers:{Accept:'application/json'}
+      signal:controller.signal,
+      headers:{Accept:SEARCH_STREAM_ACCEPT}
     });
+    if(!current()){discardBody(response);return;}
     if(response.status===401){
-      delete state.doc.documentElement.dataset.hghSearchReady;
-      state.dialog.querySelector('.hgh-search-status').textContent=copy(state.doc).signIn;
+      discardBody(response);
+      showFailure(state,true);
       return;
     }
-    if(!response.ok)throw new Error('Search unavailable');
+    if(!response.ok){
+      discardBody(response);
+      throw new Error('Search unavailable');
+    }
+    const kind=searchResponseKind(response);
+    let payload;
+    if(kind==='stream'){
+      payload=await readSearchStream(response.body,{
+        signal:controller.signal,
+        onStarted:()=>{if(current())setSearchState(state,'streaming');}
+      });
+    }else if(kind==='json'){
+      payload=await response.json();
+      if(!isSearchEnvelope(payload))throw new SearchStreamError('protocol','Malformed search response');
+    }else{
+      discardBody(response);
+      throw new SearchStreamError('protocol','Unsupported search response type');
+    }
+    if(!current())return;
     state.doc.documentElement.dataset.hghSearchReady='true';
-    render(state,await response.json());
+    render(state,payload);
+    setSearchState(state,'done');
   }catch(error){
-    if(error.name==='AbortError')return;
-    delete state.doc.documentElement.dataset.hghSearchReady;
-    state.dialog.querySelector('.hgh-search-status').textContent=copy(state.doc).unavailable;
+    if(!current())return;
+    if(error?.name==='AbortError'){clearResults(state);return;}
+    showFailure(state,error?.kind==='remote'&&error.status===401);
   }
 }
 function schedule(state,immediate=false){
-  clearTimeout(state.timer);
+  cancelSearch(state);
+  clearResults(state,!state.query.trim());
+  if(!state.query.trim())return;
+  state.hasInteractiveSearch=true;
+  state.dialog.querySelector('.hgh-search-status').textContent=copy(state.doc).searching;
+  setSearchState(state,'loading');
   state.timer=setTimeout(()=>run(state),immediate?0:120);
 }
 export function openUniversalSearch(doc=document,{seed=''}={}){
@@ -289,7 +488,7 @@ export function openUniversalSearch(doc=document,{seed=''}={}){
   input.value=seed;
   if(!state.dialog.open)state.dialog.showModal();
   requestAnimationFrame(()=>{input.focus();input.select();});
-  if(seed)schedule(state,true);else render(state,{results:[]});
+  schedule(state,true);
   return true;
 }
 function bindMobile(state,node){
@@ -344,12 +543,21 @@ function syncNativeFilterReset(state,mounted){
   const host=form.closest('.filter.menu')||form;
   if(reset.nextSibling!==host)host.before(reset);
 }
+/** Explicit per-instance opt-out for a deployment without a HyperSearch backend (the isolated native demo):
+ * its custom header template renders <meta name="hypergithub-search" content="disabled">. Only that exact value in
+ * <head> disables the header search; absence, any other value and every backend outcome (401, 404, 5xx, network
+ * failure) keep it mounted, so production cannot lose search by accident and page content cannot opt out. */
+export function universalSearchDisabled(doc=document){
+  return doc.head?.querySelector('meta[name="hypergithub-search"]')?.getAttribute('content')?.trim().toLowerCase()==='disabled';
+}
 export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
+  // Disabled before mount: no trigger, dialog, probe or hidden native field; an existing mount is restored in place.
+  if(universalSearchDisabled(doc)){restoreUniversalSearch(doc);return null;}
   let state=states.get(doc);
   if(!state){
     const dialog=create(doc);
     state={doc,dialog,ctx:parseSearchContext(doc),scope:'repo',query:'',hits:[],selected:-1,
-      fetchImpl:fetchImpl||doc.defaultView.fetch.bind(doc.defaultView),timer:null,controller:null,lastTrigger:null,probe:null,mobileOriginals:new Map(),destroyed:false};
+      fetchImpl:fetchImpl||doc.defaultView.fetch.bind(doc.defaultView),timer:null,controller:null,lastTrigger:null,probe:null,mobileOriginals:new Map(),destroyed:false,hasInteractiveSearch:false};
     states.set(doc,state);
     state.media=doc.defaultView.matchMedia('(max-width:767px)');
     state.placeTrigger=()=>{
@@ -365,9 +573,20 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
     };
     state.media.addEventListener('change',state.placeTrigger);
     doc.defaultView.addEventListener('hashchange',state.placeTrigger);
+    // Vue mounts the field asynchronously and changing its value need not add DOM.
+    state.onNativeFilterInput=event=>{
+      if(event.target.matches?.('#dashboard-repo-list .repos-search input[type="search"]'))
+        syncNativeFilterReset(state,state.desktopTrigger?.isConnected);
+    };
+    doc.addEventListener('input',state.onNativeFilterInput);
     dialog.querySelector('.hgh-search-close').onclick=()=>dialog.close();
     dialog.querySelector('form').addEventListener('submit',event=>event.preventDefault());
-    dialog.addEventListener('close',()=>state.lastTrigger?.focus?.());
+    dialog.addEventListener('close',()=>{
+      if(dialog.open)return;
+      cancelSearch(state);
+      clearResults(state);
+      state.lastTrigger?.focus?.();
+    });
     const input=dialog.querySelector('input[type="search"]');
     input.addEventListener('input',()=>{state.query=input.value;schedule(state);});
     input.addEventListener('keydown',event=>{
@@ -403,11 +622,12 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
   if(!state.probe){
     state.probe=state.fetchImpl('/api/hypersearch?q=',{headers:{Accept:'application/json'}})
       .then(response=>{
-        if(state.destroyed)return;
+        discardBody(response);
+        if(state.destroyed||state.hasInteractiveSearch)return;
         if(response.ok)doc.documentElement.dataset.hghSearchReady='true';
         else delete doc.documentElement.dataset.hghSearchReady;
       })
-      .catch(()=>{if(!state.destroyed)delete doc.documentElement.dataset.hghSearchReady;});
+      .catch(()=>{if(!state.destroyed&&!state.hasInteractiveSearch)delete doc.documentElement.dataset.hghSearchReady;});
   }
   return state;
 }
@@ -417,8 +637,8 @@ export function restoreUniversalSearch(doc=document){
   state.destroyed=true;
   state.media.removeEventListener('change',state.placeTrigger);
   doc.defaultView.removeEventListener('hashchange',state.placeTrigger);
-  state.controller?.abort();
-  clearTimeout(state.timer);
+  doc.removeEventListener('input',state.onNativeFilterInput);
+  cancelSearch(state);
   state.desktopTrigger?.remove();
   state.filterReset?.remove();
   state.dashboardFilterReset?.remove();

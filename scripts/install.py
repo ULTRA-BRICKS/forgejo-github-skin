@@ -17,7 +17,7 @@ START, END = '<!-- hypergithub:start -->', '<!-- hypergithub:end -->'
 ASSET_NAMES = (
     'core.mjs','skin.css','skin.mjs','list-options.mjs',
     'repository-controls.mjs','mobile-chrome.mjs','repository-ui.css',
-    'universal-search.mjs','universal-search.css',
+    'universal-search.mjs','search-stream.mjs','universal-search.css',
     'pagination.mjs','pagination-model.mjs','pagination.css',
     'organization.mjs','organization.css',
     'dashboard-pagination.mjs','dashboard-pagination.css',

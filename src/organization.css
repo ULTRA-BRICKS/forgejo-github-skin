@@ -82,7 +82,7 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .tw-text-center { padding: 12px 0; border-top: 1px solid var(--hgh-color-border, #d1d9e0); }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .tw-text-center .divider { display: none; }
 /* Exactly 10 repository rows visible before "View all repositories" reveals the rest (#repos). */
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] #dashboard-repo-list .repo-owner-name-list > li:nth-child(n+11) { display: none; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] #dashboard-repo-list .repo-owner-name-list > li:nth-child(n+11) { display: none !important; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page #dashboard-repo-list .repo-owner-name-list > li { flex-wrap: wrap; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-repo-meta { flex-basis: 100%; min-width: 0; padding: 2px 0 8px 24px; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-repo-desc { margin: 0 0 6px; font-size: 13px; color: var(--hgh-color-muted, #59636e); }
@@ -101,12 +101,15 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-language-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-language-list li { display: flex; align-items: center; gap: 8px; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-activity { margin-top: 32px; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-activity #activity-feed .flex-item { padding-block: 8px; gap: 8px; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-activity #activity-feed .flex-item-trailing svg { width: 16px !important; height: 16px !important; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-compact-activity .flex-item { display: flex; align-items: flex-start; padding-block: 8px; gap: 8px; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-compact-activity .flex-item-trailing svg { width: 16px !important; height: 16px !important; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-compact-activity .flex-item-main { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-compact-activity .markup :is(img, video, iframe) { max-width: 100%; }
 /* Compact activity: 5 rows visible in the overview column; full history lives under #activity. */
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] .hgh-org-activity #activity-feed > .flex-item:nth-child(n+6) { display: none; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .markup.hgh-org-clamped { max-height: 4.5em; overflow: hidden; position: relative; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .markup.hgh-org-clamped::after { content: ""; position: absolute; inset: auto 0 0; height: 1.5em; background: linear-gradient(to bottom, transparent, var(--hgh-color-canvas, #fff)); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .markup.hgh-org-clamped { max-height: 3lh; overflow: hidden; position: relative; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .markup.hgh-org-clamped > p { margin-block: 0; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .markup.hgh-org-clamped :is(img, video, audio, iframe, object, embed, .attachment, .attachments, a[download]) { display: none !important; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-toggle { display: inline-flex; margin-top: 4px; border: 0; background: none; padding: 0; color: var(--hgh-color-link, #0969da); font-size: 13px; cursor: pointer; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="repos"] .hgh-org-heatmap,
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="repos"] .hgh-org-sidebar,
@@ -158,3 +161,17 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-profile[data-hgh-org-view="overview"] .flex-list > .flex-item:nth-child(n+11) { display: none; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-view-all-bottom { display: flex; justify-content: center; padding: 16px 0 0; }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-profile[data-hgh-org-view="repos"] .hgh-org-view-all-bottom { display: none; }
+
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="overview"] #dashboard-repo-list .tw-text-center,
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-profile[data-hgh-org-view="overview"] .center.page.buttons,
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-profile[data-hgh-org-view="overview"] .hgh-pagination { display: none !important; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-profile[data-hgh-org-view="repos"] .ui.container .ui.mobile.reversed.stackable.grid > .column:not(:has(.flex-list)) { display: none !important; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-page[data-hgh-org-view="repos"] .hgh-org-columns { grid-template-columns: minmax(0, 1fr); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-profile[data-hgh-org-view="repos"] :is(.hgh-org-heatmap, .hgh-org-activity) { display: none; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.hgh-org-profile, .hgh-org-page) .hgh-org-calendar { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 10px); grid-auto-columns: 10px; gap: 3px; max-width: 100%; overflow: hidden; }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-day { border-radius: 2px; background: var(--hgh-color-subtle, #ebedf0); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-day[data-level="1"] { background: color-mix(in srgb, var(--hgh-color-success, #1f883d) 30%, var(--hgh-color-canvas, white)); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-day[data-level="2"] { background: color-mix(in srgb, var(--hgh-color-success, #1f883d) 55%, var(--hgh-color-canvas, white)); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-day[data-level="3"] { background: color-mix(in srgb, var(--hgh-color-success, #1f883d) 80%, var(--hgh-color-canvas, white)); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .hgh-org-day[data-level="4"] { background: var(--hgh-color-success, #1f883d); }
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(.hgh-org-statistics, .hgh-org-calendar-note) { font-size: 12px; color: var(--hgh-color-muted, #59636e); margin: 8px 0; }

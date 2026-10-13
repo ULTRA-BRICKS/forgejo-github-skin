@@ -1,5 +1,7 @@
 import {test, expect} from '@playwright/test';
 import fs from 'node:fs/promises';
+import http from 'node:http';
+import {appearances, applyAppearance, captureProof} from './organization-proof.mjs';
 
 // Same technique as repository-controls.spec.mjs: concatenate the real source files (stripping
 // module syntax) into one classic script so the tests exercise the production enhancer, not a
@@ -9,6 +11,10 @@ const organization = (await fs.readFile(new URL('../../src/organization.mjs', im
   .replace(/^import.*$/mg, '')
   .replaceAll('export ', '');
 const css = await fs.readFile(new URL('../../src/organization.css', import.meta.url), 'utf8');
+
+test.beforeEach(async ({page}) => {
+  await page.route('https://native-ui.test/org/ultrabricks/dashboard', route => route.fulfill({status: 401}));
+});
 
 // Real ultrabricks repositories — single source shared with stories/organization-page.mjs, see
 // stories/organization-fixtures.mjs for provenance.
@@ -98,28 +104,6 @@ async function prepare(page) {
   await expect.poll(() => page.locator('.hgh-org-repo-meta').count()).toBeGreaterThan(0);
 }
 
-test('overview shows exactly 10 repositories with a View all link into #repos', async ({page}) => {
-  await prepare(page);
-  await expect(page.locator('#dashboard-repo-list .repo-owner-name-list > li:visible')).toHaveCount(10);
-  // Never touch the generic pagination implementation — the native pager stays exactly as
-  // Vue rendered it (visible, untouched) even while the overview caps rows to 10 via our own CSS.
-  await expect(page.locator('#dashboard-repo-list .ui.borderless.pagination')).toBeVisible();
-  const viewAll = page.locator('.hgh-org-view-all');
-  await expect(viewAll).toBeVisible();
-  await expect(viewAll).toHaveAttribute('href', '#repos');
-});
-
-test('enhanceOrganization() never touches the Vue repo-list pager DOM/ARIA at all — that decoration now belongs entirely to dashboard-pagination.mjs', async ({page}) => {
-  await prepare(page);
-  const pager = page.locator('#dashboard-repo-list .ui.borderless.pagination.menu');
-  await expect(pager.locator(':scope > a')).toHaveCount(5); // First, Previous, current, Next, Last — matches the real v16.0.3 template
-  const current = pager.locator(':scope > a').nth(2);
-  await expect(current).toHaveClass(/active/);
-  await expect(current).not.toHaveClass(/hgh-org-pager-current/);
-  await expect(current).toBeVisible();
-  await expect(current).not.toHaveAttribute('aria-hidden', 'true');
-  await expect(pager.locator('a.hgh-org-pager-current')).toHaveCount(0);
-});
 
 test('shows a compact identity header reusing the native avatar/name and the real View-home link, restored exactly on teardown', async ({page}) => {
   await prepare(page);
@@ -235,10 +219,11 @@ test('sidebar renders real People and top languages from the org and repo-search
 });
 
 test('a repo-search response that arrives after the org-home fetch still refreshes Top languages/Topics', async ({page}) => {
+  const enrichment = Promise.withResolvers();
   await page.route('**/repo/search**', async (route) => {
     const url = new URL(route.request().url());
     if (url.searchParams.get('count_only') === '1') return route.fulfill({contentType: 'application/json', headers: {'X-Total-Count': String(REPOS.length)}, body: '{}'});
-    await new Promise((r) => setTimeout(r, 250)); // deliberately resolves after the faster org-home fetch below
+    await enrichment.promise; // Resolve only after People renders, independent of host scheduling.
     const data = REPOS.map(([full_name, language, description, topics]) => ({repository: {full_name, language, description, topics, stars_count: 3, forks_count: 1, open_issues_count: 2, updated_at: '2026-09-27T12:00:00Z'}}));
     return route.fulfill({contentType: 'application/json', headers: {'X-Total-Count': String(REPOS.length)}, body: JSON.stringify({data})});
   });
@@ -253,10 +238,12 @@ test('a repo-search response that arrives after the org-home fetch still refresh
   await page.addScriptTag({content: core + '\n' + organization});
   await page.evaluate(() => { window.enhanceOrganization(); });
   await page.waitForSelector('.hgh-org-page');
-  await expect(page.locator('.hgh-org-people-list a[title="Alex"]')).toBeVisible(); // the faster home-page fetch already rendered People
-  await expect.poll(() => page.locator('.hgh-org-language-list li').count(), {timeout: 5000}).toBeGreaterThan(0); // the slower repo-search must still refresh the sidebar once it resolves, not just decorate rows
-  const languages = await page.locator('.hgh-org-language-list li').allTextContents();
-  expect(languages.some((t) => t.includes('Python'))).toBe(true);
+  await expect(page.locator('.hgh-org-people-list a[title="Alex"]')).toBeVisible();
+  await expect(page.locator('.hgh-org-language-list li')).toHaveCount(0);
+  const response = page.waitForResponse(response => new URL(response.url()).pathname === '/repo/search');
+  enrichment.resolve();
+  await (await response).finished();
+  await expect(page.locator('.hgh-org-language-list')).toContainText('Python');
 });
 
 test('heatmap gets GitHub-green level colors instead of the native orange/blue primary', async ({page}) => {
@@ -534,7 +521,7 @@ test('public profile with more than 10 repos: caps to 10, reveals the rest via b
 
   const languages = await page.locator('.hgh-org-language-list li').allTextContents();
   expect(languages.some((t) => t.includes('Python'))).toBe(true);
-  await expect(page.locator('.hgh-org-topic-list .hgh-org-topic').first()).toBeVisible();
+  await expect(page.locator('.hgh-org-topic-list .hgh-org-topic').first()).toBeHidden();
 
   await page.evaluate(() => { window.restoreOrganization(); });
   await expect(page.locator('.page-content.organization.profile')).not.toHaveClass(/hgh-org-profile/);
@@ -542,4 +529,364 @@ test('public profile with more than 10 repos: caps to 10, reveals the rest via b
   await expect(page.locator('.hgh-org-sidebar')).toHaveCount(0);
   await expect(page.locator('.flex-list > .flex-item')).toHaveCount(REPOS.length); // every row still present, none dropped
   await expect(nextPageLink).toHaveAttribute('href', /page=2/);
+});
+
+test('overview owns a ten-row preview, never the dashboard repository pager', async ({page}) => {
+  await prepare(page);
+  await expect(page.locator('#dashboard-repo-list .repo-owner-name-list > li:visible')).toHaveCount(10);
+  await expect(page.locator('#dashboard-repo-list .ui.borderless.pagination')).toBeHidden();
+  await expect(page.getByRole('link', {name: 'View all repositories', exact: true})).toHaveCount(1);
+  await page.getByRole('link', {name: 'View all repositories', exact: true}).click();
+  await expect(page.locator('#dashboard-repo-list .ui.borderless.pagination')).toBeVisible();
+  await expect(page.locator('.hgh-org-sidebar')).toBeHidden();
+  await expect(page.locator('.hgh-org-heatmap')).toBeHidden();
+  await expect(page.locator('.hgh-org-activity')).toBeHidden();
+  await page.goBack();
+  await expect(page.locator('#dashboard-repo-list .ui.borderless.pagination')).toBeHidden();
+});
+
+test('public repository view hides overview context and keeps native pagination in repository history', async ({page}) => {
+  await page.route('https://native-ui.test/ultrabricks', (route) => route.fulfill({contentType: 'text/html', body: bigProfileFixture}));
+  await page.goto('https://native-ui.test/ultrabricks');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await expect(page.locator('.center.page.buttons')).toBeHidden();
+  await page.getByRole('link', {name: 'View all repositories', exact: true}).click();
+  await expect(page.locator('.hgh-org-sidebar')).toBeHidden();
+  await expect(page.locator('.center.page.buttons')).toBeVisible();
+  const next = page.locator('.center.page.buttons a.navigation[href]').first();
+  await expect(next).toHaveAttribute('href', /page=2.*#repos$/);
+  await page.goBack();
+  await expect(page.locator('.center.page.buttons')).toBeHidden();
+  await expect(page.locator('.hgh-org-sidebar')).toBeVisible();
+  await page.goForward();
+  await page.evaluate(() => window.enhanceOrganization());
+  await expect(page.locator('.hgh-org-view-all')).toHaveCount(1);
+});
+
+test('small public organizations still support focused repository and overview views', async ({page}) => {
+  await page.route('https://native-ui.test/ultrabricks', (route) => route.fulfill({contentType: 'text/html', body: profileFixture}));
+  await page.goto('https://native-ui.test/ultrabricks#repos');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await expect(page.locator('.segment.members')).toBeHidden();
+  await page.getByRole('link', {name: 'Overview', exact: true}).click();
+  await expect(page.locator('.segment.members')).toBeVisible();
+  await expect(page.getByRole('link', {name: 'View all repositories', exact: true})).toBeVisible();
+});
+
+test('public overview derives statistics, heatmap and chronological activity from viewer-scoped data', async ({page}) => {
+  await page.clock.setFixedTime(new Date('2026-10-01T12:00:00Z'));
+  await page.route('https://native-ui.test/ultrabricks', (route) => route.fulfill({contentType: 'text/html', body: bigProfileFixture}));
+  await page.route('**/api/v1/orgs/ultrabricks/activities/feeds?*', route => route.fulfill({json: [
+    {id: 1, created: '2026-10-01T09:00:00Z', op_type: 'create_issue', act_user: {login: 'alex'}, repo: {full_name: 'ultrabricks/rig-cli', html_url: 'https://native-ui.test/ultrabricks/rig-cli'}},
+    {id: 2, created: '2026-10-01T10:00:00Z', op_type: 'commit_repo', act_user: {login: 'morgan'}, repo: {full_name: 'ultrabricks/rig-cli', html_url: 'https://native-ui.test/ultrabricks/rig-cli'}},
+  ]}));
+  await page.goto('https://native-ui.test/ultrabricks');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await expect(page.locator('.hgh-org-activity .flex-item')).toHaveCount(2);
+  await expect(page.locator('.hgh-org-activity .flex-item').first()).toContainText('morgan');
+  await expect(page.locator('.hgh-org-heatmap [data-count="2"]')).toHaveCount(1);
+  await expect(page.locator('.hgh-org-statistics')).toContainText('2 recent events');
+  const order = await page.evaluate(() => {
+    const heatmap = document.querySelector('.hgh-org-heatmap');
+    const repos = document.querySelector('.ui.mobile.reversed.stackable.grid');
+    const activity = document.querySelector('.hgh-org-activity');
+    return [!!(heatmap.compareDocumentPosition(repos) & 4), !!(repos.compareDocumentPosition(activity) & 4)];
+  });
+  expect(order).toEqual([true, true]);
+  await page.getByRole('link', {name: 'View all repositories', exact: true}).click();
+  await expect(page.locator('.hgh-org-activity')).toBeHidden();
+  await expect(page.locator('.hgh-org-heatmap')).toBeHidden();
+  await page.evaluate(() => { window.restoreOrganization(); window.enhanceOrganization(); });
+  await expect(page.locator('.hgh-org-heatmap')).toHaveCount(0);
+  await page.getByRole('link', {name: 'Overview', exact: true}).click();
+  await expect(page.locator('.hgh-org-heatmap')).toHaveCount(1);
+});
+
+for (const query of ['utm_source=share', 'id=organization--overview&viewMode=story', 'q=rig', 'page=2', 'sort=recentupdate', 'language=Nix', 'archived=0', 'fork=1', 'mirror=0', 'template=1', 'private=0']) {
+  const repositoryQuery = !query.startsWith('utm_') && !query.startsWith('id=');
+  test(`${repositoryQuery ? 'native repository' : 'unrelated URL'} parameters select the correct organization view: ${query}`, async ({page}) => {
+    await page.route(`https://native-ui.test/ultrabricks?${query}`, route => route.fulfill({contentType: 'text/html', body: profileFixture}));
+    await page.goto(`https://native-ui.test/ultrabricks?${query}`);
+    await page.addScriptTag({content: core + '\n' + organization});
+    await page.evaluate(() => window.enhanceOrganization());
+    await expect(page.locator('.page-content.organization.profile')).toHaveAttribute('data-hgh-org-view', repositoryQuery ? 'repos' : 'overview');
+    await expect(page.locator('.segment.members')).toBeVisible({visible: !repositoryQuery});
+    if (repositoryQuery) {
+      await page.getByRole('link', {name: 'Overview', exact: true}).click();
+      await expect(page.locator('.segment.members')).toBeVisible();
+      expect(new URL(page.url()).search.slice(1)).toBe(query);
+      await page.goBack();
+      await expect(page.locator('.segment.members')).toBeHidden();
+    }
+  });
+}
+
+test('native dashboard repository queries select the focused view without dropping query state', async ({page}) => {
+  await mockRoutes(page);
+  const url = 'https://native-ui.test/dashboard?repo-search-query=rig&repo-search-filter=sources&repo-search-page=2';
+  await page.route(url, route => route.fulfill({contentType: 'text/html', body: fixture}));
+  await page.goto(url);
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await expect(page.locator('.hgh-org-page')).toHaveAttribute('data-hgh-org-view', 'repos');
+  await expect(page.locator('.hgh-org-sidebar')).toBeHidden();
+  expect(new URL(page.url()).search).toBe(new URL(url).search);
+});
+
+test('Overview selection survives a native query update before its hashchange event', async ({page}) => {
+  await prepare(page);
+  await page.locator('[data-hgh-org-tab="repos"]').click();
+  await expect(page.locator('.hgh-org-page')).toHaveAttribute('data-hgh-org-view', 'repos');
+  await page.evaluate(() => {
+    document.querySelector('[data-hgh-org-tab="overview"]').click();
+    history.replaceState({}, '', '?repo-search-query=rig');
+  });
+  await expect(page.locator('.hgh-org-page')).toHaveAttribute('data-hgh-org-view', 'overview');
+  await page.evaluate(() => window.enhanceOrganization());
+  expect(new URL(page.url()).hash).toBe('#overview');
+  expect(new URL(page.url()).search).toBe('?repo-search-query=rig');
+});
+
+test('hashless dashboard follows native repository query updates after enhancement', async ({page}) => {
+  await prepare(page);
+  await page.evaluate(() => {
+    history.replaceState({}, '', '?repo-search-query=rig');
+    window.enhanceOrganization();
+  });
+  await expect(page.locator('.hgh-org-page')).toHaveAttribute('data-hgh-org-view', 'repos');
+  await expect(page.locator('#dashboard-repo-list .pagination')).toBeVisible();
+  await expect(page.locator('.hgh-org-sidebar')).toBeHidden();
+  expect(new URL(page.url()).search).toBe('?repo-search-query=rig');
+});
+
+test('native dashboard replaceState retains the selected hash view through repository remounts', async ({page}) => {
+  await prepare(page);
+  await page.getByRole('link', {name: 'View all repositories', exact: true}).click();
+  await page.evaluate(() => {
+    history.replaceState({}, '', '?repo-search-query=rig&repo-search-page=2');
+    window.enhanceOrganization();
+  });
+  await expect(page).toHaveURL(/repo-search-query=rig&repo-search-page=2#repos$/);
+  await expect(page.locator('.hgh-org-page')).toHaveAttribute('data-hgh-org-view', 'repos');
+  await page.getByRole('link', {name: 'Overview', exact: true}).click();
+  await page.evaluate(() => {
+    history.replaceState({}, '', '?repo-search-query=rig&repo-search-page=2');
+    window.enhanceOrganization();
+  });
+  await expect(page).toHaveURL(/#overview$/);
+  await expect(page.locator('.hgh-org-page')).toHaveAttribute('data-hgh-org-view', 'overview');
+  await page.goBack();
+  await expect(page.locator('.hgh-org-page')).toHaveAttribute('data-hgh-org-view', 'repos');
+  await expect(page.locator('.hgh-org-page')).toHaveCount(1);
+});
+
+for (const appearance of appearances) {
+  test(`organization surface proof ${appearance.scheme} ${appearance.motion}`, async ({page}, testInfo) => {
+    await prepare(page);
+    await applyAppearance(page, appearance);
+    await expect(page.locator('#dashboard-repo-list .repo-owner-name-list > li:visible')).toHaveCount(10);
+    await expect(page.locator('#dashboard-repo-list .pagination')).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await captureProof(page, testInfo, 'overview');
+    await page.getByRole('link', {name: 'View all repositories', exact: true}).click();
+    await expect(page.locator('.hgh-org-sidebar')).toBeHidden();
+    await expect(page.locator('.hgh-org-activity')).toBeHidden();
+    await expect(page.locator('.hgh-org-heatmap')).toBeHidden();
+    await expect(page.locator('#dashboard-repo-list .pagination')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await captureProof(page, testInfo, 'repositories');
+  });
+}
+
+test('compact activity aligns event icons beside content rather than stacking them below comments', async ({page}) => {
+  await prepare(page);
+  const offset = await page.locator('#activity-feed > .flex-item').first().evaluate(row => {
+    const main = row.querySelector('.flex-item-main').getBoundingClientRect();
+    const icon = row.querySelector('.flex-item-trailing').getBoundingClientRect();
+    return {top: Math.abs(icon.top - main.top), right: icon.left >= main.right};
+  });
+  expect(offset.top).toBeLessThanOrEqual(1);
+  expect(offset.right).toBe(true);
+});
+
+test('repository-only public navigation defers activity until Overview is first visited', async ({page}) => {
+  let requests = 0;
+  await page.route('https://native-ui.test/ultrabricks', route => route.fulfill({contentType: 'text/html', body: bigProfileFixture}));
+  await page.route('**/api/v1/orgs/ultrabricks/activities/feeds?*', route => {
+    requests++;
+    return route.fulfill({json: []});
+  });
+  await page.goto('https://native-ui.test/ultrabricks#repos');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(requests).toBe(0);
+  await page.getByRole('link', {name: 'Overview', exact: true}).click();
+  await expect(page.locator('.hgh-org-statistics')).toContainText('0 recent events');
+  expect(requests).toBe(1);
+  await page.getByRole('link', {name: 'Repositories', exact: true}).click();
+  await page.getByRole('link', {name: 'Overview', exact: true}).click();
+  expect(requests).toBe(1);
+});
+
+test('public activity arriving while hidden is clamped when Overview becomes visible', async ({page}) => {
+  let release;
+  const responseGate = new Promise(resolve => { release = resolve; });
+  await page.route('https://native-ui.test/ultrabricks', route => route.fulfill({contentType: 'text/html', body: bigProfileFixture}));
+  await page.route('**/api/v1/orgs/ultrabricks/activities/feeds?*', async route => {
+    await responseGate;
+    await route.fulfill({json: [{created: new Date().toISOString(), comment: {body: 'Long comment with visible text. '.repeat(80)}}]});
+  });
+  await page.goto('https://native-ui.test/ultrabricks');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await page.getByRole('link', {name: 'Repositories', exact: true}).click();
+  release();
+  await expect(page.locator('.hgh-org-activity .markup')).toHaveCount(1);
+  await page.getByRole('link', {name: 'Overview', exact: true}).click();
+  await expect(page.getByRole('button', {name: 'Show more'})).toBeVisible();
+  await expect(page.locator('.hgh-org-activity .markup')).toHaveClass(/hgh-org-clamped/);
+});
+
+test('cookie-authenticated public Overview uses native organization activity without API credentials', async ({page}) => {
+  const server = http.createServer((request, response) => {
+    if (request.url === '/ultrabricks') {
+      response.writeHead(200, {'content-type': 'text/html'});
+      response.end(bigProfileFixture);
+    } else if (request.url === '/org/ultrabricks/dashboard' && request.headers.cookie?.includes('fixture_session=member')) {
+      response.writeHead(200, {'content-type': 'text/html'});
+      response.end(`<div class="page-content dashboard feeds">
+        <div id="user-heatmap" data-heatmap-data='[{"timestamp":${Math.floor(Date.now() / 1000)},"contributions":7}]' data-locale-total-contributions="7 contributions in the last 12 months"></div>
+        <div id="activity-feed"><div class="flex-item"><div class="flex-item-main"><a href="/ultrabricks/private/issues/1">Private issue</a><div class="markup">Member-visible comment</div></div></div></div></div>`);
+    } else {
+      response.writeHead(401);
+      response.end('API token required');
+    }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  try {
+    await page.context().addCookies([{name: 'fixture_session', value: 'member', url: origin}]);
+    await page.goto(`${origin}/ultrabricks`);
+    await page.addScriptTag({content: core + '\n' + organization});
+    await page.evaluate(() => window.enhanceOrganization());
+    await expect(page.locator('.hgh-org-activity')).toContainText('Member-visible comment');
+    await expect(page.getByRole('link', {name: 'Private issue'})).toHaveAttribute('href', '/ultrabricks/private/issues/1');
+    await expect(page.locator('.hgh-org-heatmap [data-count="7"]')).toHaveCount(1);
+    await expect(page.locator('.hgh-org-statistics')).toContainText('7 contributions');
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test('native activity links survive malformed optional contribution data', async ({page}) => {
+  await page.route('https://native-ui.test/ultrabricks', route => route.fulfill({contentType: 'text/html', body: bigProfileFixture}));
+  await page.route('https://native-ui.test/org/ultrabricks/dashboard', route => route.fulfill({contentType: 'text/html', body: `<div class="page-content dashboard feeds">
+    <div id="user-heatmap" data-heatmap-data="invalid-json"></div>
+    <div id="activity-feed"><div class="flex-item"><div class="flex-item-main"><a href="/ultrabricks/private/issues/1">Original native discussion</a></div></div></div></div>`}));
+  await page.goto('https://native-ui.test/ultrabricks');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await expect(page.getByRole('link', {name: 'Original native discussion'})).toHaveAttribute('href', '/ultrabricks/private/issues/1');
+  await expect(page.locator('.hgh-org-heatmap')).toContainText('Contribution calendar is unavailable.');
+  await expect(page.locator('.hgh-org-heatmap [data-count]')).toHaveCount(0);
+});
+
+test('relocated native First navigation retains repository view in production enhancer order', async ({page}) => {
+  const model = (await fs.readFile(new URL('../../src/pagination-model.mjs', import.meta.url), 'utf8')).replaceAll('export ', '');
+  const pagination = (await fs.readFile(new URL('../../src/pagination.mjs', import.meta.url), 'utf8')).replace(/^import.*$/mg, '').replaceAll('export ', '');
+  await page.route(/^https:\/\/native-ui.test\/ultrabricks(?:\?.*)?$/, route => route.fulfill({contentType: 'text/html', body: bigProfileFixture}));
+  await page.clock.install();
+  await page.goto('https://native-ui.test/ultrabricks?page=3#repos');
+  await page.addScriptTag({content: core + '\n' + model + '\n' + pagination + '\n' + organization});
+  await page.evaluate(() => {
+    document.querySelector('.pagination').innerHTML = '<a class="item navigation" href="/ultrabricks"><span class="navigation_label">First</span></a><a class="item navigation" href="/ultrabricks?page=2"><span class="navigation_label">Previous</span></a><a class="active item">3</a><a class="item navigation" href="/ultrabricks?page=4"><span class="navigation_label">Next</span></a><a class="item navigation" href="/ultrabricks?page=5"><span class="navigation_label">Last</span></a>';
+    window.enhancePagination();
+    window.enhanceOrganization();
+  });
+  const first = page.locator('.hgh-pagination a').filter({hasText: 'First'});
+  await expect(first).toHaveAttribute('href', '/ultrabricks#repos');
+  await page.locator('.hgh-pagination').hover();
+  await page.clock.runFor(2000);
+  await first.click();
+  await expect(page).toHaveURL('https://native-ui.test/ultrabricks#repos');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  await expect(page.locator('.hgh-org-profile')).toHaveAttribute('data-hgh-org-view', 'repos');
+});
+
+test('imported screenshot requests wait until the visible comment is expanded', async ({page}) => {
+  let imageRequests = 0;
+  await page.route('https://native-ui.test/attachment*.svg', route => {
+    imageRequests++;
+    return route.fulfill({contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="red"/></svg>'});
+  });
+  await page.route('https://native-ui.test/ultrabricks', route => route.fulfill({contentType: 'text/html', body: bigProfileFixture}));
+  await page.route('https://native-ui.test/org/ultrabricks/dashboard', route => route.fulfill({contentType: 'text/html', body: `<div class="page-content dashboard feeds">
+    <div id="activity-feed"><div class="flex-item"><div class="flex-item-main"><a href="/ultrabricks/private/issues/1">Native discussion</a>
+    <div class="markup"><p>Screenshot context</p><img src="/attachment.svg" srcset="/attachment@2x.svg 2x" width="120" height="80" alt="Native screenshot"></div>
+    </div></div></div></div>`}));
+  await page.goto('https://native-ui.test/ultrabricks');
+  await page.addScriptTag({content: core + '\n' + organization});
+  await page.evaluate(() => window.enhanceOrganization());
+  const toggle = page.getByRole('button', {name: 'Show more'});
+  await toggle.scrollIntoViewIfNeeded();
+  await page.waitForLoadState('networkidle');
+  expect(imageRequests).toBe(0);
+  await toggle.click();
+  const image = page.getByAltText('Native screenshot');
+  await expect(image).toBeVisible();
+  await expect.poll(() => image.evaluate(node => node.naturalWidth)).toBe(120);
+  expect(imageRequests).toBe(1);
+  await expect(image).toHaveAttribute('src', '/attachment.svg');
+  await expect(image).toHaveAttribute('srcset', '/attachment@2x.svg 2x');
+});
+
+for(const nativeInert of [true,false]){
+  test(`native inert changes while collapsed are preserved on disclosure (${nativeInert})`,async({page})=>{
+    await prepare(page);
+    await page.evaluate(()=>{
+      const body=document.querySelector('#activity-feed .markup');
+      const button=document.createElement('button');button.id='native-owned-inert';button.textContent='Native action';body.append(button);
+    });
+    const control=page.locator('#native-owned-inert');
+    await expect(control).toHaveJSProperty('inert',true);
+    await control.evaluate((node,value)=>{node.inert=true;if(!value)node.inert=false;},nativeInert);
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await expect(control).toHaveJSProperty('inert',true);
+    await page.getByRole('button',{name:'Show more',exact:true}).click();
+    await expect(control).toHaveJSProperty('inert',nativeInert);
+    await page.evaluate(()=>window.restoreOrganization(document));
+    await expect(control).toHaveJSProperty('inert',nativeInert);
+  });
+}
+
+test('native important flex utility cannot expose overview rows after the tenth',async({page})=>{
+  await prepare(page);
+  // Exact public Forgejo16.0.3 utility declaration captured from assets/css/index.css.
+  await page.addStyleTag({content:'.tw-flex{display:flex!important}'});
+  const rows=page.locator('#dashboard-repo-list .repo-owner-name-list>li:visible');
+  await expect(rows).toHaveCount(10);
+  await page.locator('.hgh-org-view-all').click();
+  await expect(rows).toHaveCount(VISIBLE_COUNT);
+  await page.goBack();
+  await expect(rows).toHaveCount(10);
+});
+
+test('an initially native-inert clipped control stays protected when the widget clears inert',async({page})=>{
+  await prepare(page);
+  await page.evaluate(()=>{
+    const body=document.querySelector('#activity-feed .markup');
+    const control=document.createElement('button');control.id='initially-native-inert';control.textContent='Widget action';control.inert=true;body.append(control);
+  });
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const control=page.locator('#initially-native-inert');
+  await control.evaluate(node=>{node.inert=false;});
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await expect(control).toHaveJSProperty('inert',true);
+  await page.getByRole('button',{name:'Show more',exact:true}).click();
+  await expect(control).toHaveJSProperty('inert',false);
 });

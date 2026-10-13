@@ -2,6 +2,7 @@ import {test, expect} from '@playwright/test';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
+import {appearances, applyAppearance, captureProof} from './organization-proof.mjs';
 
 const model = await fs.readFile(new URL('../../src/pagination-model.mjs', import.meta.url), 'utf8');
 const enhancer = await fs.readFile(new URL('../../src/pagination.mjs', import.meta.url), 'utf8');
@@ -24,7 +25,7 @@ function nativePagination({current, total, params = '', hash = '', lang = 'en'})
     ? {first: 'Первая', previous: 'Пред.', next: 'След.', last: 'Последняя'}
     : {first: 'First', previous: 'Previous', next: 'Next', last: 'Last'};
   // Windowed like Forgejo's real Paginater: first, ellipsis, a few around current, ellipsis, last.
-  const nums = new Set([1, total, current - 1, current, current + 1].filter((n) => n >= 1 && n <= total));
+  const nums = new Set([1, total, current - 2, current - 1, current, current + 1, current + 2].filter((n) => n >= 1 && n <= total));
   const sorted = [...nums].sort((a, b) => a - b);
   let pagesHtml = '';
   let prevNum = 0;
@@ -254,53 +255,40 @@ test('a touch long-press (contact held 2s without lifting) reveals; lifting befo
 test('hidden wing items reject pointer clicks, are absent from the tab order, and never navigate', async ({page}) => {
   await prepare(page, nativePagination({current: 6, total: 90}));
   await page.evaluate(() => enhancePagination());
-  const numberCount = await page.locator('.hgh-pg-number').count();
-  expect(numberCount).toBeGreaterThan(0);
+  const wingLink = page.locator('.hgh-pg-wing-items a[href]').first();
   const before = page.url();
-  await page.locator('.hgh-pg-number').first().click({force: true, timeout: 2000}).catch(() => {});
-  await page.waitForTimeout(50);
+  const rect = await wingLink.evaluate(node => node.getBoundingClientRect().toJSON());
+  await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
   expect(page.url()).toBe(before);
-  const tabbable = await page.evaluate(() => {
-    const number = document.querySelector('.hgh-pg-number');
-    return number.tabIndex >= 0 && number.closest('[inert]') === null;
-  });
-  expect(tabbable).toBe(false);
+  await wingLink.evaluate(node => node.focus());
+  await expect(wingLink).not.toBeFocused();
 });
 
-test('Tab reaches wing "More pages" triggers on both sides without hover; activating one reveals immediately without navigating or moving focus away', async ({page, browserName}) => {
+test('focus leaving the pager cancels dwell; moving between Previous and Next preserves it without navigation', async ({page}) => {
   await prepare(page, nativePagination({current: 6, total: 90}));
-  await page.evaluate(() => enhancePagination());
-  await page.evaluate(() => { const s = document.createElement('button'); s.id = 'before-nav'; s.textContent = 'sentinel'; document.body.prepend(s); });
-  await page.locator('#before-nav').focus();
-  const order = [];
-  let triggerHits = 0;
-  for (let i = 0; i < 8 && triggerHits < 2; i++) {
-    await page.keyboard.press('Tab');
-    const cls = await page.evaluate(() => document.activeElement.className);
-    order.push(cls);
-    if (cls.includes('hgh-pg-more')) triggerHits++;
-  }
-  // Both "More pages" triggers are real <button> elements, tab-reachable in every
-  // browser without hovering: the actual accessibility requirement.
-  expect(triggerHits).toBe(2);
-  if (browserName !== 'webkit') {
-    // WebKit's documented default only tabs through form controls, not plain
-    // <a> links (Safari's "Full Keyboard Access" off by default) — the exact
-    // same native Previous/Next anchors Forgejo already renders would skip
-    // identically today, unrelated to this enhancement. Chromium reflects the
-    // W3C default (all interactive elements tabbable), asserted precisely here.
-    expect(order).toEqual(['hgh-pg-more', 'item navigation hgh-pg-prev', 'item navigation hgh-pg-next', 'hgh-pg-more']);
-  }
-  // Focus must actually be on the trigger right now (not overshot past it) before
-  // activating, or Enter wouldn't be exercising the keyboard-reveal path at all.
-  const onTrigger = await page.evaluate(() => document.activeElement.className.includes('hgh-pg-more'));
-  expect(onTrigger).toBe(true);
+  await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+  await page.evaluate(() => {
+    enhancePagination();
+    const outside = document.createElement('button');
+    outside.id = 'outside';
+    document.body.append(outside);
+  });
   const before = page.url();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
+  await page.locator('.hgh-pg-prev').focus();
+  await page.clock.runFor(1000);
+  await page.locator('#outside').focus();
+  await page.clock.runFor(2000);
+  await expect(page.locator('.hgh-pagination')).not.toHaveAttribute('data-hgh-pg-revealed');
+  await page.locator('.hgh-pg-prev').focus();
+  await page.clock.runFor(1000);
+  await page.locator('.hgh-pg-next').focus();
+  await page.clock.runFor(999);
+  await expect(page.locator('.hgh-pagination')).not.toHaveAttribute('data-hgh-pg-revealed');
+  await page.clock.runFor(1);
+  await expect(page.locator('.hgh-pagination')).toHaveAttribute('data-hgh-pg-revealed', 'true');
+  await expect(page.locator('.hgh-pg-next')).toBeFocused();
   expect(page.url()).toBe(before);
-  const stillFocused = await page.evaluate(() => document.activeElement.className.includes('hgh-pg-more'));
-  expect(stillFocused).toBe(true);
 });
 
 test('an already-revealed session (sessionStorage flag set) renders wings visible immediately, no trigger, no timer', async ({page}) => {
@@ -588,6 +576,8 @@ test('a pending hover timer never fires after an htmx-style swap replaces the pa
     document.querySelector('.center.page.buttons').outerHTML = freshHtml;
     enhancePagination(); // the real boot() loop re-runs this on every DOM mutation
   }, nativePagination({current: 6, total: 90}));
+  // Cancel only the replacement's possible fresh hover; the detached timer must already be destroyed.
+  await page.mouse.move(0, 0);
   await page.clock.runFor(2000); // well past the original 2s from the old, now-detached region
   await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(0);
   await expect(page.locator('.hgh-pagination')).toHaveCount(1); // exactly one clean new wrapper
@@ -659,8 +649,9 @@ test('a pager enhanced while its container was hidden equalizes wing widths befo
   await expect.poll(measureOffset, {timeout: 2000}).toBeLessThan(1);
 
   const before = await centerRect(page);
-  await page.locator('.hgh-pg-more').first().focus(); // pointer-events:none by design; keyboard is the trigger's real activation path
-  await page.keyboard.press('Enter');
+  await page.clock.install();
+  await page.locator('.hgh-pg-prev').focus();
+  await page.clock.runFor(2000);
   await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
   const after = await centerRect(page);
   expect(after.center).toEqual(before.center); // zero movement through reveal, not just "close enough"
@@ -682,8 +673,6 @@ test('two pagination regions on one page (e.g. top and bottom) reveal together a
   // Both regions become revealed from a single hover on the first one, with no
   // focus change and without a second 2s wait for the other.
   await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(2);
-  const triggerHidden = await page.locator('.hgh-pg-more').evaluateAll((els) => els.map((el) => el.hidden));
-  expect(triggerHidden.every(Boolean)).toBe(true); // triggers remain in the DOM (restore fidelity) but are all hidden
   expect(await page.evaluate(() => localStorage.getItem(HABIT_KEY))).toBe('1');
 });
 
@@ -772,18 +761,27 @@ test('a 320px-wide embedded container inside a genuinely wide 1280px viewport ne
   expect(after.docHeight).toBe(before.docHeight);
 });
 
-test('a padded embedding container is measured by its content width, not its clientWidth (which includes padding) — a container that only looks wide enough never gets falsely treated as available', async ({page}) => {
+
+test('padded containers keep every pager control inside their content box before and after reveal', async ({page}) => {
   await page.setViewportSize({width: 1280, height: 800});
-  // Styles nav's real DOM parent (.center.page.buttons, the div native
-  // paginate.tmpl markup wraps around .pagination.menu — nav is inserted as
-  // its sibling, so this is the actual measured parent, not a wrapping div
-  // one level up). clientWidth is 700px, but 150px of padding on each side
-  // leaves only 400px of real room — just under the ~465px this fixture's
-  // row layout needs. Using clientWidth alone would wrongly read 700px as
-  // available and stay in the overflowing row layout.
-  await prepare(page, `<style>.center.page.buttons{width:700px;padding:0 150px;box-sizing:border-box}</style>${nativePagination({current: 6, total: 90})}`);
+  await prepare(page, `<style>.center.page.buttons{width:700px;padding:0 225px;box-sizing:border-box}</style>${nativePagination({current: 6, total: 90})}`);
+  await page.clock.install();
   await page.evaluate(() => enhancePagination());
-  await expect(page.locator('.hgh-pagination[data-hgh-pg-wrap]')).toHaveCount(1);
+  const overflow = () => page.evaluate(() => {
+    const parent = document.querySelector('.center.page.buttons');
+    const rect = parent.getBoundingClientRect();
+    const style = getComputedStyle(parent);
+    const left = rect.left + parseFloat(style.paddingLeft);
+    const right = rect.right - parseFloat(style.paddingRight);
+    return [...parent.querySelectorAll('.hgh-pagination a')].some(node => {
+      const box = node.getBoundingClientRect();
+      return box.left < left - 1 || box.right > right + 1;
+    });
+  });
+  expect(await overflow()).toBe(false);
+  await page.locator('.hgh-pg-prev').focus();
+  await page.clock.runFor(2000);
+  expect(await overflow()).toBe(false);
   await expectNoOverflow(page);
 });
 
@@ -1023,3 +1021,81 @@ test('the override is gated on the active skin: with the skin off (no matching d
   // exactly what production showed before this fix existed.
   expect(await menu.evaluate((el) => getComputedStyle(el).display)).toBe('inline-flex');
 });
+
+test('focus dwell reveals at exactly 2000ms without changing any pager rectangle', async ({page}) => {
+  await prepare(page, nativePagination({current: 6, total: 90}));
+  await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+  await page.evaluate(() => enhancePagination());
+  const geometry = () => page.evaluate(() => ({
+    boxes: [...document.querySelectorAll('.hgh-pagination, .hgh-pagination *')].map(node => node.getBoundingClientRect().toJSON()),
+    height: document.documentElement.scrollHeight,
+  }));
+  const before = await geometry();
+  await page.locator('.hgh-pg-prev').focus();
+  await page.clock.runFor(1999);
+  await expect(page.locator('.hgh-pagination')).not.toHaveAttribute('data-hgh-pg-revealed');
+  await page.clock.runFor(1);
+  await expect(page.locator('.hgh-pagination')).toHaveAttribute('data-hgh-pg-revealed', 'true');
+  expect(await geometry()).toEqual(before);
+});
+
+test('compact pagination has no invisible tab stops beyond Previous and Next', async ({page}) => {
+  await prepare(page, nativePagination({current: 6, total: 90}));
+  await page.evaluate(() => enhancePagination());
+  const stops = await page.locator('.hgh-pagination').evaluate(nav => [...nav.querySelectorAll('a,button')].filter(node => node.tabIndex >= 0 && !node.closest('[inert]') && getComputedStyle(node).visibility !== 'hidden').map(node => node.textContent.trim()));
+  expect(stops).toEqual(['Previous', 'Next']);
+});
+
+test('revealed navigation never repeats a Previous or Next destination in its wings', async ({page}) => {
+  await prepare(page, nativePagination({current: 6, total: 90}));
+  await page.evaluate(() => { sessionStorage.setItem('hgh.pagination.v1.revealed', 'true'); enhancePagination(); });
+  const destinations = await page.locator('.hgh-pagination a[href]').evaluateAll(nodes => nodes.map(node => node.href));
+  expect(new Set(destinations).size).toBe(destinations.length);
+});
+
+for (const appearance of appearances) {
+  test(`classic pager proof ${appearance.scheme} ${appearance.motion}`, async ({page}, testInfo) => {
+    await prepare(page, nativePagination({current: 6, total: 90}));
+    await applyAppearance(page, appearance);
+    await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+    await page.evaluate(() => enhancePagination());
+    const geometry = () => page.evaluate(() => ({
+      boxes: [...document.querySelectorAll('.hgh-pagination, .hgh-pagination *')].map(node => node.getBoundingClientRect().toJSON()),
+      height: document.documentElement.scrollHeight,
+    }));
+    const before = await geometry();
+    await captureProof(page, testInfo, 'compact');
+    await page.locator('.hgh-pg-prev').focus();
+    await page.clock.runFor(1999);
+    await expect(page.locator('.hgh-pagination')).not.toHaveAttribute('data-hgh-pg-revealed');
+    await page.clock.runFor(1);
+    await expect(page.locator('.hgh-pagination')).toHaveAttribute('data-hgh-pg-revealed', 'true');
+    expect(await geometry()).toEqual(before);
+    await expect(page.locator('.hgh-pg-wing-items').first()).toHaveCSS('opacity', '1');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await captureProof(page, testInfo, 'revealed');
+  });
+}
+
+for (const first of ['focus', 'pointer']) {
+  test(`mixed ${first}-first dwell continues while either input remains in classic pager`, async ({page}) => {
+    await prepare(page, nativePagination({current: 6, total: 90}));
+    await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+    await page.evaluate(() => enhancePagination());
+    if (first === 'focus') await page.locator('.hgh-pg-prev').focus();
+    else await page.hover('.hgh-pagination');
+    await page.clock.runFor(1000);
+    if (first === 'focus') await page.hover('.hgh-pagination');
+    else await page.locator('.hgh-pg-prev').focus();
+    await page.clock.runFor(500);
+    if (first === 'focus') await page.locator('.hgh-pg-prev').evaluate(node => node.blur());
+    else await page.mouse.move(0, 0);
+    await page.clock.runFor(499);
+    await expect(page.locator('.hgh-pagination')).not.toHaveAttribute('data-hgh-pg-revealed');
+    await page.clock.runFor(1);
+    await expect(page.locator('.hgh-pagination')).toHaveAttribute('data-hgh-pg-revealed', 'true');
+  });
+}
