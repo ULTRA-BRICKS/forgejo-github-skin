@@ -469,6 +469,15 @@ function pruneActivityRows(state) {
   }
 }
 
+function watchActivityAncestors(state) {
+  const ancestors = [];
+  for (let parent = state.root.parentNode; parent; parent = parent.parentNode) ancestors.push(parent);
+  if (ancestors.length === state.ancestors?.length && ancestors.every((node, index) => node === state.ancestors[index])) return;
+  state.ancestorObserver.disconnect();
+  state.ancestors = ancestors;
+  for (const parent of ancestors) state.ancestorObserver.observe(parent, {childList: true});
+}
+
 function enhanceActivity(doc, feed) {
   let state = activityFeeds.get(feed);
   if (!state) {
@@ -507,12 +516,19 @@ function enhanceActivity(doc, feed) {
       compactActivity(doc, feed, state);
     });
     state.mutationObserver.observe(feed, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['open', 'class', 'style', 'hidden', 'href', 'tabindex', 'contenteditable', 'download', 'type']});
-    state.mutationObserver.observe(doc.documentElement, {childList: true, subtree: true});
+    // Watch only direct children along the current parent chain. This catches a
+    // removed ancestor and follows reparenting without observing unrelated subtrees.
+    state.ancestorObserver = new doc.defaultView.MutationObserver(() => {
+      if (!feed.isConnected) { restoreActivity(state); return; }
+      watchActivityAncestors(state);
+    });
+    watchActivityAncestors(state);
   }
   compactActivity(doc, feed, state);
 }
 
 function restoreActivity(state) {
+  state.ancestorObserver.disconnect();
   state.resizeObserver.disconnect();
   state.mutationObserver.disconnect();
   state.bodyObserver.disconnect();

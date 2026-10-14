@@ -890,3 +890,23 @@ test('an initially native-inert clipped control stays protected when the widget 
   await page.getByRole('button',{name:'Show more',exact:true}).click();
   await expect(control).toHaveJSProperty('inert',false);
 });
+
+test('feed lifecycle observes ancestor child lists without a document-wide subtree observer',async({page})=>{
+  await page.addInitScript(()=>{
+    const observe=MutationObserver.prototype.observe;
+    window.documentSubtreeObservations=0;
+    MutationObserver.prototype.observe=function(target,options){
+      if((target===document||target===document.documentElement||target===document.body)&&options.subtree)window.documentSubtreeObservations++;
+      return observe.call(this,target,options);
+    };
+  });
+  await prepare(page);
+  await expect.poll(()=>page.evaluate(()=>window.documentSubtreeObservations)).toBe(0);
+  await page.evaluate(()=>{
+    window.retainedFeed=document.querySelector('#activity-feed');
+    const holder=document.createElement('section');holder.id='moved-feed-parent';document.body.append(holder);holder.append(window.retainedFeed);
+  });
+  await expect(page.locator('#activity-feed .hgh-org-toggle')).toHaveCount(1);
+  await page.evaluate(()=>document.querySelector('#moved-feed-parent').remove());
+  await expect.poll(()=>page.evaluate(()=>window.retainedFeed.querySelectorAll('.hgh-org-toggle').length)).toBe(0);
+});
