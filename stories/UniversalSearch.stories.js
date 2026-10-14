@@ -107,7 +107,7 @@ function resetSearch(optOut=false){
   document.head.querySelector('meta[name="hypergithub-search"]')?.remove();
   if(optOut)document.head.insertAdjacentHTML('beforeend','<meta name="hypergithub-search" content="disabled">');
 }
-function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,auth=false,stream=null,owner='ultrabricks',lang='en',organization=false,open=true,mount=true,native=false,optOut=false}={}){
+function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,auth=false,stream=null,owner='ultrabricks',lang='en',organization=false,open=true,mount=true,native=false,optOut=false,scopeMenu=false}={}){
   resetSearch(optOut);
   document.documentElement.lang=lang;
   document.documentElement.dataset.theme=dark?'hypergithub-dark':'hypergithub-light';
@@ -119,6 +119,7 @@ function render({seed='focusBestSearch',mode='symbol',dark=false,error=false,aut
     const fetchImpl=stream?streamFetch(stream,mode):auth?async()=>new Response('{}',{status:401}):error?async()=>new Response('{}',{status:503}):fakeFetch(mode);
     if(mount)enhanceUniversalSearch(document,{fetchImpl});
     if(mount&&open)openUniversalSearch(document,{seed});
+    if(scopeMenu)requestAnimationFrame(()=>document.querySelector('.hgh-search-scope-trigger')?.click());
   });
   return root;
 }
@@ -178,3 +179,8 @@ export const StreamInterruptedDark={render:()=>render({seed:'restoreFocus',strea
 export const StreamDeadline={render:()=>render({seed:'restoreFocus',stream:'deadline'})};
 export const StreamAuthRequired={render:()=>render({seed:'restoreFocus',stream:'auth'})};
 export const StreamInterruptedRussian={render:()=>render({seed:'restoreFocus',stream:'interrupted',mode:'enabled',lang:'ru'})};
+
+// The same inline scope menu and result geometry as the installed enhancer.
+export const ScopeMenu={render:()=>render({seed:'needle',mode:'manyKinds',native:true,scopeMenu:true})};
+export const ScopeMenuDark={render:()=>render({seed:'needle',mode:'manyKinds',native:true,dark:true,scopeMenu:true})};
+export const ScopeMenuOnError={render:()=>render({seed:'needle',error:true,scopeMenu:true})};

@@ -67,8 +67,9 @@ test('backend failure, restore and re-enhance preserve native controls and filte
   await expect(page.getByRole('status')).toContainText('temporarily unavailable');
   await expect(page.locator('#dashboard-repo-list input')).toBeHidden();
   await expect(page.getByRole('button',{name:'Filter'})).toBeVisible();
-  await page.getByRole('radio',{name:'Everywhere'}).click();
-  await expect(page.getByRole('radio',{name:'Everywhere'})).toHaveAttribute('aria-checked','true');
+  await page.locator('.hgh-search-scope-trigger').click();
+  await page.getByRole('menuitemradio',{name:'Everywhere'}).click();
+  await expect(page.getByRole('menuitemradio',{name:'Everywhere',includeHidden:true})).toHaveAttribute('aria-checked','true');
   await page.evaluate(()=>search.restoreUniversalSearch(document));
   await expect(page.locator('#dashboard-repo-list input')).toBeVisible();
   expect(await page.evaluate(()=>document.querySelector('#dashboard-repo-list input')===nativeInput)).toBe(true);

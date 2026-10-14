@@ -25,14 +25,14 @@ test('keyboard selection and Escape preserve a useful focus path',async({page})=
   await expect(input).toBeFocused();
 });
 
-test('search scopes are compact and discoverable',async({page})=>{
+test('search scopes are compact and discoverable in the inline dropdown',async({page})=>{
   await story(page,'search-universal-search--symbol');
-  const dialog=page.locator('#hgh-universal-search');
-  await expect(dialog.getByRole('radio',{name:'This repository'})).toHaveAttribute('aria-checked','true');
-  await dialog.getByRole('radio',{name:'ultrabricks'}).click();
-  await expect(dialog.getByRole('radio',{name:'ultrabricks'})).toHaveAttribute('aria-checked','true');
-  await dialog.getByRole('radio',{name:'Everywhere'}).click();
-  await expect(dialog.getByRole('radio',{name:'Everywhere'})).toHaveAttribute('aria-checked','true');
+  const dialog=page.locator('#hgh-universal-search'),trigger=dialog.locator('.hgh-search-scope-trigger');
+  await expect(trigger).toHaveAttribute('data-scope-value','repo');
+  for(const [name,value] of [['ultrabricks','owner'],['Everywhere','global']]){
+    await trigger.click();await dialog.getByRole('menuitemradio',{name,exact:true}).click();
+    await expect(trigger).toHaveAttribute('data-scope-value',value);await expect(dialog.getByRole('searchbox')).toBeFocused();
+  }
 });
 
 test('AST, file and backend error states explain themselves',async({page})=>{
@@ -98,7 +98,8 @@ test('Russian UI is localized and restore returns the original native label',asy
   await story(page,'search-universal-search--russian');
   const dialog=page.locator('#hgh-universal-search');
   await expect(dialog.getByRole('searchbox')).toHaveAttribute('placeholder','Искать код, символы, файлы…');
-  await expect(dialog.getByRole('radio',{name:'Этот репозиторий'})).toBeVisible();
+  await dialog.locator('.hgh-search-scope-trigger').click();
+  await expect(dialog.getByRole('menuitemradio',{name:'Этот репозиторий'})).toBeVisible();
   await story(page,'search-universal-search--restored-russian');
   await expect(page.locator('#hgh-universal-search')).toHaveCount(0);
   await expect(page.locator('.hgh-native-search')).toHaveAttribute('aria-label','Поиск репозиториев');
@@ -115,7 +116,8 @@ test('arrow keys wrap and scope click issues a scoped re-search',async({page})=>
   await expect(dialog.getByRole('option').nth(1)).toHaveAttribute('aria-selected','true');
   await input.press('ArrowDown');
   await expect(dialog.getByRole('option').nth(0)).toHaveAttribute('aria-selected','true');
-  await dialog.getByRole('radio',{name:'ultrabricks'}).click();
+  await dialog.locator('.hgh-search-scope-trigger').click();
+  await dialog.getByRole('menuitemradio',{name:'ultrabricks'}).click();
   await expect.poll(()=>page.locator('body').getAttribute('data-last-search-url')).toContain('owner%3Aultrabricks');
 });
 
@@ -136,11 +138,11 @@ test('mark highlighting cannot unescape executable HTML',async({page})=>{
 });
 
 for(const id of ['many-results-native-type','many-results-native-type-dark']){
-  test(`${id}: kinds stay whole words and scope tabs keep full height while only results scroll`,async({page})=>{
+  test(`${id}: kinds stay whole words and inline scope keeps full height while only results scroll`,async({page})=>{
     await story(page,'search-universal-search--'+id);
     await expect(page.locator('#hgh-universal-search').getByRole('option')).toHaveCount(30);
     const report=await page.evaluate(()=>{
-      const dialog=document.querySelector('#hgh-universal-search'),scopes=dialog.querySelector('.hgh-search-scopes');
+      const dialog=document.querySelector('#hgh-universal-search'),scopes=dialog.querySelector('.hgh-search-scope-trigger');
       const lines=node=>{const range=document.createRange();range.selectNodeContents(node);return new Set([...range.getClientRects()].filter(r=>r.width>0).map(r=>Math.round(r.top))).size;};
       const scrollable=value=>value==='auto'||value==='scroll';
       return {

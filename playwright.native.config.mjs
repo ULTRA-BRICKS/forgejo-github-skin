@@ -12,6 +12,7 @@ const nativeSuites = [
   'universal-search-scope.spec.mjs',
   'universal-search-header.spec.mjs',
   'universal-search-layout.spec.mjs',
+  'search-scope-menu.spec.mjs',
   'universal-search-capability.spec.mjs',
   'native-diff-layout.spec.mjs',
 ];

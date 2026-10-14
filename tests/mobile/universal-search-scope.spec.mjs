@@ -59,8 +59,8 @@ function openSearch(page, seed = '') {
 }
 
 function scopeRadios(page) {
-  return page.locator('#hgh-universal-search [role="radio"]').evaluateAll(
-    (nodes) => nodes.map((n) => ({scope: n.dataset.scope, label: n.textContent, checked: n.getAttribute('aria-checked')})),
+  return page.locator('#hgh-universal-search [role="menuitemradio"]').evaluateAll(
+    (nodes) => nodes.map((n) => ({scope: n.dataset.scope, label: n.getAttribute('aria-label'), checked: n.getAttribute('aria-checked')})),
   );
 }
 

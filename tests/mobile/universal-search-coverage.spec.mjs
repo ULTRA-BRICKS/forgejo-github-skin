@@ -208,7 +208,7 @@ for(const width of [320,440,1280])for(const theme of ['light','dark']){
     await input(page).press('ArrowDown');
     await expect(options(page).first()).toHaveAttribute('aria-selected','true');
     await input(page).press('Tab');
-    await page.keyboard.press('Tab');
+    await expect(page.locator('.hgh-search-close')).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(summary).toBeFocused();
     await page.keyboard.press('Enter');

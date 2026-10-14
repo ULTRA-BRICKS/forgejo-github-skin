@@ -43,7 +43,7 @@ async function openWithResults(page,{theme,owner='acme',count=30}){
 
 const dialogGeometry=page=>page.evaluate(()=>{
   const rect=node=>{const r=node.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,width:r.width,height:r.height};};
-  const dialog=document.querySelector('#hgh-universal-search'),scopes=dialog.querySelector('.hgh-search-scopes'),results=dialog.querySelector('.hgh-search-results');
+  const dialog=document.querySelector('#hgh-universal-search'),scopes=dialog.querySelector('.hgh-search-scope-trigger'),results=dialog.querySelector('.hgh-search-results');
   const scrollable=value=>value==='auto'||value==='scroll';
   // A scrolling region is a user-scrollable box whose content overflows it; overflow:hidden clamps are not.
   const scrollers=[dialog,...dialog.querySelectorAll('*')].filter(node=>{
@@ -52,7 +52,7 @@ const dialogGeometry=page=>page.evaluate(()=>{
   }).map(node=>node.className||node.tagName);
   return {
     dialog:rect(dialog),scopes:{...rect(scopes),clientHeight:scopes.clientHeight,scrollHeight:scopes.scrollHeight,clientWidth:scopes.clientWidth,scrollWidth:scopes.scrollWidth},
-    buttons:[...scopes.querySelectorAll('button')].map(button=>({label:button.textContent,...rect(button)})),
+    buttons:[{label:scopes.textContent,...rect(scopes)}],
     scrollers,resultsOverflow:results.scrollHeight-results.clientHeight,
     documentOverflow:document.documentElement.scrollWidth-innerWidth,
   };
@@ -61,9 +61,9 @@ const dialogGeometry=page=>page.evaluate(()=>{
 function expectScopesWhole(geometry){
   expect(geometry.scopes.scrollHeight,'scope row content is not clipped vertically').toBeLessThanOrEqual(geometry.scopes.clientHeight);
   expect(geometry.scopes.scrollWidth,'scope row does not overflow horizontally').toBeLessThanOrEqual(geometry.scopes.clientWidth);
-  expect(geometry.buttons.length).toBe(3);
+  expect(geometry.buttons.length).toBe(1);
   for(const button of geometry.buttons){
-    expect(button.height,button.label).toBeGreaterThanOrEqual(28);
+    expect(button.height,button.label).toBeGreaterThanOrEqual(36);
     expect(button.top,button.label).toBeGreaterThanOrEqual(geometry.scopes.top-0.5);
     expect(button.bottom,button.label).toBeLessThanOrEqual(geometry.scopes.bottom+0.5);
     expect(button.left,button.label).toBeGreaterThanOrEqual(geometry.scopes.left-0.5);
@@ -82,9 +82,9 @@ for(const theme of ['light','dark']){
       const pills=[...document.querySelectorAll('#hgh-universal-search .hgh-search-kind')].map(pill=>{
         const range=document.createRange();range.selectNodeContents(pill);
         const lines=new Set([...range.getClientRects()].filter(r=>r.width>0).map(r=>Math.round(r.top))).size;
-        const box=pill.getBoundingClientRect(),main=pill.parentElement.querySelector('.hgh-search-main').getBoundingClientRect();
+        const box=pill.getBoundingClientRect(),main=pill.parentElement.querySelector('.hgh-search-main>b').getBoundingClientRect();
         return {text:pill.textContent,lines,clipped:pill.scrollWidth>pill.clientWidth,fontSize:parseFloat(getComputedStyle(pill).fontSize),
-          overlapsMain:box.right>main.left+0.5,mainLeft:Math.round(main.left),rowOverflow:pill.parentElement.scrollWidth>pill.parentElement.clientWidth};
+          overlapsMain:box.left<main.right-0.5,mainLeft:Math.round(main.left),rowOverflow:pill.parentElement.scrollWidth>pill.parentElement.clientWidth};
       });
       return {pills,documentOverflow:document.documentElement.scrollWidth-innerWidth};
     });
@@ -101,18 +101,21 @@ for(const theme of ['light','dark']){
     await page.screenshot({path:testInfo.outputPath(`kinds-${theme}.png`)});
   });
 
-  test(`scope tabs keep full height and stay clickable and keyboard reachable with many results (${theme})`,async({page},testInfo)=>{
+  test(`inline scope keeps full height and its menu stays keyboard reachable with many results (${theme})`,async({page},testInfo)=>{
     await openWithResults(page,{theme});
     expectScopesWhole(await dialogGeometry(page));
     await page.screenshot({path:testInfo.outputPath(`scopes-${theme}.png`)});
     for(const scope of ['global','owner','repo']){
+      await page.locator('.hgh-search-scope-trigger').click();
       await page.locator(`#hgh-universal-search [data-scope="${scope}"]`).click();
       await expect(page.locator(`#hgh-universal-search [data-scope="${scope}"]`)).toHaveAttribute('aria-checked','true');
       await expect(page.locator('#hgh-universal-search .hgh-search-results>a')).toHaveCount(30);
       expectScopesWhole(await dialogGeometry(page));
     }
     await page.locator('#hgh-universal-search input').focus();
-    for(let step=0;step<6&&await page.evaluate(()=>document.activeElement?.dataset.scope!=='owner');step++)await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
     await expect(page.locator('#hgh-universal-search [data-scope="owner"]')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.locator('#hgh-universal-search [data-scope="owner"]')).toHaveAttribute('aria-checked','true');
@@ -121,9 +124,10 @@ for(const theme of ['light','dark']){
   });
 }
 
-test('a long organization name wraps the scope tabs instead of scrolling them',async({page},testInfo)=>{
+test('a long organization name fits the inline scope and opens readable menu choices',async({page},testInfo)=>{
   await openWithResults(page,{theme:'light',owner:'ultrabricks-platform-engineering-research'});
   expectScopesWhole(await dialogGeometry(page));
+  await page.locator('.hgh-search-scope-trigger').click();
   await page.locator('#hgh-universal-search [data-scope="global"]').click();
   await expect(page.locator('#hgh-universal-search [data-scope="global"]')).toHaveAttribute('aria-checked','true');
   await page.screenshot({path:testInfo.outputPath('long-owner.png')});

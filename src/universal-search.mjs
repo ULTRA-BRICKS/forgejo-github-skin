@@ -19,6 +19,7 @@ function copy(doc){
     scope:'Область поиска',
     resultsLabel:'Результаты поиска',
     repo:'Этот репозиторий',
+    repoShort:'Репозиторий',
     everywhere:'Везде',
     searching:'Ищу…',
     results:'результатов',
@@ -40,6 +41,7 @@ function copy(doc){
     scope:'Search scope',
     resultsLabel:'Search results',
     repo:'This repository',
+    repoShort:'Repository',
     everywhere:'Everywhere',
     searching:'Searching…',
     results:'results',
@@ -231,39 +233,68 @@ function emptyHelp(doc){
   const c=copy(doc);
   return '<div class="hgh-search-help"><b>'+c.understands+'</b><span><code>focus.ts</code> '+c.files+'</span><span><code>restoreFocus</code> '+c.symbols+'</span><span><code>foo(a, b)</code> '+c.ast+'</span><span><code>def:name</code>, <code>ref:name</code>, <code>path:</code>, <code>lang:</code></span></div>';
 }
+const SCOPE_CHEVRON='<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const SCOPE_ICON='<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 2.5h8a1 1 0 0 1 1 1V14H4a2 2 0 0 1-2-2V3.5a1 1 0 0 1 1-1Zm0 8h9M5 5h4M5 7h4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 function create(doc){
   const c=copy(doc),dialog=doc.createElement('dialog');
   dialog.id='hgh-universal-search';
   dialog.className='hgh-search-dialog';
-  dialog.innerHTML='<form method="dialog" class="hgh-search-box"><div class="hgh-search-input-row">'+SEARCH_ICON+'<input type="search" autocomplete="off" spellcheck="false"><button type="button" class="hgh-search-close">×</button></div><div class="hgh-search-scopes" role="radiogroup"></div><div class="hgh-search-status" role="status" aria-live="polite"></div><div class="hgh-search-coverage" hidden></div><div class="hgh-search-results" role="listbox">'+emptyHelp(doc)+'</div></form>';
+  dialog.innerHTML='<form method="dialog" class="hgh-search-box"><div class="hgh-search-input-row"><div class="hgh-search-scope-control"><button type="button" class="hgh-search-scope-trigger" aria-haspopup="menu" aria-expanded="false" aria-controls="hgh-search-scope-menu">'+SCOPE_ICON+'<span class="hgh-search-scope-current"></span>'+SCOPE_CHEVRON+'</button><div id="hgh-search-scope-menu" class="hgh-search-scopes" role="menu" popover="manual" hidden></div></div><input type="search" autocomplete="off" spellcheck="false"><button type="button" class="hgh-search-close">×</button></div><div class="hgh-search-status" role="status" aria-live="polite"></div><div class="hgh-search-coverage" hidden></div><div class="hgh-search-results" role="listbox">'+emptyHelp(doc)+'</div></form>';
   const input=dialog.querySelector('input');
-  input.setAttribute('aria-label',c.search); input.placeholder=c.placeholder;
+  input.setAttribute('aria-label',c.search);input.placeholder=c.placeholder;
   dialog.querySelector('.hgh-search-close').setAttribute('aria-label',c.close);
+  dialog.querySelector('.hgh-search-scope-trigger').setAttribute('aria-label',c.scope);
   dialog.querySelector('.hgh-search-scopes').setAttribute('aria-label',c.scope);
   dialog.querySelector('.hgh-search-results').setAttribute('aria-label',c.resultsLabel);
   doc.body.append(dialog);
   return dialog;
 }
+function positionScopeMenu(state){
+  const menu=state.dialog.querySelector('.hgh-search-scopes'),trigger=state.dialog.querySelector('.hgh-search-scope-trigger');
+  const rect=trigger.getBoundingClientRect(),win=state.doc.defaultView;
+  menu.style.maxWidth=Math.max(0,win.innerWidth-24)+'px';
+  menu.style.maxHeight=Math.max(80,Math.min(320,win.innerHeight-24))+'px';
+  const width=menu.getBoundingClientRect().width,height=menu.getBoundingClientRect().height;
+  menu.style.left=Math.max(12,Math.min(rect.left,win.innerWidth-width-12))+'px';
+  menu.style.top=Math.max(12,Math.min(rect.bottom+8,win.innerHeight-height-12))+'px';
+}
+function closeScopeMenu(state,focus=false){
+  const menu=state.dialog.querySelector('.hgh-search-scopes'),trigger=state.dialog.querySelector('.hgh-search-scope-trigger');
+  state.scopeMenuOpen=false;
+  if(menu.matches(':popover-open'))menu.hidePopover();
+  menu.hidden=true;
+  trigger.setAttribute('aria-expanded','false');
+  if(focus)trigger.focus();
+}
+function openScopeMenu(state,last=false){
+  const menu=state.dialog.querySelector('.hgh-search-scopes');
+  state.scopeMenuOpen=true;menu.hidden=false;
+  if(menu.showPopover)menu.showPopover();
+  state.dialog.querySelector('.hgh-search-scope-trigger').setAttribute('aria-expanded','true');
+  positionScopeMenu(state);
+  const buttons=[...menu.querySelectorAll('[role="menuitemradio"]')];
+  (last?buttons.at(-1):buttons.find(button=>button.getAttribute('aria-checked')==='true')||buttons[0])?.focus();
+}
 function setScopes(state){
   const {dialog,ctx}=state,c=copy(state.doc),host=dialog.querySelector('.hgh-search-scopes');
-  const choices=[
-    ctx.repo&&['repo',c.repo],
-    ctx.owner&&['owner',ctx.owner],
-    ['global',c.everywhere]
-  ].filter(Boolean);
+  const trigger=dialog.querySelector('.hgh-search-scope-trigger');
+  const choices=[ctx.repo&&['repo',c.repo,ctx.repo],ctx.owner&&['owner',ctx.owner,''],['global',c.everywhere,'']].filter(Boolean);
+  closeScopeMenu(state);
+  trigger.dataset.scopeValue=state.scope;
+  const currentLabel=state.scope==='repo'?c.repoShort:state.scope==='owner'?ctx.owner:c.everywhere;
+  trigger.querySelector('.hgh-search-scope-current').textContent=currentLabel;
+  trigger.setAttribute('aria-label',c.scope+': '+currentLabel);
+  trigger.title=state.scope==='repo'?ctx.repo:state.scope==='owner'?ctx.owner:c.everywhere;
   host.replaceChildren();
-  for(const [value,label] of choices){
-    const button=state.doc.createElement('button');
-    button.type='button';
-    button.role='radio';
-    button.dataset.scope=value;
-    button.setAttribute('aria-checked',String(state.scope===value));
-    button.textContent=label;
-    button.onclick=()=>{
-      state.scope=value;
-      setScopes(state);
-      schedule(state,true);
-    };
+  for(const [value,label,detail] of choices){
+    const button=state.doc.createElement('button');button.type='button';button.role='menuitemradio';button.tabIndex=-1;
+    button.dataset.scope=value;button.setAttribute('aria-checked',String(state.scope===value));button.setAttribute('aria-label',label);
+    const text=state.doc.createElement('span');text.className='hgh-search-scope-text';
+    const name=state.doc.createElement('span');name.className='hgh-search-scope-name';name.textContent=label;text.append(name);
+    if(detail){const small=state.doc.createElement('small');small.textContent=detail;text.append(small);}
+    const check=state.doc.createElement('span');check.className='hgh-search-scope-check';check.textContent='✓';check.setAttribute('aria-hidden','true');
+    button.append(text,check);
+    button.onclick=()=>{state.scope=value;setScopes(state);schedule(state,true);dialog.querySelector('input').focus();};
     host.append(button);
   }
 }
@@ -559,6 +590,28 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
     state={doc,dialog,ctx:parseSearchContext(doc),scope:'repo',query:'',hits:[],selected:-1,
       fetchImpl:fetchImpl||doc.defaultView.fetch.bind(doc.defaultView),timer:null,controller:null,lastTrigger:null,probe:null,mobileOriginals:new Map(),destroyed:false,hasInteractiveSearch:false};
     states.set(doc,state);
+    const scopeTrigger=dialog.querySelector('.hgh-search-scope-trigger'),scopeMenu=dialog.querySelector('.hgh-search-scopes');
+    scopeTrigger.onclick=()=>state.scopeMenuOpen?closeScopeMenu(state):openScopeMenu(state);
+    scopeTrigger.onkeydown=event=>{
+      if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();openScopeMenu(state,event.key==='ArrowUp');}
+    };
+    scopeMenu.onkeydown=event=>{
+      const items=[...scopeMenu.querySelectorAll('[role="menuitemradio"]')],index=items.indexOf(doc.activeElement);
+      if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+        event.preventDefault();event.stopPropagation();
+        const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;
+        items[next]?.focus();
+      }else if(event.key==='Escape'){
+        event.preventDefault();event.stopPropagation();closeScopeMenu(state,true);
+      }else if(event.key==='Tab'){
+        event.preventDefault();closeScopeMenu(state,event.shiftKey);if(!event.shiftKey)dialog.querySelector('input').focus();
+      }
+    };
+    dialog.addEventListener('pointerdown',event=>{
+      if(state.scopeMenuOpen&&!event.target.closest('.hgh-search-scope-control'))closeScopeMenu(state);
+    });
+    state.onScopeResize=()=>{if(state.scopeMenuOpen)positionScopeMenu(state);};
+    doc.defaultView.addEventListener('resize',state.onScopeResize);
     state.media=doc.defaultView.matchMedia('(max-width:767px)');
     state.placeTrigger=()=>{
       const nav=doc.querySelector('#navbar');
@@ -583,6 +636,7 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
     dialog.querySelector('form').addEventListener('submit',event=>event.preventDefault());
     dialog.addEventListener('close',()=>{
       if(dialog.open)return;
+      closeScopeMenu(state);
       cancelSearch(state);
       clearResults(state);
       state.lastTrigger?.focus?.();
@@ -634,7 +688,9 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
 export function restoreUniversalSearch(doc=document){
   const state=states.get(doc);
   if(!state)return;
+  closeScopeMenu(state);
   state.destroyed=true;
+  doc.defaultView.removeEventListener('resize',state.onScopeResize);
   state.media.removeEventListener('change',state.placeTrigger);
   doc.defaultView.removeEventListener('hashchange',state.placeTrigger);
   doc.removeEventListener('input',state.onNativeFilterInput);

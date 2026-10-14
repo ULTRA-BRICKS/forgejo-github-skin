@@ -140,3 +140,17 @@ and the actual Forgejo `tw-flex { display:flex!important }` utility competing
 with the ten-row Overview cap. These cases are run alongside the complete native
 Chromium/WebKit suites; the two Chromium-CDP-only accessibility/touch contracts
 remain explicitly separate from physical Safari acceptance.
+
+### Inline scope selector and search spacing
+
+The scope selector is inside the query row. Its menu uses native popover placement
+and menu-item radio semantics, keeps the same native page-context choices, and
+returns focus to the retained query after selection. Escape closes this menu before
+closing search. Scope selection sends one replacement request through the existing
+cancellation path. Explicit query qualifiers keep their existing precedence.
+
+Result paths, repository metadata and code snippets share a left inset. Result kind
+is trailing metadata rather than a fixed left column. The list alone scrolls while
+the query row remains fixed. `search-scope-menu.spec.mjs` covers these interactions,
+small viewports, long context names, focus return and global-only pages. Storybook
+includes open-menu, dark-menu and backend-error menu states using the same enhancer.
