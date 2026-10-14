@@ -261,6 +261,7 @@ function positionScopeMenu(state){
 function closeScopeMenu(state,focus=false){
   const menu=state.dialog.querySelector('.hgh-search-scopes'),trigger=state.dialog.querySelector('.hgh-search-scope-trigger');
   state.scopeMenuOpen=false;
+  state.scopeResizeObserver?.disconnect();
   if(menu.matches(':popover-open'))menu.hidePopover();
   menu.hidden=true;
   trigger.setAttribute('aria-expanded','false');
@@ -272,6 +273,7 @@ function openScopeMenu(state,last=false){
   if(menu.showPopover)menu.showPopover();
   state.dialog.querySelector('.hgh-search-scope-trigger').setAttribute('aria-expanded','true');
   positionScopeMenu(state);
+  state.scopeResizeObserver.observe(state.dialog);
   const buttons=[...menu.querySelectorAll('[role="menuitemradio"]')];
   (last?buttons.at(-1):buttons.find(button=>button.getAttribute('aria-checked')==='true')||buttons[0])?.focus();
 }
@@ -611,6 +613,9 @@ export function enhanceUniversalSearch(doc=document,{fetchImpl}={}){
       if(state.scopeMenuOpen&&!event.target.closest('.hgh-search-scope-control'))closeScopeMenu(state);
     });
     state.onScopeResize=()=>{if(state.scopeMenuOpen)positionScopeMenu(state);};
+    // Delayed results can recenter a desktop dialog without a window resize.
+    // Observe its box only while the scope menu is open.
+    state.scopeResizeObserver=new doc.defaultView.ResizeObserver(state.onScopeResize);
     doc.defaultView.addEventListener('resize',state.onScopeResize);
     state.media=doc.defaultView.matchMedia('(max-width:767px)');
     state.placeTrigger=()=>{

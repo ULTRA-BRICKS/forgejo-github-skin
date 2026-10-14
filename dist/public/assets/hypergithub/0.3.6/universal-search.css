@@ -13,6 +13,8 @@ html[data-hgh-search-mounted] #dashboard-repo-list .repos-search input[type="sea
 .hgh-search-box{display:flex;flex-direction:column;max-height:inherit}
 .hgh-search-input-row{display:flex;flex:none;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-bottom:1px solid var(--hgh-color-border);box-sizing:border-box}
 .hgh-search-input-row>input{min-width:0;width:0;flex:1;height:36px;padding:0;border:0!important;border-radius:0;box-shadow:none!important;outline:none;background:transparent;color:inherit;font-family:inherit;font-size:16px;line-height:24px}
+#hgh-universal-search .hgh-search-input-row>input:focus{outline:none!important}
+.hgh-search-input-row:has(>input:focus-visible){box-shadow:inset 0 -2px var(--hgh-color-link)}
 .hgh-search-input-row>input::-webkit-search-cancel-button{display:none}
 .hgh-search-input-row>input::placeholder{color:var(--hgh-color-muted);opacity:1}
 .hgh-search-close{flex:0 0 28px;width:28px;height:32px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--hgh-color-muted);font-size:22px;cursor:pointer}
@@ -63,4 +65,10 @@ html[data-hgh-search-mounted] #dashboard-repo-list .repos-search input[type="sea
   #navbar:has(.hgh-native-search) .hgh-global-search-trigger{display:none}
   .hgh-search-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px);margin-top:8px}
   .hgh-search-results>a,.hgh-search-help,.hgh-search-empty{padding-inline:12px}
+}
+
+@media(max-width:360px){.hgh-search-scope-control{max-width:45%}.hgh-search-scope-trigger>svg:first-child{display:none}}
+
+@media(forced-colors:active){
+  #hgh-universal-search :is(.hgh-search-input-row>input,.hgh-search-scope-trigger,.hgh-search-scopes>button,.hgh-search-close):focus{outline:2px solid Highlight!important;outline-offset:-2px}
 }

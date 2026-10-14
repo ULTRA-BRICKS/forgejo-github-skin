@@ -25,6 +25,7 @@ const mobileSuites = [
 // These set their own 320/440/1280 viewports, so each browser runs them once, in its 1280 project.
 const selfParameterizedSuites = [
   'universal-search-stream.spec.mjs',
+  'search-scope-resize.spec.mjs',
   'universal-search-coverage.spec.mjs',
 ];
 
