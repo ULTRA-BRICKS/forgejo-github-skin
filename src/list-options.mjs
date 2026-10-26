@@ -1,4 +1,6 @@
 /** One disclosure for list filters, sort order and density. Existing controls keep their listeners. */
+import {usable} from './core.mjs';
+
 export function createListOptions(doc, label = 'List options') {
   const details = doc.createElement('details');
   details.className = 'hgh-list-options hgh-disclosure';
@@ -24,21 +26,35 @@ export function bindDisclosure(details) {
   let disposed=false;
   const close = (restore) => { details.open = false; if (restore) trigger?.focus(); };
   const outside = (event) => { if (!details.contains(event.target)) close(false); };
+  const innerEscapes = new WeakSet();
+  const rememberInnerEscape = (event) => {
+    if (event.key !== 'Escape') return;
+    const dropdown = event.target.closest?.('.dropdown');
+    if (!dropdown || !details.contains(dropdown)) return;
+    for (const menu of dropdown.querySelectorAll('.menu.visible')) {
+      if (usable(menu)) { innerEscapes.add(event); return; }
+    }
+  };
   const escape = (event) => {
-    if (event.key === 'Escape' && details.open) { event.preventDefault(); event.stopPropagation(); close(true); }
+    if (event.key !== 'Escape' || !details.open || event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey || innerEscapes.has(event)) return;
+    if (event.target.closest?.('dialog[open], [role="dialog"][aria-modal="true"]')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    close(true);
   };
   // A key press may arrive before the asynchronous toggle event.
+  details.addEventListener('keydown', rememberInnerEscape, true);
   details.addEventListener('keydown', escape);
   const onToggle=() => {
     if(disposed)return;
     trigger?.setAttribute('aria-expanded', String(details.open));
     doc.removeEventListener('pointerdown', outside, true);
-    doc.removeEventListener('keydown', escape, true);
-    if (details.open) { doc.addEventListener('pointerdown', outside, true); doc.addEventListener('keydown', escape, true); }
+    doc.removeEventListener('keydown', escape);
+    if (details.open) { doc.addEventListener('pointerdown', outside, true); doc.addEventListener('keydown', escape); }
   };
   details.addEventListener('toggle',onToggle);
   trigger?.setAttribute('aria-expanded', String(details.open));
-  const cleanup=()=>{disposed=true;details.removeEventListener('toggle',onToggle);disclosureCleanup.delete(details);delete details.dataset.disclosureBound;doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',escape,true);details.removeEventListener('keydown',escape);};
+  const cleanup=()=>{disposed=true;details.removeEventListener('toggle',onToggle);disclosureCleanup.delete(details);delete details.dataset.disclosureBound;doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',escape);details.removeEventListener('keydown',escape);details.removeEventListener('keydown',rememberInnerEscape,true);};
   disclosureCleanup.set(details,cleanup);
   return cleanup;
 }
@@ -46,7 +62,11 @@ const nativeStates = new Map();
 function releaseState(host,state){
   state.media.removeEventListener('change',state.update);
   state.destroy();state.details.open=false;
-  for(const {node,marker} of state.slots)if(marker.isConnected)marker.replaceWith(node);
+  // parentNode, never isConnected: an htmx-style swap can detach the whole host (marker
+  // included) before cleanup runs, and isConnected is false there even though the marker's
+  // parent still exists — checking it would silently strand every relocated control instead
+  // of restoring it (same fix as pagination.mjs's relocate()/organization.mjs's restoreSlot).
+  for(const {node,marker} of state.slots)if(marker.parentNode)marker.replaceWith(node);
   state.details.remove();delete host.dataset.hghDensity;nativeStates.delete(host);
 }
 function cleanupDisconnected(doc){

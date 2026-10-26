@@ -1,8 +1,9 @@
 import {buildPresentation,workObject} from '../integrations/link-preview/slack-presentation.mjs';
 import {previewFixtures} from './preview-fixtures.mjs';
 const origin='https://forge.example',repositoryUrl=origin+'/ultrabricks/keyboard-lab',sha='8ae41f7b'+'a'.repeat(32);
-const icons={repository:new URL('../assets/slack-icons/repository.png',import.meta.url).href,pull:new URL('../assets/slack-icons/pull.png',import.meta.url).href,issue:new URL('../assets/slack-icons/issue.png',import.meta.url).href,commit:new URL('../assets/slack-icons/commit.png',import.meta.url).href,file:new URL('../assets/slack-icons/file.png',import.meta.url).href};
+const icons={repository:new URL('../assets/slack-icons/repository.png',import.meta.url).href,pull:new URL('../assets/slack-icons/pull.png',import.meta.url).href,issue:new URL('../assets/slack-icons/issue.png',import.meta.url).href,commit:new URL('../assets/slack-icons/commit.png',import.meta.url).href,file:new URL('../assets/slack-icons/file.png',import.meta.url).href,organization:new URL('../assets/slack-icons/organization.png',import.meta.url).href};
 export const slackCases={
+ Organization:{kind:'organization'},
  Repository:{kind:'repository'},PullRequest:{kind:'pull'},Issue:{kind:'issue'},Commit:{kind:'commit'},File:{kind:'file'},
  MergedPullRequest:{kind:'pull',status:'Merged'},DraftPullRequest:{kind:'pull',status:'Draft'},ClosedIssue:{kind:'issue',status:'Closed'},
  FailingChecks:{kind:'pull',checks:{state:'failure',total:7,passed:5}},PassingChecks:{kind:'pull',checks:{state:'success',total:7,passed:7}},NoChecks:{kind:'pull',checks:{state:'unknown',total:0,passed:0}},
@@ -15,9 +16,12 @@ export const slackCases={
 export function slackFixture(options={}){
  const kind=options.kind||'pull',base=structuredClone(previewFixtures[kind]);
  const path=kind==='pull'?'/pulls/23':kind==='issue'?'/issues/42':kind==='commit'?'/commit/'+sha:kind==='file'?'/src/commit/'+sha+'/src/focus.js':'';
- const resourceUrl=repositoryUrl+path,originalUrl=resourceUrl+(kind==='file'?'#L12-L16':'');
- const link={kind,owner:'ultrabricks',repo:'keyboard-lab',repositoryUrl,resourceUrl,originalUrl,...(['issue','pull'].includes(kind)?{number:kind==='pull'?23:42}:{}),...(['file','commit'].includes(kind)?{sha}:{}),...(kind==='file'?{path:'src/focus.js',lines:{start:12,end:16}}:{})};
- base.link=link;base.repository='ultrabricks/keyboard-lab';base.private=!!options.private;base.updatedAt='2026-09-19T10:00:00Z';
+ const orgRoot=origin+'/ultrabricks';
+ const resourceUrl=kind==='organization'?orgRoot:repositoryUrl+path,originalUrl=kind==='organization'?orgRoot:resourceUrl+(kind==='file'?'#L12-L16':'');
+ const link=kind==='organization'
+   ?{kind,owner:'ultrabricks',repo:null,repositoryUrl:orgRoot,resourceUrl:orgRoot,originalUrl:orgRoot}
+   :{kind,owner:'ultrabricks',repo:'keyboard-lab',repositoryUrl,resourceUrl,originalUrl,...(['issue','pull'].includes(kind)?{number:kind==='pull'?23:42}:{}),...(['file','commit'].includes(kind)?{sha}:{}),...(kind==='file'?{path:'src/focus.js',lines:{start:12,end:16}}:{})};
+ base.link=link;base.repository=kind==='organization'?'ultrabricks':'ultrabricks/keyboard-lab';base.private=!!options.private;base.updatedAt='2026-09-19T10:00:00Z';
  if(kind==='pull')base.title='PR #23: Keep focus stable when menus close';
  if(kind==='issue')base.title='Issue #42: Restore keyboard navigation after filtering';
  if(['pull','issue'].includes(kind)){base.status=options.status||'Open';const state=base.summary.metrics.find(m=>m.label==='State');if(state)state.value=base.status;}

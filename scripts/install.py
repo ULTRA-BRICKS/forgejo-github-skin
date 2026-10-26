@@ -14,6 +14,34 @@ BASE_THEMES = ['forgejo-auto','forgejo-light','forgejo-dark','gitea-auto','gitea
     'forgejo-auto-deuteranopia-protanopia','forgejo-light-deuteranopia-protanopia','forgejo-dark-deuteranopia-protanopia',
     'forgejo-auto-tritanopia','forgejo-light-tritanopia','forgejo-dark-tritanopia']
 START, END = '<!-- hypergithub:start -->', '<!-- hypergithub:end -->'
+ASSET_NAMES = (
+    'core.mjs','skin.css','skin.mjs','list-options.mjs',
+    'repository-controls.mjs','mobile-chrome.mjs','repository-ui.css',
+    'universal-search.mjs','search-stream.mjs','universal-search.css',
+    'pagination.mjs','pagination-model.mjs','pagination.css',
+    'organization.mjs','organization.css',
+    'dashboard-pagination.mjs','dashboard-pagination.css',
+)
+VERSION_RE = re.compile(r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$')
+
+def validate_asset_set(actual: set[Path], version: str) -> None:
+    themes = {Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
+    required = themes | {Path(f'hypergithub/{version}/{name}') for name in ASSET_NAMES}
+    missing = required - actual
+    unexpected = []
+    for rel in actual:
+        if rel in themes:
+            continue
+        parts = rel.parts
+        if (len(parts) == 3 and parts[0] == 'hypergithub'
+                and VERSION_RE.fullmatch(parts[1]) and parts[2] in ASSET_NAMES):
+            continue
+        unexpected.append(rel)
+    if missing or unexpected:
+        raise ValueError(
+            f'Unexpected build asset set; missing={sorted(missing)!r}, '
+            f'extra={sorted(unexpected)!r}'
+        )
 
 def check_version(version: str, manifest: dict) -> str:
     return require_tested_version(version, manifest)
@@ -86,8 +114,6 @@ def plan(custom: Path, ini: Path, make_default: bool) -> list[tuple[Path, bytes,
     targets = []
     asset_root = ROOT/'dist/public/assets'
     version = json.loads((ROOT/'package.json').read_text())['version']
-    expected = {Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
-    expected |= {Path(f'hypergithub/{version}/{name}') for name in ('core.mjs','skin.css','skin.mjs','list-options.mjs','repository-controls.mjs','mobile-chrome.mjs','repository-ui.css')}
     actual = set()
     for source in sorted(asset_root.rglob('*')):
         rel = source.relative_to(asset_root)
@@ -100,8 +126,7 @@ def plan(custom: Path, ini: Path, make_default: bool) -> list[tuple[Path, bytes,
             target = custom/'public/assets'/rel
             ensure_no_symlinks(target)
             targets.append((target, source.read_bytes(), 0o644))
-    if actual != expected:
-        raise ValueError(f'Unexpected build asset set; missing={sorted(expected-actual)!r}, extra={sorted(actual-expected)!r}')
+    validate_asset_set(actual, version)
     hook = custom/'templates/custom/footer.tmpl'; ensure_no_symlinks(hook)
     old = hook.read_text() if hook.exists() else ''
     fragment = (ROOT/'dist/templates/custom/footer.tmpl').read_text()

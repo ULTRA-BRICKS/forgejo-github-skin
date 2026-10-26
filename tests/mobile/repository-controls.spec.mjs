@@ -1,12 +1,11 @@
 import {test,expect} from '@playwright/test';
 import fs from 'node:fs/promises';
-const controls=await fs.readFile(new URL('../../src/repository-controls.mjs',import.meta.url),'utf8');
-const base=await fs.readFile(new URL('../../src/list-options.mjs',import.meta.url),'utf8');
+import {openNativeFixture,exposeModules} from './native-module-fixture.mjs';
 const css=(await fs.readFile(new URL('../../src/skin.css',import.meta.url),'utf8')).replace(/^@import.*$/mg,'')+await fs.readFile(new URL('../../src/repository-ui.css',import.meta.url),'utf8');
 const fixture='<html lang="en" data-theme="hypergithub-light" data-hgh-ready="true"><head><meta name="viewport" content="width=device-width"><style>:root{--hgh-color-border:#d1d9e0;--hgh-color-subtle:#f6f8fa;--hgh-color-text:#1f2328}body{margin:16px;font:14px Arial}.repo-button-row{display:flex}.button-sequence{display:flex}.button{display:inline-flex}.ui.container{width:100%}.branch-dropdown-button{width:100px}button{height:32px}</style></head><body><main class="repository file"><div class="repo-header"><div class="repo-buttons"><div class="ui labeled button"><button class="ui button">Watch</button><a class="ui basic label" href="#watchers">3</a></div></div></div><div class="ui container"><div class="repo-description">Repository description</div><div class="repo-button-row"><div class="button-sequence"><div class="js-branch-tag-selector"><button class="branch-dropdown-button">main</button></div><a class="button" id="new-pull-request" href="/compare">PR</a><a class="button" href="/find/main">Find file</a><button class="button" id="add-native">Add file</button></div><div><details class="hgh-clone"><summary>Code</summary><input value="clone URL"></details></div><button class="button" data-hgh-help>Shortcuts</button></div></div></main></body></html>';
 async function prepare(page){
- await page.setContent(fixture);await page.addStyleTag({content:css});
- await page.addScriptTag({content:base.replaceAll('export ','')+'\n'+controls.replace(/^import.*$/mg,'').replaceAll('export ','')});
+ await openNativeFixture(page,fixture);await page.addStyleTag({content:css});
+ await exposeModules(page,'repository-controls.mjs');
  await page.evaluate(()=>{window.originalButton=document.getElementById('add-native');window.hits=0;originalButton.onclick=()=>window.hits++;enhanceRepositoryControls();enhanceRepositoryControls();});
 }
 test('compact file actions preserve native nodes, handlers, original desktop positions and theme teardown',async({page})=>{
@@ -45,4 +44,26 @@ test('a removed description cannot crash a later mobile transition or strand nat
  await page.setViewportSize({width:320,height:956});await expect(page.locator('.hgh-repo-more')).toBeVisible();
  await expect(page.locator('.repo-buttons')).toHaveCount(1);await expect(page.locator('.repo-buttons')).toBeVisible();
  await page.evaluate(()=>restoreRepositoryControls());await expect(page.locator('.repo-header>.repo-buttons')).toBeVisible();await expect(page.locator('.button-sequence>#add-native')).toBeVisible();expect(errors).toEqual([]);
+});
+
+test('a temporarily detached-but-reused row restores its exact original controls on reinsertion',async({page})=>{
+ await page.setViewportSize({width:320,height:956});
+ await prepare(page);
+ await expect(page.locator('.hgh-repo-more')).toBeVisible();
+ const result=await page.evaluate(()=>{
+  const row=document.querySelector('.repo-button-row');
+  const parent=row.parentNode,next=row.nextSibling;
+  row.remove(); // detach but keep a live reference — a framework reusing the same node
+  enhanceRepositoryControls(); // sees the detached row and tears down its state via cleanupDisconnected()
+  parent.insertBefore(row,next); // reinsert the SAME node
+  return {
+   addFilePresent: document.getElementById('add-native')===window.originalButton,
+   moreCount: document.querySelectorAll('.hgh-repo-more').length,
+  };
+ });
+ expect(result.addFilePresent).toBe(true); // original control restored to its exact original slot, not lost
+ expect(result.moreCount).toBe(0); // stale disclosure torn down, not leaked
+ await page.evaluate(()=>enhanceRepositoryControls());
+ await expect(page.locator('.hgh-repo-more')).toBeVisible();
+ await expect(page.locator('#add-native')).toHaveCount(1);
 });

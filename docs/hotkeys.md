@@ -77,3 +77,41 @@ GitHub's code-cursor shortcuts (`Shift+J`, line menu, symbol selection) depend o
 ## Safety rule
 
 A shortcut may activate only an existing same-origin link or existing native Forgejo control. If permissions, page state, or server features remove that control, the shortcut is a no-op and help marks it unavailable. The skin never fabricates a mutation endpoint, never retries an uncertain mutation, and never steals character keys while the user is typing, composing IME text, or using an editor.
+
+## Native focus and interruption regression coverage
+
+The skin cancels a pending `G` sequence on Escape, editable/modal focus, composition,
+modified or already-handled keys, repeated keys, hash/history navigation and native
+HTMX swaps. Modified `?` is not a help command. Escape does not override composition,
+an event already handled before capture or a native modal, including a modal opened
+inside an inert wrapper. Native input Escape handlers run before the skin's dismissal
+fallback; closing an inner filter keeps the outer disclosure open. Deferred focus
+repair preserves usable native focus choices, but restores the trigger when focus
+is left on the body or in the closed menu—even when native branch Escape cancels
+the key. Help and `W` both resolve a focused branch selector, or the sole usable
+selector when there is no focused one; an ambiguous unfocused pair is unavailable.
+Dropdown ownership and shortcut activation share the same rendered, hidden/inert
+and disabled-control eligibility rules, so a CSS-hidden inner menu cannot prevent
+Escape from closing the outer disclosure.
+
+Creating an issue requires the server-rendered, usable New issue link. The skin never
+derives `/issues/new` from the Issues tab. Help excludes hidden, inert and disabled
+controls, including disabled ancestor fieldsets.
+Go-to-line is available only when a rendered line is usable. A hidden or collapsed
+destination keeps the line form open with an unavailable-line message rather than
+claiming successful navigation.
+
+`scripts/verify-native-parity.mjs --candidate` exercises the real public Forgejo
+branch and author selectors with this worktree's skin assets. It selects a slash
+containing branch and an author through the native keyboard model, preserves the
+filter query, and checks Escape closure and focus return. This is read-only native
+candidate proof, not a deployed result or authenticated comment/review proof.
+Collapsed mobile file actions remain listed when their native links are usable;
+opening help does not leave the disclosure open. Hidden, inert or disabled links
+remain unavailable. The candidate probe fails closed on missing skin assets and
+requires both `skin.mjs` and `skin.css` to be locally fulfilled for every case.
+
+The script's default dataset is this repository's `rig/tracked-files-task-route` branch and
+`alex-mextner` author. `PARITY_BASE` and `PARITY_EVIDENCE` select the endpoint and
+artifact directory; an alternate endpoint must expose the same synthetic/read-only
+test data. It never submits comments, reviews, approvals or merges.

@@ -1,24 +1,27 @@
 {
   "name": "@ultrabricks/forgejo-github-skin",
-  "version": "0.1.9",
+  "version": "0.3.6",
   "private": true,
   "type": "module",
   "description": "Opt-in, GitHub-familiar Forgejo skin with measured design references",
   "scripts": {
     "tokens": "node scripts/extract-tokens.mjs",
     "build": "node scripts/build.mjs",
-    "test": "npm run check:generated && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p '*_test.py'",
-    "test:browser": "node scripts/browser-tests.mjs",
+    "test": "npm run check:generated && npm run check:code-example-fingerprint && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p '*_test.py'",
+    "test:browser": "node scripts/browser-tests.mjs && node --test tests/browser/keyboard-parity.test.mjs",
     "capture": "node scripts/capture-github.mjs",
-    "storybook": "storybook dev -p 6006 --no-open",
-    "storybook:build": "storybook build -o storybook-static",
+    "storybook": "node scripts/sharing/build-code-example.mjs && storybook dev -p 6006 --no-open",
+    "storybook:build": "node scripts/sharing/build-code-example.mjs && storybook build -o storybook-static",
     "storybook:screenshots": "node scripts/storybook-screenshots.mjs",
     "storybook:test": "node scripts/storybook-smoke.mjs",
     "check:generated": "node scripts/check-generated.mjs",
+    "check:code-example-fingerprint": "node scripts/sharing/build-code-example.mjs --check",
     "test:sharing": "node --test tests/sharing/*.test.mjs",
     "sharing:serve": "node integrations/link-preview/server.mjs",
     "sharing:verify": "node scripts/sharing/verify-public.mjs",
     "sharing:doctor": "node scripts/sharing/doctor.mjs",
+    "sharing:preflight": "node scripts/sharing/check-renderer-preflight.mjs",
+    "sharing:cold-render-evidence": "node scripts/sharing/cold-render-evidence.mjs",
     "test:mobile": "playwright test -c playwright.mobile.config.mjs",
     "test:mobile:update": "playwright test -c playwright.mobile.config.mjs --update-snapshots",
     "test:preview-layout": "node scripts/sharing/check-preview-layout.mjs",
@@ -36,5 +39,9 @@
   "engines": {
     "node": ">=22.12.0",
     "npm": ">=10"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }

@@ -1,3 +1,4 @@
+/** Shared theme, keyboard and native-control eligibility rules. */
 export const THEME_PREFIX = 'hypergithub-';
 
 const repoNavigation = new Map([
@@ -13,6 +14,18 @@ const repoNavigation = new Map([
 
 export function themeEnabled(name) {
   return ['light', 'dark', 'auto'].some((mode) => name === THEME_PREFIX + mode);
+}
+
+export function rendered(element) {
+  return element.getClientRects().length > 0 && element.ownerDocument.defaultView.getComputedStyle(element).visibility === 'visible';
+}
+
+export function visible(element) {
+  return !!element && !element.closest('[hidden],[inert]') && rendered(element);
+}
+
+export function usable(element) {
+  return visible(element) && !element.matches(':disabled,[disabled],[aria-disabled="true"],.disabled') && !element.closest('[aria-disabled="true"],fieldset[disabled]');
 }
 
 export function isEditable(target) {

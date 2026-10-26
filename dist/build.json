@@ -1,5 +1,5 @@
 {
-  "version": "0.1.9",
+  "version": "0.3.6",
   "tokenCount": 98,
   "files": [
     "skin.css",
@@ -8,7 +8,17 @@
     "list-options.mjs",
     "repository-controls.mjs",
     "mobile-chrome.mjs",
-    "repository-ui.css"
+    "repository-ui.css",
+    "universal-search.mjs",
+    "search-stream.mjs",
+    "universal-search.css",
+    "pagination.mjs",
+    "pagination-model.mjs",
+    "pagination.css",
+    "organization.mjs",
+    "organization.css",
+    "dashboard-pagination.mjs",
+    "dashboard-pagination.css"
   ],
   "format": "DTCG 2025.10",
   "fontFiles": 0

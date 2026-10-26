@@ -1,5 +1,5 @@
 import {shell,icon,disclosure,escape} from './repository-shell.mjs';
-export default {title:'Screens/Workflows'};
+export default {id:'screens-workflows',title:'Reference reconstructions/Workflows',parameters:{docs:{description:{component:'Synthetic GitHub-reference reconstructions, not native Forgejo pages. Shared controls reuse repository-ui.css and the production disclosure enhancer. Screenshots do not certify native forms, permissions or review submission.'}}}};
 const branches=['main','feature/keyboard-navigation','fix/accessibility-focus','docs/component-guidelines','chore/update-dependencies'];
 export const Branches={render:()=>{
  const root=shell(`<main class="hgh-branches"><div class="hgh-list-heading"><h1>Branches</h1><button class="hgh-control hgh-new-pr" data-new-branch>New branch</button></div><div class="hgh-branch-tabs" role="tablist" aria-label="Branch categories">${['Overview','Yours','Active','Stale','All'].map((s,i)=>`<button type="button" role="tab" aria-selected="${i===0}" data-kind="${s}">${s}</button>`).join('')}</div><label class="hgh-field">Search branches<input type="search" placeholder="Search branches…"></label><div class="hgh-branch-results"></div></main>`);

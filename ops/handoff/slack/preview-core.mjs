@@ -18,7 +18,16 @@ export function verifySlackRequest({rawBody, timestamp, signature, signingSecret
 
 const validName = (value) => /^[A-Za-z0-9_.-]{1,100}$/.test(value) && !['.', '..'].includes(value);
 const validSha = (value) => /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(value);
-const reserved = new Set(['api', 'admin', 'user', 'assets', 'explore', 'notifications']);
+// Sourced from Forgejo's own reserved-username enforcement — reservedUsernames /
+// reservedUserPatterns in models/user/user.go, https://codeberg.org/forgejo/forgejo/raw/branch/forgejo/models/user/user.go
+// (NOT Gitea's list, which differs slightly): these path segments can never be a real
+// user/organization account, so a single-segment link must never be parsed as one.
+const reserved = new Set(['-', '.well-known', 'actor', 'admin', 'api', 'assets', 'attachments',
+  'avatar', 'avatars', 'captcha', 'explore', 'favicon.ico', 'forgejo-actions', 'ghost',
+  'gitea-actions', 'issues', 'login', 'manifest.json', 'metrics', 'milestones', 'notifications',
+  'org', 'pulls', 'repo', 'repo-avatars', 'report_abuse', 'robots.txt', 'sitemap.xml', 'ssh_info',
+  'swagger.v1.json', 'user', 'v2']);
+const reservedNameSuffix = /\.(?:keys|gpg|rss|atom|png)$/i;
 const parsedLinks = new WeakSet();
 function parsed(result) {
   Object.freeze(result);
@@ -41,7 +50,27 @@ export function parseForgejoLink(raw, configuredBase) {
     const parts = encoded.map(decodeURIComponent);
     if (parts.some(s => !s || s === '.' || s === '..' || /[\u0000-\u001f\\/%]/u.test(s))) return null;
     const [owner, repo, route, id, ...rest] = parts;
-    if (!validName(owner ?? '') || !validName(repo ?? '') || reserved.has(owner.toLowerCase())) return null;
+    // A bare `/<owner>` is the public organization profile; `/org/<name>/dashboard`
+    // is the personal/authenticated dashboard with the coordinated hash tabs. Both
+    // resolve to the same canonical organization identity (`resourceUrl`),
+    // independent of which form was posted.
+    if (parts.length === 1) {
+      if (!validName(owner ?? '') || reserved.has(owner.toLowerCase()) || reservedNameSuffix.test(owner) || url.hash) return null;
+      const orgRoot = `${base.origin}${prefix}${encodeURIComponent(owner)}`;
+      return parsed({originalUrl: raw, owner, repo: null, repositoryUrl: orgRoot, kind: 'organization', resourceUrl: orgRoot});
+    }
+    if (owner === 'org' && parts.length === 3 && route === 'dashboard') {
+      const name = repo;
+      if (!validName(name ?? '') || reserved.has(name.toLowerCase()) || reservedNameSuffix.test(name)) return null;
+      // Accepting a posted `#prs`/`#issues` hash here is independent of which actions a
+      // rendered card offers: this only validates a link shape someone may have pasted.
+      // The org card itself emits no PR/issue action (FJ-56) even though this allowlist
+      // still recognizes those two hash spellings.
+      if (url.hash && !['#overview', '#repos', '#prs', '#issues', '#activity'].includes(url.hash)) return null;
+      const orgRoot = `${base.origin}${prefix}${encodeURIComponent(name)}`;
+      return parsed({originalUrl: raw, owner: name, repo: null, repositoryUrl: orgRoot, kind: 'organization', resourceUrl: orgRoot});
+    }
+    if (!validName(owner ?? '') || !validName(repo ?? '') || reserved.has(owner.toLowerCase()) || reservedNameSuffix.test(owner)) return null;
     const root = `${base.origin}${prefix}${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
     const common = {originalUrl: raw, owner, repo, repositoryUrl: root};
     if (parts.length === 2 && !url.hash) return parsed({...common, kind: 'repository', resourceUrl: root});
@@ -143,7 +172,7 @@ export function richCard({facts, policy, link, title, description, status}) {
   if (facts?.resourceUrl !== link.resourceUrl) throw new Error('Authorization proof belongs to another resource');
   const name = plain(title, 150) || 'Forgejo';
   const detail = decision==='summary' ? '' : plain(description, 400);
-  const summary = [plain(status, 80), `${link.owner}/${link.repo}`,
+  const summary = [plain(status, 80), link.kind === 'organization' ? link.owner : `${link.owner}/${link.repo}`,
     ['disclosed','summary'].includes(decision) ? 'Shared copy • visible to this conversation' : 'Public'].filter(Boolean).join(' · ');
   return {blocks: [
     {type: 'header', text: {type: 'plain_text', text: name, emoji: false}},

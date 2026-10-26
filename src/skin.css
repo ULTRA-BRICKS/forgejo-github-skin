@@ -1,4 +1,8 @@
+@import url('./universal-search.css');
 @import url('./repository-ui.css');
+@import url('./pagination.css');
+@import url('./organization.css');
+@import url('./dashboard-pagination.css');
 /* Native Forgejo DOM and semantics; every visual rule is scoped to an opt-in theme. */
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) {
   --fonts-regular: var(--hgh-font-sans);
@@ -16,7 +20,7 @@ html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-t
   background: var(--hgh-color-canvas);
 }
 html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(button,input,select,textarea) { font-family: inherit; }
-html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(a,button,input,textarea,select,summary):focus-visible {
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) :is(a,button,input,textarea,select,summary,.ui.dropdown[tabindex]):focus-visible {
   outline: var(--hgh-control-focusWidth) solid var(--hgh-color-focus);
   outline-offset: 2px;
 }

@@ -8,6 +8,12 @@ const common = {
   description: "The image contributes facts, not another copy of this text.",
 };
 export const previewFixtures = {
+  organization: {
+    ...common,
+    title: "Ultrabricks",
+    description: "Accessible, keyboard-first developer tools.",
+    summary: { kind: "organization", number: null, sha: "", metrics: [], labels: [], activity: null, code: null },
+  },
   repository: {
     ...common,
     summary: {

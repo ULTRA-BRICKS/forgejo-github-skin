@@ -1,20 +1,36 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import {deployPrebuilt,readLinkedProject,hasUncommittedSource} from "./vercel-deploy.mjs";
+import {
+  renderCodeExample,
+  closeRenderer,
+  pngPixelsMatch,
+} from "./sharing/code-example-fingerprint.mjs";
 const root = path.resolve(import.meta.dirname, ".."),
   output = path.join(root, ".vercel/output");
-const project = JSON.parse(
-  await fs.readFile(path.join(root, ".vercel/project.json"), "utf8"),
-);
-if (project.projectName !== "forgejo-ui")
-  throw new Error("Only the existing Forgejo UI gallery may be updated");
-if (
-  execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], {
-    cwd: root,
-    encoding: "utf8",
-  }).trim()
-)
+const project = readLinkedProject(root);
+// Checked BEFORE the build below (which regenerates assets/slack-examples/code.png and
+// therefore mutates the tree): otherwise this guard would spuriously fire whenever the
+// freshly-rendered PNG bytes differ from what's committed for a purely environmental
+// reason (see the cross-OS caveat in code-example-fingerprint.mjs), rejecting an
+// otherwise-clean publish for a reason unrelated to uncommitted work.
+if (hasUncommittedSource(root))
   throw new Error("Publish committed sources and evidence only");
+const sourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {cwd: root, encoding: "utf8"}).trim();
+const sourceTree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], {cwd: root, encoding: "utf8"}).trim();
+try {
+  // Always rebuilds storybook-static from the current working tree (which regenerates
+  // assets/slack-examples/code.png first, see the `storybook:build` script) instead of
+  // trusting whatever storybook-static already happens to be on disk — that's exactly how
+  // a stale published fixture could recur even after the source PNG passes its own check.
+  execFileSync("npm", ["run", "storybook:build"], { cwd: root, stdio: "inherit" });
+} catch (error) {
+  throw new Error(
+    "Refusing to publish: `npm run storybook:build` failed (see output above).",
+    { cause: error },
+  );
+}
 await fs.rm(output, { recursive: true, force: true });
 await fs.mkdir(path.join(output, "static"), { recursive: true });
 const allowed = (source) =>
@@ -23,6 +39,31 @@ await fs.cp(path.join(root, "storybook-static"), path.join(output, "static"), {
   recursive: true,
   filter: allowed,
 });
+// Same-run integrity backstop: both sides of this pixel comparison come from this exact
+// publish invocation (the PNG just bundled by the build above, and a fresh render made
+// right here), so — unlike comparing against a git-committed binary — it is not exposed to
+// cross-OS font/encoder drift. Should never trip given storybook:build always regenerates
+// the fixture first; it only catches a future regression in the build/bundling wiring.
+const codeExampleAssets = (
+  await fs.readdir(path.join(output, "static/assets"))
+).filter((name) => /^code-[\w-]+\.png$/.test(name));
+if (codeExampleAssets.length !== 1)
+  throw new Error(
+    `Expected exactly one bundled code-example PNG in storybook-static/assets, found ${codeExampleAssets.length}`,
+  );
+const bundledCodeExample = await fs.readFile(
+  path.join(output, "static/assets", codeExampleAssets[0]),
+);
+try {
+  const freshCodeExample = await renderCodeExample();
+  if (!(await pngPixelsMatch(bundledCodeExample, freshCodeExample)))
+    throw new Error(
+      "The code-example PNG just built into storybook-static does not pixel-match a fresh " +
+        "render from this same publish run — a build-wiring regression, not a stale-asset issue.",
+    );
+} finally {
+  await closeRenderer();
+}
 await fs.writeFile(
   path.join(output, "config.json"),
   JSON.stringify(
@@ -83,19 +124,11 @@ await fs.copyFile(
   path.join(root, "research/preview-renderer-parity.json"),
   path.join(output, "static/preview-v2/pixel-proof.json"),
 );
+await fs.writeFile(path.join(output, "static/publication.json"), JSON.stringify({
+  sourceCommit, sourceTree, projectId: project.projectId, orgId: project.orgId,
+  kind: "Static Storybook and curated evidence; not live native Forgejo acceptance",
+}, null, 2) + "\n");
 console.log(
   "Staged reviewed Storybook and tracked PNG evidence; no credentials, source tree, maps or font binaries.",
 );
-if (process.argv.includes("--deploy"))
-  execFileSync(
-    "vercel",
-    [
-      "deploy",
-      "--prebuilt",
-      "--prod",
-      "--yes",
-      "--scope",
-      "inventorems-projects",
-    ],
-    { cwd: root, stdio: "inherit" },
-  );
+if (process.argv.includes("--deploy")) deployPrebuilt(root);

@@ -222,11 +222,21 @@ for (const [anonymousReadable, privateFlag, expectedImage] of [[false, false, fa
 
 test('image snapshots require useful public facts and refuse protected metadata', () => {
   const f=fixture();f.slack.config={...f.slack.config,origin:'https://links.example'};
+  const repoLink=parseForgejoLink(source+'/owner/private',source);
+  const fileRaw=source+'/owner/private/src/commit/'+'a'.repeat(40)+'/x.js';
   try {
-    assert.equal(f.slack.imageSnapshot({private:false,summary:{metrics:[{label:'Stars',value:null}]}}),null);
-    assert.equal(f.slack.imageSnapshot({private:true,title:'SECRET',summary:{code:['SECRET'],metrics:[{label:'Bytes',value:12}]}}),null);
-    const url=f.slack.imageSnapshot({link:parseForgejoLink(raw,source),private:false,title:'Public',summary:{metrics:[{label:'Stars',value:0}]}});
+    assert.equal(f.slack.imageSnapshot({link:repoLink,private:false,summary:{kind:'repository',metrics:[{label:'Stars',value:null}],activity:null}}),null);
+    assert.equal(f.slack.imageSnapshot({private:true,title:'SECRET',link:parseForgejoLink(raw,source),summary:{kind:'file',code:['SECRET'],metrics:[{label:'Bytes',value:12}]}}),null);
+    // A file with no non-blank code lines is not additive, even though the kind matches.
+    assert.equal(f.slack.imageSnapshot({link:parseForgejoLink(fileRaw,source),private:false,summary:{kind:'file',code:[],metrics:[{label:'Bytes',value:12}]}}),null);
+    // A pull/issue/commit never gets a supplemental image, even with real metric values:
+    // Work Object fields already show them, so an image would only repeat them.
+    assert.equal(f.slack.imageSnapshot({link:parseForgejoLink(raw,source),private:false,summary:{kind:'pull',number:5,metrics:[{label:'Added',value:12},{label:'Removed',value:3}]}}),null);
+    // The parsed link's own kind (from its URL shape) must agree with the claimed
+    // summary kind; a mismatch is refused rather than trusted.
+    assert.equal(f.slack.imageSnapshot({link:parseForgejoLink(raw,source),private:false,summary:{kind:'repository',activity:{days:[1,0,2]}}}),null);
+    const url=f.slack.imageSnapshot({link:repoLink,private:false,title:'Public',summary:{kind:'repository',activity:{days:[1,0,2]}}});
     assert.match(url,/^https:\/\/links\.example\/image\/s\/[a-f0-9]{48}$/);
-    assert.deepEqual(f.store.get('image:'+url.split('/').at(-1)),{sourceUrl:raw,version:2});
+    assert.deepEqual(f.store.get('image:'+url.split('/').at(-1)),{sourceUrl:repoLink.originalUrl,version:3,view:'activity'});
   } finally {f.store.close();}
 });

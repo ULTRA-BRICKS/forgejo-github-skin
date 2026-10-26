@@ -1,4 +1,4 @@
-import importlib.util, pathlib, sys, tempfile, unittest
+import importlib.util, json, pathlib, re, sys, tempfile, unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 spec=importlib.util.spec_from_file_location('installer',ROOT/'scripts/install.py')
@@ -46,4 +46,69 @@ class InstallerTests(unittest.TestCase):
    self.assertFalse((real/'asset.css').exists())
  def test_compat_helper_is_shared(self):
   self.assertEqual(installer.check_version('v16.0.3+build',{'testedForgejo':['16.0.3']}),'16.0.3')
+ def test_asset_names_include_pagination_and_organization_modules(self):
+  for name in ('pagination.mjs','pagination-model.mjs','pagination.css','organization.mjs','organization.css','dashboard-pagination.mjs','dashboard-pagination.css'):
+   self.assertIn(name,installer.ASSET_NAMES)
+ def test_asset_set_accepts_current_and_previous_known_release(self):
+  version='0.2.0'
+  themes={pathlib.Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
+  current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES}
+  previous={pathlib.Path('hypergithub/0.1.9/skin.css'),pathlib.Path('hypergithub/0.1.9/skin.mjs')}
+  installer.validate_asset_set(themes|current|previous,version)
+ def test_asset_set_accepts_0_3_0_alongside_0_2_0_compatibility(self):
+  version='0.3.0'
+  themes={pathlib.Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
+  current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES}
+  previous={pathlib.Path('hypergithub/0.2.0/skin.css'),pathlib.Path('hypergithub/0.2.0/skin.mjs')}
+  installer.validate_asset_set(themes|current|previous,version)
+ def test_asset_set_rejects_unknown_versioned_file(self):
+  version='0.2.0'
+  themes={pathlib.Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
+  current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES}
+  with self.assertRaises(ValueError):
+   installer.validate_asset_set(themes|current|{pathlib.Path('hypergithub/0.1.9/evil.js')},version)
+ def test_current_dist_plan_includes_current_version_dashboard_pagination(self):
+  version=json.loads((ROOT/'package.json').read_text())['version']
+  with tempfile.TemporaryDirectory(dir=ROOT) as d:
+   root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')
+   planned=installer.plan(custom,ini,False)
+   names={str(path.relative_to(custom)) for path,_,_ in planned if path.is_relative_to(custom)}
+   self.assertIn(f'public/assets/hypergithub/{version}/dashboard-pagination.mjs',names)
+   self.assertIn(f'public/assets/hypergithub/{version}/dashboard-pagination.css',names)
+   self.assertIn('public/assets/hypergithub/0.3.0/organization.mjs',names)
+ def test_current_dist_plan_includes_search_stream_module_imported_by_universal_search(self):
+  version=json.loads((ROOT/'package.json').read_text())['version']
+  with tempfile.TemporaryDirectory(dir=ROOT) as d:
+   root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')
+   planned=installer.plan(custom,ini,False)
+   names={str(path.relative_to(custom)) for path,_,_ in planned if path.is_relative_to(custom)}
+   self.assertIn(f'public/assets/hypergithub/{version}/search-stream.mjs',names)
+   self.assertIn(f'public/assets/hypergithub/{version}/universal-search.mjs',names)
+ def test_asset_set_rejects_a_current_release_missing_the_search_stream_module(self):
+  version='0.3.5'
+  themes={pathlib.Path(f'css/theme-hypergithub-{mode}.css') for mode in ('auto','light','dark')}
+  current={pathlib.Path(f'hypergithub/{version}/{name}') for name in installer.ASSET_NAMES if name!='search-stream.mjs'}
+  with self.assertRaises(ValueError):
+   installer.validate_asset_set(themes|current,version)
+ def test_every_local_module_import_ships_in_the_installer_asset_set(self):
+  imported=set()
+  for source in (ROOT/'src').glob('*.mjs'):
+   imported.update(re.findall(r"from\s+'\./([\w.-]+\.mjs)'",source.read_text()))
+  self.assertTrue(imported)
+  self.assertLessEqual(imported,set(installer.ASSET_NAMES))
+ def test_current_dist_plan_includes_0_3_0_pagination_and_organization(self):
+  with tempfile.TemporaryDirectory(dir=ROOT) as d:
+   root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')
+   planned=installer.plan(custom,ini,False)
+   names={str(path.relative_to(custom)) for path,_,_ in planned if path.is_relative_to(custom)}
+   self.assertIn('public/assets/hypergithub/0.3.0/organization.mjs',names)
+   self.assertIn('public/assets/hypergithub/0.3.0/pagination.mjs',names)
+   self.assertIn('public/assets/hypergithub/0.2.0/skin.mjs',names)
+ def test_current_dist_plan_accepts_n_minus_one_and_universal_search(self):
+  with tempfile.TemporaryDirectory(dir=ROOT) as d:
+   root=pathlib.Path(d); custom=root/'custom'; custom.mkdir(); ini=root/'app.ini'; ini.write_text('[ui]\nTHEMES = forgejo-auto\n')
+   planned=installer.plan(custom,ini,False)
+   names={str(path.relative_to(custom)) for path,_,_ in planned if path.is_relative_to(custom)}
+   self.assertIn('public/assets/hypergithub/0.2.0/universal-search.mjs',names)
+   self.assertIn('public/assets/hypergithub/0.1.9/skin.css',names)
 if __name__=='__main__':unittest.main()

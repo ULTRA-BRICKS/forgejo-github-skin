@@ -25,14 +25,20 @@ export function graphicLayout(meta, tokens) {
   const dim = name => tokens.preview[name].$value.value;
   const width = dim('width'), baseHeight = dim('height'), gap = dim('gutter');
   const codeOnly=meta.previewVariant==='code'&&meta.summary?.kind==='file';
+  // The Slack native object already shows title/metrics/logo as text fields; an
+  // activity-only image repeats none of that — just the chart and its date legend.
+  const activityOnly=meta.previewVariant==='activity'&&meta.summary?.kind==='repository';
   const lines = codeLines(meta), codeStart = codeOnly?28:64, codeStep = codeOnly?20:dim('lineHeight');
   const codeEnd = codeStart + Math.max(0, lines.length - 1) * codeStep;
   const codeFooter = codeEnd + 20;
-  const height = meta.summary?.kind === 'file' && lines.length
-    ? (codeOnly?codeFooter+16:Math.max(baseHeight, codeFooter + 12)) : baseHeight;
-  return { width, height, gap, lines, codeOnly, codeStart, codeStep, codeFooter,
+  const activityChartTop = 12, activityChartBottom = 60, activityFooter = 80;
+  const height = activityOnly ? activityFooter + 14
+    : meta.summary?.kind === 'file' && lines.length
+      ? (codeOnly?codeFooter+16:Math.max(baseHeight, codeFooter + 12)) : baseHeight;
+  return { width, height, gap, lines, codeOnly, activityOnly, codeStart, codeStep, codeFooter,
     header: 22, rule: 32, metadata: 46, metricValue: 58, metricLabel: 75,
-    chartTop: 87, chartBottom: 109, detail: 106, footer: height - 12 };
+    chartTop: activityOnly?activityChartTop:87, chartBottom: activityOnly?activityChartBottom:109,
+    detail: 106, footer: activityOnly?activityFooter:height - 12 };
 }
 export function syntaxSegments(line) {
   const pattern = /(\/\/.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:const|let|var|function|return|if|else|for|while|async|await|import|export|from|class|new|throw|true|false|null|undefined)\b|\b\d+(?:\.\d+)?\b)/g;
@@ -53,13 +59,19 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
   const { width: W, height: H, gap: G } = layout;
   const dim = name => previewTokens.preview[name].$value.value;
   const c = Object.fromEntries(Object.entries(baseTokens.color[mode === 'adaptive' ? 'light' : mode]).map(([k, v]) => [k, color(v)]));
+  // Measured against #ffffff and the GitHub/Slack dark canvas #0d1117 (relative-luminance
+  // formula): #797979 is the highest min(lightContrast, darkContrast) any single grey can
+  // reach against both (~4.35:1 each). Nothing rendered here is WCAG "large text" (18.66px+
+  // bold / 24px+), so this sits just under the 4.5:1 AA-normal bar on both surfaces — the
+  // best simultaneous compromise, not a full AA pass. `muted` reuses the same grey: a dimmer
+  // secondary tone would push one surface's contrast below this floor (see #6e7781's 4.16:1
+  // worst case, or #858585's 3.69:1 — both worse than this optimum).
   if (mode === 'adaptive') Object.assign(c, {
-    text: '#66707b', muted: '#6e7781', border: '#8c959f',
+    text: '#797979', muted: '#797979', border: '#8c959f',
     success: '#1a7f37', danger: '#cf222e', link: '#0969da',
   });
-  const stroke = mode === 'adaptive' ? ' paint-order="stroke" stroke="white" stroke-opacity=".76" stroke-width=".8" stroke-linejoin="round"' : '';
   const text = (x, y, value, { size = dim('labelSize'), tone = 'text', weight = 400, anchor = 'start', attrs = '' } = {}) =>
-    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${stroke}${attrs}>${esc(value)}</text>`;
+    `<text x="${x}" y="${y}" font-size="${size}" fill="${c[tone] || c.text}" font-weight="${weight}" text-anchor="${anchor}"${attrs}>${esc(value)}</text>`;
   const line = (x1, y1, x2, y2) => `<path d="M${x1},${y1}L${x2},${y2}" fill="none" stroke="${c.border}" stroke-opacity=".5"/>`;
   const fact = meta.summary, brand = meta.brand || { name: 'Code host', initials: 'CH' };
   const safeLogo = typeof brand.logoData === 'string' && /^data:image\/(?:png|webp);base64,[A-Za-z0-9+/=]+$/.test(brand.logoData) && brand.logoData.length < 200000;
@@ -68,7 +80,7 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
     : `<rect x="${G}" y="8" width="18" height="18" rx="3" fill="none" stroke="${c.text}"/>` + text(G + 9, 21, cut(brand.initials || brand.name, 2).toUpperCase(), { size: 9, weight: 650, anchor: 'middle' });
   const kind = fact.kind === 'pull' ? 'PR' : fact.kind === 'repository' ? 'REPO' : String(fact.kind).toUpperCase();
   let body = `<g data-preview-header>${mark}${text(G + 26, layout.header, cut(brand.name, 24), { weight: 650 })}${text(W - G, layout.header, kind + (fact.number ? ' #' + fact.number : ''), { tone: 'muted', anchor: 'end' })}</g>` + line(G, layout.rule, W - G, layout.rule);
-  if(layout.codeOnly)body='';
+  if(layout.codeOnly||layout.activityOnly)body='';
   if (fact.kind === 'file' && layout.lines.length) {
     const start = Number.isSafeInteger(fact.lineStart) && fact.lineStart > 0 ? fact.lineStart : 1;
     const lastNumber = start + layout.lines.length - 1;
@@ -82,17 +94,19 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
       body += text(G, y, String(start + i), { tone: 'muted', size: codeSize, attrs: ' data-line-number font-family="ui-monospace, SFMono-Regular, Menlo, monospace"' });
       // A single SVG text run lets the browser position tokens, preserving spaces and glyph widths.
       const spans = syntaxSegments(cut(source, maxChars)).map(token => `<tspan fill="${c[token.tone]}" data-tone="${token.tone}">${esc(token.text)}</tspan>`).join('');
-      body += `<text data-code-row="${i}" x="${codeX}" y="${y}" xml:space="preserve" font-size="${codeSize}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"${stroke}>${spans}</text>`;
+      body += `<text data-code-row="${i}" x="${codeX}" y="${y}" xml:space="preserve" font-size="${codeSize}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${spans}</text>`;
     });
     body += text(G, layout.codeFooter, `Lines ${start}–${lastNumber} · excerpt only`, { tone: 'muted', size: 11, attrs: ' data-preview-footer' });
   } else {
-    const metrics = (fact.metrics || []).filter(m => hasValue(m.value)).slice(0, 4);
-    const step = (W - 2 * G) / Math.max(1, metrics.length);
-    for (const [i, item] of metrics.entries()) {
-      const value = cut(num(item.value), 10);
-      const preferred = typeof item.value === 'string' ? dim('textValueSize') : dim('numberSize');
-      const size = Math.max(12, Math.min(preferred, (step - dim('metricGap')) / Math.max(1, [...value].length) / .68));
-      body += `<g data-metric="${i}">${text(G + i * step, layout.metricValue, value, { size, weight: 650, tone: item.tone })}${text(G + i * step, layout.metricLabel, cut(item.label, 13), { size: 11, tone: 'muted' })}</g>`;
+    if(!layout.activityOnly){
+      const metrics = (fact.metrics || []).filter(m => hasValue(m.value)).slice(0, 4);
+      const step = (W - 2 * G) / Math.max(1, metrics.length);
+      for (const [i, item] of metrics.entries()) {
+        const value = cut(num(item.value), 10);
+        const preferred = typeof item.value === 'string' ? dim('textValueSize') : dim('numberSize');
+        const size = Math.max(12, Math.min(preferred, (step - dim('metricGap')) / Math.max(1, [...value].length) / .68));
+        body += `<g data-metric="${i}">${text(G + i * step, layout.metricValue, value, { size, weight: 650, tone: item.tone })}${text(G + i * step, layout.metricLabel, cut(item.label, 13), { size: 11, tone: 'muted' })}</g>`;
+      }
     }
     if (fact.kind === 'repository' && fact.activity?.days?.length) {
       const activity = fact.activity, days = activity.days.slice(0, 28).map(n => Number.isFinite(n) && n > 0 ? n : 0);
@@ -104,7 +118,13 @@ export function graphic(meta, baseTokens, previewTokens, { mode = 'adaptive' } =
       });
       body += line(G, layout.chartBottom, W - G, layout.chartBottom) + '</g>';
       body += text(G, layout.footer, cut(`${num(activity.total)}${activity.sampled ? '+' : ''} commits · ${num(activity.authorCount)} authors`, 37), { tone: 'muted', size: 11, attrs: ' data-preview-footer' });
-      body += text(W - G, layout.footer, '28d' + (activity.end ? ' · ' + String(activity.end).slice(5, 10) : ''), { tone: 'muted', size: 11, anchor: 'end' });
+      // Activity-only strips the header/metrics, so the legend needs the full date span
+      // (not just the end date) to remain self-contained; the full card keeps "28d · end"
+      // since its header/rule already frame the card's timeframe.
+      const range = layout.activityOnly && activity.start && activity.end
+        ? String(activity.start).slice(5, 10) + '–' + String(activity.end).slice(5, 10)
+        : '28d' + (activity.end ? ' · ' + String(activity.end).slice(5, 10) : '');
+      body += text(W - G, layout.footer, range, { tone: 'muted', size: 11, anchor: 'end' });
     } else if (fact.kind === 'pull' || fact.kind === 'commit') {
       const add = fact.metrics?.find(m => m.label === 'Added')?.value;
       const del = fact.metrics?.find(m => m.label === 'Removed')?.value;
