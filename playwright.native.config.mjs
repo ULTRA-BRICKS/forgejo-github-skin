@@ -5,6 +5,8 @@ import mobile from './playwright.mobile.config.mjs';
 const nativeSuites = [
   'organization.spec.mjs',
   'activity-density.spec.mjs',
+  'native-activity-icons.spec.mjs',
+  'native-org-repo-list.spec.mjs',
   'pagination.spec.mjs',
   'dashboard-pagination.spec.mjs',
   'pagination-theme-race.spec.mjs',

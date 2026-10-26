@@ -6,7 +6,9 @@ import fs from 'node:fs/promises';
 // the real search modules and styles from src. Only the search service is simulated. Each project supplies the
 // viewport width; light and dark run in every project.
 const root=new URL('../../',import.meta.url);
-const NATIVE_BODY='body{margin:0;line-height:20px;font-family:-apple-system,"Segoe UI",system-ui,"Noto Sans","Noto Sans Hebrew",Roboto,"Helvetica Neue",Arial,"Liberation Sans",sans-serif;display:flex;flex-direction:column;overflow-wrap:break-word}';
+// Forgejo 16.0.6 index.css, verbatim: every <dialog> is a centering flex row, so a form child shrinks to its content.
+const NATIVE_DIALOG=':root{--page-margin-x:16px;--color-body:#fff;--color-shadow:#0003}dialog{align-items:center;justify-content:center;position:fixed;text-align:start;border:none;background:var(--color-body);box-shadow:1px 3px 3px 0 var(--color-shadow),1px 3px 15px 2px var(--color-shadow);border-radius:.28571429rem;outline:none;z-index:1001;pointer-events:auto;touch-action:auto;max-width:min(800px,calc(100vw - var(--page-margin-x) * 2));min-width:min(400px,calc(100vw - var(--page-margin-x) * 2));padding:0}dialog[open],dialog:target{display:flex}';
+const NATIVE_BODY=NATIVE_DIALOG+'body{margin:0;line-height:20px;font-family:-apple-system,"Segoe UI",system-ui,"Noto Sans","Noto Sans Hebrew",Roboto,"Helvetica Neue",Arial,"Liberation Sans",sans-serif;display:flex;flex-direction:column;overflow-wrap:break-word}';
 // Every kind forgejo-search emits (repository, file, symbol roles, lexical code, structural) plus the client fallback.
 const KINDS=['repository','file','definition','reference','code','structure',undefined];
 
@@ -132,3 +134,32 @@ test('a long organization name fits the inline scope and opens readable menu cho
   await expect(page.locator('#hgh-universal-search [data-scope="global"]')).toHaveAttribute('aria-checked','true');
   await page.screenshot({path:testInfo.outputPath('long-owner.png')});
 });
+
+// Forgejo's `dialog[open]{display:flex;justify-content:center}` made the form a content-sized, centered flex item:
+// production showed a 201px form inside a 424px dialog with a 58px input and wide empty gutters.
+for(const theme of ['light','dark']){
+  test(`the search form fills the dialog content width under native dialog flex centering (${theme})`,async({page},testInfo)=>{
+    await openWithResults(page,{theme,count:6});
+    const measure=()=>page.evaluate(()=>{
+      const box=node=>node.getBoundingClientRect();
+      const dialog=document.querySelector('#hgh-universal-search'),form=dialog.querySelector('.hgh-search-box'),row=dialog.querySelector('.hgh-search-input-row'),input=dialog.querySelector('input');
+      const style=getComputedStyle(dialog),inner=box(dialog).width-parseFloat(style.borderLeftWidth)-parseFloat(style.borderRightWidth);
+      return {inner,form:box(form).width,formLeft:box(form).left-box(dialog).left,row:box(row).width,input:box(input).width,viewport:innerWidth,overflow:document.documentElement.scrollWidth-innerWidth};
+    });
+    // The empty state (no results to widen the form) is the one production users see first.
+    for(const state of ['results','empty']){
+      if(state==='empty'){
+        await page.locator('#hgh-universal-search input').fill('');
+        await expect(page.locator('#hgh-universal-search .hgh-search-results>a')).toHaveCount(0);
+      }
+      const width=await measure();
+      expect(width.form,`${state}: form fills the dialog`).toBeCloseTo(width.inner,0);
+      expect(width.formLeft,`${state}: form starts at the dialog edge`).toBeLessThanOrEqual(1);
+      expect(width.row,`${state}: input row fills the form`).toBeCloseTo(width.inner,0);
+      expect(width.input,`${state}: query field is usable`).toBeGreaterThanOrEqual(Math.min(120,width.viewport-240));
+      expect(width.overflow,`${state}: no horizontal page overflow`).toBeLessThanOrEqual(0);
+      await page.locator('#hgh-universal-search input').focus();
+      await page.screenshot({path:testInfo.outputPath(`native-width-${state}-${theme}.png`)});
+    }
+  });
+}

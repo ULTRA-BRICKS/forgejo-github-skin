@@ -1,0 +1,392 @@
+<div role="main" aria-label="demo-owner" class="page-content user profile">
+	<div class="ui container">
+		
+
+
+
+
+	<div id="flash-message" hx-swap-oob="true"></div>
+
+
+		<div class="ui stackable grid">
+			<div class="ui four wide column">
+				
+
+
+
+<div id="profile-avatar-card" class="ui card" hx-swap="morph">
+	<div id="profile-avatar" class="content tw-flex">
+	
+		<a class="image" href="/user/settings#avatar-settings" data-tooltip-content="Change your avatar…">
+			
+			<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/47d58109434ca0231a2122593e7856b4" title="demo-owner" width="256" height="256">
+		</a>
+	
+	</div>
+	<div class="content tw-break-anywhere profile-avatar-name">
+		
+		<span class="username">demo-owner </span>
+		<div class="tw-mt-2 tw-flex tw-items-center tw-gap-2 tw-justify-center">
+			<span>
+				<a class="muted" href="/demo-owner?tab=followers"><svg viewBox="0 0 16 16" class="tw-mr-1 svg octicon-people" aria-hidden="true" width="18" height="18"><path d="M2 5.5a3.5 3.5 0 1 1 5.898 2.549 5.51 5.51 0 0 1 3.034 4.084.75.75 0 1 1-1.482.235 4 4 0 0 0-7.9 0 .75.75 0 0 1-1.482-.236A5.5 5.5 0 0 1 3.102 8.05 3.5 3.5 0 0 1 2 5.5M11 4a3.001 3.001 0 0 1 2.22 5.018 5 5 0 0 1 2.56 3.012.749.749 0 0 1-.885.954.75.75 0 0 1-.549-.514 3.51 3.51 0 0 0-2.522-2.372.75.75 0 0 1-.574-.73v-.352a.75.75 0 0 1 .416-.672A1.5 1.5 0 0 0 11 5.5.75.75 0 0 1 11 4m-5.5-.5a2 2 0 1 0-.001 3.999A2 2 0 0 0 5.5 3.5"></path></svg>0 followers</a> · <a class="muted" href="/demo-owner?tab=following">0 following</a>
+			</span>
+			
+				<details class="dropdown dir-auto">
+	<summary class="border" data-tooltip-content="More actions">
+		<svg viewBox="0 0 16 16" class="svg octicon-kebab-horizontal" aria-hidden="true" width="16" height="16"><path d="M8 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M1.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3m13 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"></path></svg>
+	</summary>
+	<div class="content">
+		<ul>
+			
+				<li>
+					<a href="/user/settings"><svg viewBox="0 0 16 16" class="svg octicon-pencil" aria-hidden="true" width="16" height="16"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.25.25 0 0 0 .108-.064Zm1.238-3.763a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354Z"></path></svg>Edit profile</a>
+				</li>
+			
+			
+				<li>
+					<a href="/admin/users/1"><svg viewBox="0 0 16 16" class="svg octicon-gear" aria-hidden="true" width="16" height="16"><path d="M8 0a8 8 0 0 1 .701.031C9.444.095 9.99.645 10.16 1.29l.288 1.107c.018.066.079.158.212.224q.347.171.668.386c.123.082.233.09.299.071l1.103-.303c.644-.176 1.392.021 1.82.63q.406.578.704 1.218c.315.675.111 1.422-.364 1.891l-.814.806c-.049.048-.098.147-.088.294q.024.386 0 .772c-.01.147.038.246.088.294l.814.806c.475.469.679 1.216.364 1.891a8 8 0 0 1-.704 1.217c-.428.61-1.176.807-1.82.63l-1.102-.302c-.067-.019-.177-.011-.3.071a6 6 0 0 1-.668.386c-.133.066-.194.158-.211.224l-.29 1.106c-.168.646-.715 1.196-1.458 1.26a8 8 0 0 1-1.402 0c-.743-.064-1.289-.614-1.458-1.26l-.289-1.106c-.018-.066-.079-.158-.212-.224a6 6 0 0 1-.668-.386c-.123-.082-.233-.09-.299-.071l-1.103.303c-.644.176-1.392-.021-1.82-.63a8 8 0 0 1-.704-1.218c-.315-.675-.111-1.422.363-1.891l.815-.806c.05-.048.098-.147.088-.294a6 6 0 0 1 0-.772c.01-.147-.038-.246-.088-.294l-.815-.806C.635 6.045.431 5.298.746 4.623a8 8 0 0 1 .704-1.217c.428-.61 1.176-.807 1.82-.63l1.102.302c.067.019.177.011.3-.071q.321-.215.668-.386c.133-.066.194-.158.211-.224l.29-1.106C6.009.645 6.556.095 7.299.03Q7.646 0 8 0m-.571 1.525c-.036.003-.108.036-.137.146l-.289 1.105c-.147.561-.549.967-.998 1.189q-.26.13-.5.29c-.417.278-.97.423-1.529.27l-1.103-.303c-.109-.03-.175.016-.195.045q-.33.47-.573.99c-.014.031-.021.11.059.19l.815.806c.411.406.562.957.53 1.456a5 5 0 0 0 0 .582c.032.499-.119 1.05-.53 1.456l-.815.806c-.081.08-.073.159-.059.19q.243.52.573.989c.02.03.085.076.195.046l1.102-.303c.56-.153 1.113-.008 1.53.27q.242.16.501.29c.447.222.85.629.997 1.189l.289 1.105c.029.109.101.143.137.146a6.6 6.6 0 0 0 1.142 0c.036-.003.108-.036.137-.146l.289-1.105c.147-.561.549-.967.998-1.189q.26-.13.5-.29c.417-.278.97-.423 1.529-.27l1.103.303c.109.029.175-.016.195-.045q.33-.47.573-.99c.014-.031.021-.11-.059-.19l-.815-.806c-.411-.406-.562-.957-.53-1.456a5 5 0 0 0 0-.582c-.032-.499.119-1.05.53-1.456l.815-.806c.081-.08.073-.159.059-.19a6.5 6.5 0 0 0-.573-.989c-.02-.03-.085-.076-.195-.046l-1.102.303c-.56.153-1.113.008-1.53-.27a4.4 4.4 0 0 0-.501-.29c-.447-.222-.85-.629-.997-1.189l-.289-1.105c-.029-.11-.101-.143-.137-.146a6.6 6.6 0 0 0-1.142 0M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0M9.5 8a1.5 1.5 0 1 0-3.001.001A1.5 1.5 0 0 0 9.5 8"></path></svg>User details</a>
+				</li>
+			
+			
+				<li>
+					<a href="/demo-owner.rss"><svg viewBox="0 0 16 16" class="svg octicon-rss" aria-hidden="true" width="16" height="16"><path d="M2.002 2.725a.75.75 0 0 1 .797-.699C8.79 2.42 13.58 7.21 13.974 13.201a.75.75 0 0 1-1.497.098 10.5 10.5 0 0 0-9.776-9.776.747.747 0 0 1-.7-.798ZM2.84 7.05h-.002a7 7 0 0 1 6.113 6.111.75.75 0 0 1-1.49.178 5.5 5.5 0 0 0-4.8-4.8.75.75 0 0 1 .179-1.489M2 13a1 1 0 1 1 2 0 1 1 0 0 1-2 0"></path></svg>RSS feed</a>
+				</li>
+				<li>
+					<a href="/demo-owner.atom"><svg viewBox="0 0 16 16" class="svg octicon-rss" aria-hidden="true" width="16" height="16"><path d="M2.002 2.725a.75.75 0 0 1 .797-.699C8.79 2.42 13.58 7.21 13.974 13.201a.75.75 0 0 1-1.497.098 10.5 10.5 0 0 0-9.776-9.776.747.747 0 0 1-.7-.798ZM2.84 7.05h-.002a7 7 0 0 1 6.113 6.111.75.75 0 0 1-1.49.178 5.5 5.5 0 0 0-4.8-4.8.75.75 0 0 1 .179-1.489M2 13a1 1 0 1 1 2 0 1 1 0 0 1-2 0"></path></svg>Atom feed</a>
+				</li>
+			
+			<li>
+				<a href="/demo-owner.keys"><svg viewBox="0 0 16 16" class="svg octicon-key" aria-hidden="true" width="16" height="16"><path d="M10.5 0a5.499 5.499 0 1 1-1.288 10.848l-.932.932a.75.75 0 0 1-.53.22H7v.75a.75.75 0 0 1-.22.53l-.5.5a.75.75 0 0 1-.53.22H5v.75a.75.75 0 0 1-.22.53l-.5.5a.75.75 0 0 1-.53.22h-2A1.75 1.75 0 0 1 0 14.25v-2c0-.199.079-.389.22-.53l4.932-4.932A5.5 5.5 0 0 1 10.5 0m-4 5.5c-.001.431.069.86.205 1.269a.75.75 0 0 1-.181.768L1.5 12.56v1.69c0 .138.112.25.25.25h1.69l.06-.06v-1.19a.75.75 0 0 1 .75-.75h1.19l.06-.06v-1.19a.75.75 0 0 1 .75-.75h1.19l1.023-1.025a.75.75 0 0 1 .768-.18A4 4 0 1 0 6.5 5.5M11 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2"></path></svg>SSH keys</a>
+			</li>
+			<li>
+				<a href="/demo-owner.gpg"><svg viewBox="0 0 16 16" class="svg octicon-key" aria-hidden="true" width="16" height="16"><path d="M10.5 0a5.499 5.499 0 1 1-1.288 10.848l-.932.932a.75.75 0 0 1-.53.22H7v.75a.75.75 0 0 1-.22.53l-.5.5a.75.75 0 0 1-.53.22H5v.75a.75.75 0 0 1-.22.53l-.5.5a.75.75 0 0 1-.53.22h-2A1.75 1.75 0 0 1 0 14.25v-2c0-.199.079-.389.22-.53l4.932-4.932A5.5 5.5 0 0 1 10.5 0m-4 5.5c-.001.431.069.86.205 1.269a.75.75 0 0 1-.181.768L1.5 12.56v1.69c0 .138.112.25.25.25h1.69l.06-.06v-1.19a.75.75 0 0 1 .75-.75h1.19l.06-.06v-1.19a.75.75 0 0 1 .75-.75h1.19l1.023-1.025a.75.75 0 0 1 .768-.18A4 4 0 1 0 6.5 5.5M11 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2"></path></svg>GPG keys</a>
+			</li>
+		</ul>
+		
+	</div>
+</details>
+
+			
+		</div>
+	</div>
+	
+	<div class="extra content tw-break-anywhere">
+		<ul>
+			
+			
+				<li>
+					<svg viewBox="0 0 16 16" class="svg octicon-mail" aria-hidden="true" width="16" height="16"><path d="M1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25v-8.5C0 2.784.784 2 1.75 2M1.5 12.251c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V5.809L8.38 9.397a.75.75 0 0 1-.76 0L1.5 5.809zm13-8.181v-.32a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25v.32L8 7.88Z"></path></svg>
+					<a class="tw-flex-1" href="mailto:demo-owner@example.invalid" rel="nofollow">demo-owner@example.invalid</a>
+					
+						<a href="/user/settings#privacy-user-settings">
+							<i data-tooltip-content="Your email address is visible to all authenticated users">
+								<svg viewBox="0 0 16 16" class="svg octicon-unlock" aria-hidden="true" width="16" height="16"><path d="M5.5 4v2h7A1.5 1.5 0 0 1 14 7.5v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5v-6A1.5 1.5 0 0 1 3.499 6H4V4a4 4 0 0 1 7.371-2.154.75.75 0 0 1-1.264.808A2.5 2.5 0 0 0 5.5 4m-2 3.5v6h9v-6z"></path></svg>
+							</i>
+						</a>
+					
+				</li>
+			
+			
+			
+			
+			<li>
+				<svg viewBox="0 0 16 16" class="svg octicon-calendar" aria-hidden="true" width="16" height="16"><path d="M4.75 0a.75.75 0 0 1 .75.75V2h5V.75a.75.75 0 0 1 1.5 0V2h1.25c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25V3.75C1 2.784 1.784 2 2.75 2H4V.75A.75.75 0 0 1 4.75 0M2.5 7.5v6.75c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V7.5Zm10.75-4H2.75a.25.25 0 0 0-.25.25V6h11V3.75a.25.25 0 0 0-.25-.25"></path></svg>
+				<span>Joined on <absolute-date weekday="" year="numeric" month="short" day="numeric" date="2026-10-26T17:35:34Z">2026-10-26</absolute-date></span>
+			</li>
+			
+			<li>
+				<ul class="user-orgs">
+				
+					
+					<li>
+						<a href="/demo-bricks" data-tooltip-content="demo-bricks">
+							<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/d4e3680f11e586f9feb7785beb87906e?size=64" title="DEMO BRICKS" width="28" height="28">
+						</a>
+					</li>
+					
+				
+				</ul>
+			</li>
+			
+			
+		</ul>
+	</div>
+</div>
+
+			</div>
+			<div class="ui twelve wide column tw-mb-4">
+				<overflow-menu class="ui secondary pointing tabular borderless menu">
+	<div class="overflow-menu-items">
+		
+		<a class=" item" href="/demo-owner?tab=repositories">
+			<svg viewBox="0 0 16 16" class="svg octicon-repo" aria-hidden="true" width="16" height="16"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.5 2.5 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.5 2.5 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.25.25 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"></path></svg> Repositories
+			
+				<div class="ui small label">1</div>
+			
+			<span hidden="" test-name="repository-count">1</span>
+		</a>
+		
+		<a href="/demo-owner/-/projects" class="item">
+			<svg viewBox="0 0 16 16" class="svg octicon-project-symlink" aria-hidden="true" width="16" height="16"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16h-8.5a.75.75 0 0 1 0-1.5h8.5a.25.25 0 0 0 .25-.25V6.5h-13v1.75a.75.75 0 0 1-1.5 0ZM6.5 5h8V1.75a.25.25 0 0 0-.25-.25H6.5Zm-5 0H5V1.5H1.75a.25.25 0 0 0-.25.25Z"></path><path d="M1.5 13.737a2.25 2.25 0 0 1 2.262-2.25L4 11.49v1.938c0 .218.26.331.42.183l2.883-2.677a.25.25 0 0 0 0-.366L4.42 7.89a.25.25 0 0 0-.42.183V9.99l-.23-.001A3.75 3.75 0 0 0 0 13.738v1.012a.75.75 0 0 0 1.5 0z"></path></svg> Projects
+			
+			<span hidden="" test-name="project-count">0</span>
+		</a>
+		
+		
+			<a href="/demo-owner/-/packages" class="item">
+				<svg viewBox="0 0 16 16" class="svg octicon-package" aria-hidden="true" width="16" height="16"><path d="m8.878.392 5.25 3.045c.54.314.872.89.872 1.514v6.098a1.75 1.75 0 0 1-.872 1.514l-5.25 3.045a1.75 1.75 0 0 1-1.756 0l-5.25-3.045A1.75 1.75 0 0 1 1 11.049V4.951c0-.624.332-1.201.872-1.514L7.122.392a1.75 1.75 0 0 1 1.756 0M7.875 1.69l-4.63 2.685L8 7.133l4.755-2.758-4.63-2.685a.25.25 0 0 0-.25 0M2.5 5.677v5.372c0 .09.047.171.125.216l4.625 2.683V8.432Zm6.25 8.271 4.625-2.683a.25.25 0 0 0 .125-.216V5.677L8.75 8.432Z"></path></svg> Packages
+				
+				<span hidden="" test-name="package-count">0</span>
+			</a>
+		
+		
+		
+			
+				<a class="active item" href="/demo-owner?tab=activity">
+					<svg viewBox="0 0 16 16" class="svg octicon-rss" aria-hidden="true" width="16" height="16"><path d="M2.002 2.725a.75.75 0 0 1 .797-.699C8.79 2.42 13.58 7.21 13.974 13.201a.75.75 0 0 1-1.497.098 10.5 10.5 0 0 0-9.776-9.776.747.747 0 0 1-.7-.798ZM2.84 7.05h-.002a7 7 0 0 1 6.113 6.111.75.75 0 0 1-1.49.178 5.5 5.5 0 0 0-4.8-4.8.75.75 0 0 1 .179-1.489M2 13a1 1 0 1 1 2 0 1 1 0 0 1-2 0"></path></svg> Public activity
+				</a>
+			
+			
+			
+			<a class="item" href="/demo-owner?tab=stars">
+				<svg viewBox="0 0 16 16" class="svg octicon-star" aria-hidden="true" width="16" height="16"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25m0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41z"></path></svg> Starred repositories
+				
+			</a>
+			
+		
+	</div>
+</overflow-menu>
+
+				
+					
+					<p id="visibility-hint">
+						
+							
+								Your activity is visible to everyone, except for interactions in private spaces. <a href="/user/settings#keep-activity-private">Configure</a>.
+							
+						
+					</p>
+					
+					
+						
+	
+	
+
+
+						<div id="activity-feed" class="flex-list">
+	
+		<div class="flex-item">
+			<div class="flex-item-leading">
+				<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/47d58109434ca0231a2122593e7856b4?size=64" title="demo-owner" width="28" height="28">
+			</div>
+			<div class="flex-item-main tw-gap-2">
+				<div>
+					
+						<a href="/demo-owner" title="">demo-owner</a>
+					
+					
+						
+							pushed to <a href="/demo-bricks/rig-demo/src/branch/feat/x">feat/x</a> at <a href="/demo-bricks/rig-demo">demo-bricks/rig-demo</a>
+						
+					
+					<relative-time prefix="" tense="past" datetime="2026-10-26T17:35:44Z" data-tooltip-content="" data-tooltip-interactive="true">2026-10-26 17:35:44 +00:00</relative-time>
+				</div>
+				
+					
+					
+					
+					<div class="tw-flex tw-flex-col tw-gap-1">
+						
+							<div class="flex-text-block">
+								<img class="ui avatar" src="/avatars/47d58109434ca0231a2122593e7856b4?size=64" alt="" title="demo-owner" width="16" height="16" loading="lazy">
+								
+
+<a href="/demo-bricks/rig-demo/commit/a50c2e2d5b06f90646f821d798f0625422a65410" rel="nofollow" class="sha label">
+	<span class="shortsha">a50c2e2d5b</span></a>
+
+								<span class="text truncate">
+									feat
+								</span>
+							</div>
+						
+					</div>
+					
+				
+			</div>
+			<div class="flex-item-trailing">
+				<svg viewBox="0 0 16 16" class="text grey tw-mr-1 svg octicon-git-commit" aria-hidden="true" width="32" height="32"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0"></path></svg>
+			</div>
+		</div>
+	
+		<div class="flex-item">
+			<div class="flex-item-leading">
+				<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/47d58109434ca0231a2122593e7856b4?size=64" title="demo-owner" width="28" height="28">
+			</div>
+			<div class="flex-item-main tw-gap-2">
+				<div>
+					
+						<a href="/demo-owner" title="">demo-owner</a>
+					
+					
+						
+							pushed to <a href="/demo-bricks/rig-demo/src/branch/feat/x">feat/x</a> at <a href="/demo-bricks/rig-demo">demo-bricks/rig-demo</a>
+						
+					
+					<relative-time prefix="" tense="past" datetime="2026-10-26T17:35:44Z" data-tooltip-content="" data-tooltip-interactive="true">2026-10-26 17:35:44 +00:00</relative-time>
+				</div>
+				
+					
+					
+					
+					<div class="tw-flex tw-flex-col tw-gap-1">
+						
+					</div>
+					
+				
+			</div>
+			<div class="flex-item-trailing">
+				<svg viewBox="0 0 16 16" class="text grey tw-mr-1 svg octicon-git-commit" aria-hidden="true" width="32" height="32"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0"></path></svg>
+			</div>
+		</div>
+	
+		<div class="flex-item">
+			<div class="flex-item-leading">
+				<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/47d58109434ca0231a2122593e7856b4?size=64" title="demo-owner" width="28" height="28">
+			</div>
+			<div class="flex-item-main tw-gap-2">
+				<div>
+					
+						<a href="/demo-owner" title="">demo-owner</a>
+					
+					
+						
+							created branch <a href="/demo-bricks/rig-demo/src/branch/feat/x">feat/x</a> in <a href="/demo-bricks/rig-demo">demo-bricks/rig-demo</a>
+						
+					
+					<relative-time prefix="" tense="past" datetime="2026-10-26T17:35:44Z" data-tooltip-content="" data-tooltip-interactive="true">2026-10-26 17:35:44 +00:00</relative-time>
+				</div>
+				
+					
+					
+					
+					<div class="tw-flex tw-flex-col tw-gap-1">
+						
+					</div>
+					
+				
+			</div>
+			<div class="flex-item-trailing">
+				<svg viewBox="0 0 16 16" class="text grey tw-mr-1 svg octicon-git-commit" aria-hidden="true" width="32" height="32"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0"></path></svg>
+			</div>
+		</div>
+	
+		<div class="flex-item">
+			<div class="flex-item-leading">
+				<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/47d58109434ca0231a2122593e7856b4?size=64" title="demo-owner" width="28" height="28">
+			</div>
+			<div class="flex-item-main tw-gap-2">
+				<div>
+					
+						<a href="/demo-owner" title="">demo-owner</a>
+					
+					
+						created repository <a href="/demo-owner/personal-demo">demo-owner/personal-demo</a>
+					
+					<relative-time prefix="" tense="past" datetime="2026-10-26T17:35:44Z" data-tooltip-content="" data-tooltip-interactive="true">2026-10-26 17:35:44 +00:00</relative-time>
+				</div>
+				
+			</div>
+			<div class="flex-item-trailing">
+				<svg viewBox="0 0 16 16" class="text grey tw-mr-1 svg octicon-repo" aria-hidden="true" width="32" height="32"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.5 2.5 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.5 2.5 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.25.25 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"></path></svg>
+			</div>
+		</div>
+	
+		<div class="flex-item">
+			<div class="flex-item-leading">
+				<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/47d58109434ca0231a2122593e7856b4?size=64" title="demo-owner" width="28" height="28">
+			</div>
+			<div class="flex-item-main tw-gap-2">
+				<div>
+					
+						<a href="/demo-owner" title="">demo-owner</a>
+					
+					
+						
+						created pull request <a href="/demo-bricks/rig-demo/pulls/4">demo-bricks/rig-demo#4</a>
+					
+					<relative-time prefix="" tense="past" datetime="2026-10-26T17:35:43Z" data-tooltip-content="" data-tooltip-interactive="true">2026-10-26 17:35:43 +00:00</relative-time>
+				</div>
+				
+					<span class="text truncate issue title">Synthetic PR</span>
+				
+			</div>
+			<div class="flex-item-trailing">
+				<svg viewBox="0 0 16 16" class="text grey tw-mr-1 svg octicon-git-pull-request" aria-hidden="true" width="32" height="32"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25m5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354M3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5m0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5m8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0"></path></svg>
+			</div>
+		</div>
+	
+		<div class="flex-item">
+			<div class="flex-item-leading">
+				<img loading="lazy" alt="" class="ui avatar tw-align-middle" src="/avatars/47d58109434ca0231a2122593e7856b4?size=64" title="demo-owner" width="28" height="28">
+			</div>
+			<div class="flex-item-main tw-gap-2">
+				<div>
+					
+						<a href="/demo-owner" title="">demo-owner</a>
+					
+					
+						
+						closed issue <a href="/demo-bricks/tasks-demo/issues/3">demo-bricks/tasks-demo#3</a>
+					
+					<relative-time prefix="" tense="past" datetime="2026-10-26T17:35:41Z" data-tooltip-content="" data-tooltip-interactive="true">2026-10-26 17:35:41 +00:00</relative-time>
+				</div>
+				
+					<span class="text truncate issue title">Synthetic issue 2 in tasks-demo</span>
+				
+			</div>
+			<div class="flex-item-trailing">
+				<svg viewBox="0 0 16 16" class="text grey tw-mr-1 svg octicon-issue-closed" aria-hidden="true" width="32" height="32"><path d="M11.28 6.78a.75.75 0 0 0-1.06-1.06L7.25 8.69 5.78 7.22a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0z"></path><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-1.5 0a6.5 6.5 0 1 0-13 0 6.5 6.5 0 0 0 13 0"></path></svg>
+			</div>
+		</div>
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+		
+	
+	
+
+
+
+	
+
+
+</div>
+
+					
+				
+			</div>
+		</div>
+	</div>
+</div>

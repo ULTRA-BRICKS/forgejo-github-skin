@@ -209,3 +209,13 @@ export function organizationProfile({dark = false, sessionActivity = false} = {}
   queueMicrotask(() => enhanceOrganization(document));
   return container;
 }
+
+// Native user profile "Public activity" tab: the same Forgejo feed template as the dashboards, with
+// its original 32px event glyphs, under `.page-content.user.profile`.
+export function userProfileActivity({dark = false} = {}) {
+  const container = document.createElement('div');
+  setupOrgFixture(container, {dark});
+  container.innerHTML = `<div role="main" aria-label="alex" class="page-content user profile"><div class="ui container"><div id="activity-feed" class="flex-list">${activityFeedHtml(7)}</div></div></div>`;
+  queueMicrotask(() => enhanceOrganization(document));
+  return container;
+}

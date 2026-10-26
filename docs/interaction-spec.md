@@ -73,7 +73,7 @@ This document turns UI polish into explicit behavior. Native Forgejo permissions
 
 ## Activity disclosure
 
-- Organization and personal native activity keep their original order and links. Organization activity follows the repository preview; personal dashboards retain their native layout.
+- Organization, personal and user-profile (Public activity tab) native activity keep their original order and links. Organization activity follows the repository preview; personal dashboards and profiles retain their native layout.
 - Event icons are 16px. Comments overflowing the browser-resolved `3lh` preview receive Show more/Show less with `aria-expanded`; images, media and download attachments stay completely hidden while collapsed.
 - Imported comment images use native lazy loading before insertion, retaining their original `src`/`srcset`, so collapsed screenshots do not download eagerly.
 - Clipped or attachment-only interactive descendants, including linked-image-only comments with zero-height previews, are inert until expansion. Protection transfers when a native control moves between collapsed comments. Visible preview links stay usable; expansion and teardown restore original native controls.

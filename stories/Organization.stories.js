@@ -1,4 +1,4 @@
-import {organizationDashboard, organizationProfile} from './organization-page.mjs';
+import {organizationDashboard, organizationProfile, userProfileActivity} from './organization-page.mjs';
 export default {title: 'Screens/Organization'};
 
 // #overview is the default view; #repos and #activity are real in-page views this module renders.
@@ -21,3 +21,5 @@ export const ProfileSessionActivity = {
   name: 'Profile with session dashboard activity (native fixture, not live)',
   render: () => organizationProfile({sessionActivity: true}),
 };
+export const UserProfileActivity = {render: () => userProfileActivity()};
+export const UserProfileActivityDark = {render: () => userProfileActivity({dark: true})};

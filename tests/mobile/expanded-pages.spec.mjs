@@ -52,6 +52,29 @@ test('PRs/Issues Storybook states demonstrate the real native handoff link, not 
  await expect(page.locator('.hgh-org-handoff-note')).toContainText('Issues');
  await expect(page.locator('.hgh-org-handoff-note a')).toHaveAttribute('href',/\/ultrabricks\/issues$/);
 });
+test('user profile Public activity story renders 16px event glyphs through the production enhancer',async({page})=>{
+ for(const id of ['screens-organization--user-profile-activity','screens-organization--user-profile-activity-dark']){
+  await open(page,id);
+  await expect(page.locator('.page-content.user.profile #activity-feed.hgh-compact-activity')).toHaveCount(1);
+  const sizes=await page.locator('#activity-feed .flex-item-trailing > svg').evaluateAll(n=>n.map(e=>[Math.round(e.getBoundingClientRect().width),Math.round(e.getBoundingClientRect().height)]));
+  expect(sizes).toHaveLength(7);
+  expect(sizes.every(([w,h])=>w===16&&h===16)).toBe(true);
+ }
+});
+test('overview story keeps repository names visible beside enrichment and the focused pager keeps Previous apart from Next',async({page})=>{
+ await open(page,'screens-organization--overview');
+ await page.waitForSelector('.hgh-org-page');
+ await expect.poll(()=>page.locator('.hgh-org-repo-meta').count()).toBeGreaterThan(0);
+ const widths=await page.locator('#dashboard-repo-list .repo-owner-name-list > li:visible .repo-list-link .text.truncate').evaluateAll(n=>n.map(e=>Math.round(e.getBoundingClientRect().width)));
+ expect(widths.length).toBeGreaterThan(0);
+ expect(widths.every(w=>w>40)).toBe(true);
+ await open(page,'screens-dashboardpagination--compact');
+ const pager=page.locator('#dashboard-repo-list .hgh-vpg');
+ await expect(pager).toBeVisible();
+ const [prev,next]=await Promise.all(['prev','next'].map(k=>pager.locator('.hgh-vpg-'+k).evaluate(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width};})));
+ expect(prev.width).toBeGreaterThan(60);
+ expect(prev.right).toBeLessThanOrEqual(next.left+1);
+});
 test('desktop (1280px) overview shows a real two-column layout with no horizontal overflow',async({page})=>{
  await page.setViewportSize({width:1280,height:900});
  await open(page,'screens-organization--overview');

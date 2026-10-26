@@ -146,13 +146,16 @@ function buildRepoDecoration(doc, repo) {
     lang.append(langDot(doc, repo.language), doc.createTextNode(repo.language));
     stats.append(lang);
   }
+  // `/repo/search` answers with a minimal repository object: timestamps are the zero time and forks/open
+  // issues are zero-valued defaults, so only a real `updated_at` shows the counts and date are genuine.
+  const detailed = Date.parse(repo.updated_at) > 0;
   for (const [iconName, field] of REPO_STATS) {
-    if (!Number.isFinite(repo[field])) continue;
+    if (!Number.isFinite(repo[field]) || (!detailed && field !== 'stars_count')) continue;
     const stat = el(doc, 'span', 'hgh-org-stat');
     stat.append(icon(doc, iconName), doc.createTextNode(String(repo[field])));
     stats.append(stat);
   }
-  const when = repo.updated_at && relativeTime(repo.updated_at);
+  const when = detailed && relativeTime(repo.updated_at);
   if (when) stats.append(el(doc, 'span', 'hgh-org-stat hgh-org-updated', `Updated ${when}`));
   if (stats.childElementCount) wrap.append(stats);
   if (Array.isArray(repo.topics) && repo.topics.length) {
@@ -994,7 +997,7 @@ export function enhanceOrganization(doc = document) {
     profiles.set(root, enhanceProfile(root, doc, win));
   }
   pruneDetached(activityFeeds, doc, restoreActivity);
-  for (const feed of doc.querySelectorAll('.page-content.dashboard.feeds #activity-feed')) {
+  for (const feed of doc.querySelectorAll('.page-content:is(.dashboard.feeds, .user.profile) #activity-feed')) {
     enhanceActivity(doc, feed);
   }
 }

@@ -1,0 +1,108 @@
+/* Compact-by-default decoration for the Vue-owned dashboard/org repo-list pager.
+   Loaded by dashboard-pagination.mjs's added classes only; every selector below is
+   scoped to classes that module adds, so this file never touches the native
+   `.ui.borderless.pagination.menu` before enhancement or any other component.
+
+   Every rule below is additionally scoped under the stable `#dashboard-repo-list`
+   ID (the real Vue mount root, per templates/user/dashboard/repolist.tmpl —
+   already relied on by src/organization.mjs). This is NOT cosmetic scoping: it
+   restyles the native `.ui.pagination.menu`/`.item` elements Fomantic UI already
+   styles at real compound-class specificity (its own `.ui.menu`/`.ui.pagination.
+   menu`/`.ui.menu .item` rules), and a bare single-class `.hgh-vpg{display:grid}`
+   would LOSE that cascade fight regardless of source order (a 1-class selector
+   never beats a 2-3-class one) — an ID selector reliably beats those.
+   It does NOT, on its own, beat every possible higher-specificity selector on
+   this same element: src/organization.css used to target this identical pager
+   through its own ID-anchored ancestor chain (`html:is(...) .hgh-org-page
+   #dashboard-repo-list .ui.borderless.pagination.menu`, six class-level
+   components deep) and won `display` outright. That conflict was resolved in
+   the 0.3.1 cutover, not by CSS alone: organization.css's now-superseded pager
+   rules (and organization.mjs's now-superseded pager-decoration JS) were
+   removed rather than trying to out-specificity a rule targeting the exact same
+   element; a real Chromium run with both stylesheets loaded together (post-
+   cutover, organization.css's rules removed) confirmed `display: grid` wins.
+
+   A 4-column grid, not flex: First/Last sit in `minmax(0,1fr)` tracks that are
+   ALWAYS pixel-equal to each other by construction (equal `fr` shares of the
+   remaining space), regardless of "First" (5 chars) vs "Last" (4 chars) being
+   different natural widths — so the row as a whole is centered in its container
+   without drifting toward whichever edge text is wider, and Previous/Next (the
+   two middle, `auto`-sized columns) end up sitting at that row's own center as
+   a pair — not "the whole group looks roughly centered" by accident.
+   `minmax(0, …)` (not bare `1fr`) removes each track's content-based minimum,
+   which is what actually forces the two edge tracks to stay equal instead of
+   drifting toward whichever text is wider. */
+#dashboard-repo-list .hgh-vpg{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto minmax(0,1fr);align-items:center;column-gap:4px;font:14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
+#dashboard-repo-list .hgh-vpg-first{justify-self:end}
+#dashboard-repo-list .hgh-vpg-last{justify-self:start}
+
+/* Vue never renders a text label on these anchors (icon-only: a single
+   `<svg-icon>` child, no `.navigation_label` span like base/paginate.tmpl has) —
+   unlike pagination.css, there is no existing text node to prepend/append a
+   chevron onto. The ghost "‹ Previous  Next ›" / "First" / "Last" labels are pure
+   CSS generated content: real pixels on screen for every user, but literally
+   invisible to the DOM/`Element.innerText`/Vue's own vdom — zero node insertion,
+   so there is no patch-interaction risk with Vue's ownership of these anchors.
+   The text comes straight from the `data-hgh-vpg-label` attribute JS sets (see
+   stringsFor() in dashboard-pagination.mjs) via plain `attr()` — no custom
+   property, no JSON/CSS-string encoding question, no style-attribute merging:
+   `trackAttr()` (already used for every other attribute here) is the entire
+   set/restore mechanism, so the visible label is localized the same way the
+   sr-only status text is, instead of being frozen to English in this file. */
+#dashboard-repo-list .hgh-vpg-prev svg,#dashboard-repo-list .hgh-vpg-next svg,#dashboard-repo-list .hgh-vpg-edge svg{display:none}
+#dashboard-repo-list .hgh-vpg-prev,#dashboard-repo-list .hgh-vpg-next,#dashboard-repo-list .hgh-vpg-first,#dashboard-repo-list .hgh-vpg-last{white-space:nowrap;padding-inline:10px}
+#dashboard-repo-list .hgh-vpg-prev::before,#dashboard-repo-list .hgh-vpg-next::after,#dashboard-repo-list .hgh-vpg-first::after,#dashboard-repo-list .hgh-vpg-last::after{content:attr(data-hgh-vpg-label)}
+/* Fomantic's `.ui.menu .item::before` is the absolutely positioned 1px item divider; Previous borrows that pseudo-element for its label, so it must give the geometry back or the label leaves the flow and overlaps Next. */
+#dashboard-repo-list .hgh-vpg-prev::before{position:static;width:auto;height:auto;background:none}
+
+/* Ghost edges: reserve their natural (small, fixed-text) width from first paint
+   via opacity, never display/width, so revealing them never shifts Previous/Next
+   or the document height. `inert` (set/cleared in JS) is the real interaction/AX
+   barrier; these two rules are the visual half of that same protection.
+   `transition:none` on this base (hidden) rule is NOT redundant with the
+   revealed rule below declaring its own `transition:opacity .15s ease`: CSS
+   resolves the `transition` property itself per normal cascade, independent of
+   which rule wins `opacity` — a real Fomantic UI `.item` rule (lower selector
+   specificity than our ID-scoped one, but the ONLY rule setting `transition` if
+   we don't set one here) can still win the `transition` property alone and
+   animate FROM the native browser default (opacity:1, an `<a>` has
+   no opacity override) the very first time these classes are applied, flashing
+   the edges briefly visible before fading to hidden — exactly the regression a
+   real WebKit run against production-shaped adversarial CSS caught. Declaring
+   `transition:none` here makes the initial hide instant regardless of any
+   ancestor/sibling stylesheet's own `.item` transition; only the deliberate
+   reveal (the rule below) ever animates opacity. */
+#dashboard-repo-list .hgh-vpg:not([data-hgh-vpg-revealed]) .hgh-vpg-edge{opacity:0;pointer-events:none;transition:none}
+#dashboard-repo-list .hgh-vpg[data-hgh-vpg-revealed] .hgh-vpg-edge{opacity:1;transition:opacity .15s ease}
+#dashboard-repo-list .hgh-vpg .hgh-vpg-omitted{visibility:hidden;pointer-events:none}
+
+/* Shared sr-only visual-hide idiom for two different real elements: the native
+   current-page anchor (`<a class="active item">{{ page }}</a>`, no href, never a
+   click target — stays in the DOM for assistive tech but is pulled out of grid
+   flow entirely via `position:absolute`, so it never occupies a column) and the
+   separate `role="status"` announcement span this module appends. One class,
+   not two identical declaration blocks. */
+#dashboard-repo-list .hgh-vpg-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+
+
+@media (prefers-reduced-motion:reduce){
+  #dashboard-repo-list .hgh-vpg[data-hgh-vpg-revealed] .hgh-vpg-edge{transition:none}
+}
+
+/* Narrow viewports: reserve a second row for First/Last instead of shrinking or
+   overflowing. Long localized labels (Russian "Последняя"/"Первая" plus the
+   longer "‹ Пред."/"След. ›") no longer fit all four items on one 320px row —
+   verified failing before this rule, matching src/pagination.css's own
+   narrow-viewport row-reservation strategy for the same class of problem.
+   Previous/Next still end up adjacent and centered (they meet at the shared
+   boundary of two equal 1fr columns); First/Last flank the row below the same
+   way. Row 2 is always reserved once revealed (both cells always populated
+   when First/Last exist at all), so revealing never causes a height jump here
+   either. */
+@media (max-width:479px){
+  #dashboard-repo-list .hgh-vpg{grid-template-columns:1fr 1fr;grid-template-areas:"prev next" "first last";row-gap:4px}
+  #dashboard-repo-list .hgh-vpg-prev{grid-area:prev;justify-self:end}
+  #dashboard-repo-list .hgh-vpg-next{grid-area:next;justify-self:start}
+  #dashboard-repo-list .hgh-vpg-first{grid-area:first;justify-self:end}
+  #dashboard-repo-list .hgh-vpg-last{grid-area:last;justify-self:start}
+}

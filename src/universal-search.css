@@ -10,7 +10,7 @@ html[data-hgh-search-mounted] #dashboard-repo-list .repos-search input[type="sea
 .hgh-global-search-trigger:focus-visible{outline:2px solid var(--hgh-color-link);outline-offset:2px}
 .hgh-search-dialog{width:min(720px,calc(100vw - 24px));max-width:none;max-height:min(720px,calc(100dvh - 48px));padding:0;border:1px solid var(--hgh-color-border);border-radius:12px;background:var(--hgh-color-canvas);color:var(--hgh-color-text);box-shadow:0 16px 48px rgb(31 35 40 / 22%);overflow:hidden}
 .hgh-search-dialog::backdrop{background:rgb(31 35 40 / 36%);backdrop-filter:blur(2px)}
-.hgh-search-box{display:flex;flex-direction:column;max-height:inherit}
+.hgh-search-box{display:flex;flex-direction:column;flex:1 1 auto;box-sizing:border-box;width:100%;min-width:0;max-height:inherit}
 .hgh-search-input-row{display:flex;flex:none;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-bottom:1px solid var(--hgh-color-border);box-sizing:border-box}
 .hgh-search-input-row>input{min-width:0;width:0;flex:1;height:36px;padding:0;border:0!important;border-radius:0;box-shadow:none!important;outline:none;background:transparent;color:inherit;font-family:inherit;font-size:16px;line-height:24px}
 #hgh-universal-search .hgh-search-input-row>input:focus{outline:none!important}

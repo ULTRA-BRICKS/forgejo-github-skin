@@ -154,3 +154,44 @@ is trailing metadata rather than a fixed left column. The list alone scrolls whi
 the query row remains fixed. `search-scope-menu.spec.mjs` covers these interactions,
 small viewports, long context names, focus return and global-only pages. Storybook
 includes open-menu, dark-menu and backend-error menu states using the same enhancer.
+
+### Native layout fixes found against a real Forgejo 16.0.6 server (0.3.7)
+
+Fixtures written by hand omitted rules Forgejo itself ships, so a synthetic native
+instance (the real 16.0.6 binary, loopback only, synthetic users) was measured with
+0.3.5, 0.3.6 and 0.3.7 assets at 320/440/1280 in light and dark. Five defects were
+demonstrated and fixed; each has a failing-first native-DOM test:
+
+- Forgejo draws every feed event glyph at 32px (`feeds.tmpl`). The 0.3.6 enhancer
+  capped them only on `.page-content.dashboard.feeds`, so the user profile Public
+  activity tab (`.page-content.user.profile`) still showed 32px glyphs. It now gets the
+  same compact-activity behavior.
+- The Vue repository link carries `flex: 1 1 0%` (dashboard-repo-list chunk). Beside the
+  100%-basis enrichment block on a wrapped line it kept no free space, so every
+  repository name collapsed to zero width. The link keeps its native zero basis but gets a
+  `min(100%, 12ch)` floor, so the meta block wraps and a long name still truncates beside
+  Vue's trailing commit-status icon (a content basis had pushed that icon onto its own line).
+- `/repo/search` returns a minimal repository object (`routers/web/repo/repo.go`
+  `SearchRepo`): zero-time timestamps and zero-valued forks/open-issues counts. Those
+  rendered as "Updated 2,055 years ago" and fabricated `0` forks and issues. Only
+  `stars_count` is shown unless a real `updated_at` proves the counts are genuine.
+- Fomantic's absolutely positioned `.ui.menu .item::before` divider swallowed the
+  Previous label of the focused repositories pager, which then overlapped Next. The
+  label pseudo-element resets that geometry.
+- Forgejo styles every `dialog[open]` as `display:flex;justify-content:center`. The
+  search dialog's form was a content-sized, centered flex item: production 0.3.6 drew a
+  201px form inside a 424px dialog at 440px, leaving a 58px query field between wide
+  gutters. `.hgh-search-box` now fills the dialog (`flex:1 1 auto;width:100%;min-width:0`).
+  `universal-search-layout.spec.mjs` now carries Forgejo's own `dialog` rules and asserts
+  the form, input row and field fill the dialog with and without results.
+
+All earlier versioned assets remain byte-for-byte unchanged; `organization.mjs`,
+`organization.css`, `dashboard-pagination.css` and `universal-search.css` are the only
+modules that differ from 0.3.6.
+
+`tests/mobile/native-activity-icons.spec.mjs` and `tests/mobile/native-org-repo-list.spec.mjs`
+run the production enhancers and stylesheets against server-rendered Forgejo 16.0.6
+markup and the exact native rules that match it (`tests/fixtures/forgejo-16.0.6/`, with
+provenance), including the unmodified `/repo/search` response. Storybook fixtures now
+carry the same two native rules and `expanded-pages.spec.mjs` covers the new
+`UserProfileActivity` stories.

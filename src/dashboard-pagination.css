@@ -52,6 +52,8 @@
 #dashboard-repo-list .hgh-vpg-prev svg,#dashboard-repo-list .hgh-vpg-next svg,#dashboard-repo-list .hgh-vpg-edge svg{display:none}
 #dashboard-repo-list .hgh-vpg-prev,#dashboard-repo-list .hgh-vpg-next,#dashboard-repo-list .hgh-vpg-first,#dashboard-repo-list .hgh-vpg-last{white-space:nowrap;padding-inline:10px}
 #dashboard-repo-list .hgh-vpg-prev::before,#dashboard-repo-list .hgh-vpg-next::after,#dashboard-repo-list .hgh-vpg-first::after,#dashboard-repo-list .hgh-vpg-last::after{content:attr(data-hgh-vpg-label)}
+/* Fomantic's `.ui.menu .item::before` is the absolutely positioned 1px item divider; Previous borrows that pseudo-element for its label, so it must give the geometry back or the label leaves the flow and overlaps Next. */
+#dashboard-repo-list .hgh-vpg-prev::before{position:static;width:auto;height:auto;background:none}
 
 /* Ghost edges: reserve their natural (small, fixed-text) width from first paint
    via opacity, never display/width, so revealing them never shifts Previous/Next

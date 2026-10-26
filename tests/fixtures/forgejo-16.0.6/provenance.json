@@ -1,0 +1,11 @@
+{
+ "forgejo": "16.0.6+gitea-1.22.0",
+ "binarySha256": "b90e22c2e5534fd7705d93d81ecea792b00f15cad0ee7bbc3061c65bf9524293",
+ "binaryUrl": "https://codeberg.org/forgejo/forgejo/releases/download/v16.0.6/forgejo-16.0.6-linux-amd64",
+ "indexCssSha256": "52ff8702fe6eb8483f20cf93c50dd153ee1a8f194979498bf0d09961e20f0f9e",
+ "template": "templates/user/dashboard/feeds.tmpl at tag v16.0.6 (feed icon: {{svg (printf \"octicon-%s\" (ActionIcon .GetOpType)) 32 \"text grey tw-mr-1\"}})",
+ "capture": "Server-rendered HTML of /demo-owner?tab=activity and / for a synthetic signed-in user on an isolated loopback instance; scripts removed, first six feed rows kept.",
+ "data": "synthetic only",
+ "orgDashboard": "org-dashboard.html: server HTML of /org/demo-bricks/dashboard after Forgejo Vue mounted the repo list, skin disabled, scripts removed, svg path data elided, first five feed rows; repo-search.json: unmodified /repo/search?... response of the same instance (limit=3); dashboard-repo-list-config.json: window.config.pageData.dashboardRepoList",
+ "repoSearchHandler": "routers/web/repo/repo.go SearchRepo at tag v16.0.6 fills only ID, FullName, Fork, Private, Template, Mirror, Stars, HTMLURL, Link, Internal; every other api.Repository field is its zero value"
+}

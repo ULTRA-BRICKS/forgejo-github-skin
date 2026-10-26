@@ -119,3 +119,7 @@ body{font-family:"Mona Sans Variable","Mona Sans VF",-apple-system,BlinkMacSyste
 @media(max-width:767px){.hgh-reference-shell[data-active-tab=issues] .hgh-repo-nav>a:nth-of-type(2){display:none}.hgh-reference-shell[data-active-tab=issues] .hgh-repo-nav>a:nth-of-type(3){display:flex}}
 
 @media(max-width:500px){.state-demo.story-pad{padding:16px}.state-demo .demo-disclosure{width:100%}.state-demo .demo-popover{position:relative;left:0;right:auto;top:8px;width:100%;max-width:100%;margin-bottom:16px}.state-demo .clone-field{min-width:0}.state-demo .clone-field>code{display:block;min-width:0;white-space:normal;overflow-wrap:anywhere}.state-demo .tooltip-bubble{left:0;transform:none}.state-demo .state-row{min-width:0}.state-demo .demo-toast{max-width:100%;flex-wrap:wrap}}
+
+/* Native Forgejo 16.0.6 rules the fixtures must carry so stories lay out as the real page does: the Vue repository link (dashboard-repo-list chunk) and the Fomantic menu item divider (index.css). */
+#dashboard-repo-list .repo-list-link{flex:1 1 0%}
+.ui.menu .item::before{position:absolute;content:"";top:0;right:0;height:100%;width:1px}
