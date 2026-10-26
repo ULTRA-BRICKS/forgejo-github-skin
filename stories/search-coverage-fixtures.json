@@ -1,0 +1,225 @@
+{
+  "enabled": {
+    "query": "repo:acme/open ast:needle($A)",
+    "mode": "ast",
+    "inferred": "ast",
+    "results": [
+      {
+        "repo": "acme/open",
+        "path": "src/needle.js",
+        "language": "javascript",
+        "line": 1,
+        "kind": "structure",
+        "score": 80.0,
+        "snippet": "<mark>needle</mark>(value);",
+        "mode": "ast",
+        "revision": "9487b1b17459a43f682b7e3ae300e28235ba3e03",
+        "url": "/acme/open/src/commit/9487b1b17459a43f682b7e3ae300e28235ba3e03/src/needle.js#L1"
+      }
+    ],
+    "coverage": {
+      "version": 1,
+      "scope": "authorized_indexed_default_branch",
+      "completeness": "bounded",
+      "semantics": {
+        "definitions": "pattern_based",
+        "references": "lexical"
+      },
+      "ast": {
+        "status": "ran"
+      },
+      "limits": {
+        "repository_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "file_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "symbol_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "lexical_candidates": {
+          "limit": 40,
+          "state": "complete"
+        },
+        "ast_files": {
+          "limit": 20,
+          "state": "complete"
+        },
+        "results": {
+          "limit": 1,
+          "state": "truncated"
+        }
+      }
+    },
+    "elapsed_ms": 52.41,
+    "total_ms": 56.72
+  },
+  "unavailable": {
+    "query": "repo:acme/open ast:needle($A)",
+    "mode": "ast",
+    "inferred": "ast",
+    "results": [
+      {
+        "repo": "acme/open",
+        "path": "src/needle.js",
+        "language": "javascript",
+        "line": 1,
+        "kind": "code",
+        "score": 20.000001108847187,
+        "snippet": "<mark>needle</mark>(value);",
+        "mode": "text",
+        "revision": "9487b1b17459a43f682b7e3ae300e28235ba3e03",
+        "url": "/acme/open/src/commit/9487b1b17459a43f682b7e3ae300e28235ba3e03/src/needle.js#L1"
+      }
+    ],
+    "coverage": {
+      "version": 1,
+      "scope": "authorized_indexed_default_branch",
+      "completeness": "bounded",
+      "semantics": {
+        "definitions": "pattern_based",
+        "references": "lexical"
+      },
+      "ast": {
+        "status": "unavailable"
+      },
+      "limits": {
+        "repository_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "file_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "symbol_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "lexical_candidates": {
+          "limit": 40,
+          "state": "complete"
+        },
+        "ast_files": {
+          "limit": 20,
+          "state": "complete"
+        },
+        "results": {
+          "limit": 1,
+          "state": "complete"
+        }
+      }
+    },
+    "elapsed_ms": 2.43,
+    "total_ms": 11.27
+  },
+  "truncated": {
+    "query": "repo:acme/many ast:needle($A)",
+    "mode": "ast",
+    "inferred": "ast",
+    "results": [
+      {
+        "repo": "acme/many",
+        "path": "src/needle00.js",
+        "language": "javascript",
+        "line": 1,
+        "kind": "structure",
+        "score": 80.0,
+        "snippet": "<mark>needle</mark>(value);",
+        "mode": "ast",
+        "revision": "bc979f1f9d634ec48c532d0573697f6e5130659e",
+        "url": "/acme/many/src/commit/bc979f1f9d634ec48c532d0573697f6e5130659e/src/needle00.js#L1"
+      }
+    ],
+    "coverage": {
+      "version": 1,
+      "scope": "authorized_indexed_default_branch",
+      "completeness": "bounded",
+      "semantics": {
+        "definitions": "pattern_based",
+        "references": "lexical"
+      },
+      "ast": {
+        "status": "ran"
+      },
+      "limits": {
+        "repository_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "file_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "symbol_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "lexical_candidates": {
+          "limit": 40,
+          "state": "complete"
+        },
+        "ast_files": {
+          "limit": 20,
+          "state": "truncated"
+        },
+        "results": {
+          "limit": 1,
+          "state": "unknown"
+        }
+      }
+    },
+    "elapsed_ms": 120.61,
+    "total_ms": 126.67
+  },
+  "denied": {
+    "query": "repo:acme/locked ast:needle($A)",
+    "mode": "ast",
+    "inferred": "ast",
+    "results": [],
+    "coverage": {
+      "version": 1,
+      "scope": "authorized_indexed_default_branch",
+      "completeness": "bounded",
+      "semantics": {
+        "definitions": "pattern_based",
+        "references": "lexical"
+      },
+      "ast": {
+        "status": "no_candidates"
+      },
+      "limits": {
+        "repository_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "file_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "symbol_hits": {
+          "limit": 1,
+          "state": "not_applicable"
+        },
+        "lexical_candidates": {
+          "limit": 40,
+          "state": "complete"
+        },
+        "ast_files": {
+          "limit": 20,
+          "state": "complete"
+        },
+        "results": {
+          "limit": 1,
+          "state": "complete"
+        }
+      }
+    },
+    "elapsed_ms": 2.26,
+    "total_ms": 6.64
+  }
+}

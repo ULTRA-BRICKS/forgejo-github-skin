@@ -17,3 +17,7 @@ export const Dark = {render: () => organizationDashboard({dark: true})};
 export const WithFlashAlert = {render: () => organizationDashboard({alert: true})};
 export const Profile = {render: () => organizationProfile()};
 export const ProfileDark = {render: () => organizationProfile({dark: true})};
+export const ProfileSessionActivity = {
+  name: 'Profile with session dashboard activity (native fixture, not live)',
+  render: () => organizationProfile({sessionActivity: true}),
+};

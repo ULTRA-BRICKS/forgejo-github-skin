@@ -1,7 +1,7 @@
 /**
  * Compact-by-default pagination: only "< Previous  Next >" shows until the pointer
- * rests on the whole region for 2s (or the user tabs to a "More pages" trigger, or
- * long-presses on touch — all funnel through the same reveal controller), at which
+ * or keyboard focus rests on the whole region for 2s (including touch long-press,
+ * all through the same reveal controller), at which
  * point real First/number/Last "wings" fade in around the fixed-position center
  * pair with zero layout shift, because both wing columns reserve equal width from
  * first paint.
@@ -21,8 +21,8 @@ const states = new Map(); // native <div class="pagination menu"> -> state
 function stringsFor(doc) {
   const ru = doc.documentElement.lang?.startsWith('ru');
   return ru
-    ? {label: 'Постраничная навигация', more: 'Ещё страницы', page: (n) => `Страница ${n}`, pageOf: (n, total) => `Страница ${n} из ${total}`}
-    : {label: 'Pagination', more: 'More pages', page: (n) => `Page ${n}`, pageOf: (n, total) => `Page ${n} of ${total}`};
+    ? {label: 'Постраничная навигация', page: (n) => `Страница ${n}`, pageOf: (n, total) => `Страница ${n} из ${total}`}
+    : {label: 'Pagination', page: (n) => `Page ${n}`, pageOf: (n, total) => `Page ${n} of ${total}`};
 }
 
 function edgeText(anchorEl) {
@@ -87,20 +87,10 @@ function relocate(doc, el, undo) {
   return el;
 }
 
-function retireTrigger(doc, trigger) {
-  if (!trigger || trigger.hidden) return;
-  if (doc.activeElement === trigger) {
-    trigger.addEventListener('blur', () => { trigger.hidden = true; }, {once: true});
-  } else {
-    trigger.hidden = true;
-  }
-}
-
-function applyRevealed(doc, nav, wings) {
+function applyRevealed(nav, wings) {
   nav.dataset.hghPgRevealed = 'true';
   for (const wing of wings) {
     wing.itemsBox.removeAttribute('inert');
-    retireTrigger(doc, wing.trigger);
   }
 }
 
@@ -112,7 +102,7 @@ function revealAllRegions(doc) {
   for (const [, state] of states) {
     if (state.nav.ownerDocument !== doc || state.nav.dataset.hghPgRevealed === 'true') continue;
     state.controller.cancel();
-    applyRevealed(doc, state.nav, state.wings);
+    applyRevealed(state.nav, state.wings);
   }
 }
 
@@ -188,23 +178,9 @@ function build(doc, menu) {
     const itemsBox = doc.createElement('span');
     itemsBox.className = 'hgh-pg-wing-items';
     itemsBox.append(buildSide(doc, items, parsed, pagesByHref, pagesByNum, undo));
-    let trigger = null;
     if (!alreadyRevealed) itemsBox.setAttribute('inert', '');
-    if (!alreadyRevealed && items.length) {
-      trigger = doc.createElement('button');
-      trigger.type = 'button';
-      trigger.className = 'hgh-pg-more';
-      trigger.setAttribute('aria-label', strings.more);
-      trigger.textContent = '…';
-      trigger.addEventListener('click', (event) => {
-        event.preventDefault();
-        controller.reveal(() => revealAllRegions(doc));
-      });
-      wing.append(itemsBox, trigger);
-    } else {
-      wing.append(itemsBox);
-    }
-    const record = {wing, itemsBox, trigger};
+    wing.append(itemsBox);
+    const record = {wing, itemsBox};
     wings.push(record);
     return record;
   }
@@ -242,8 +218,10 @@ function build(doc, menu) {
 
   if (alreadyRevealed) nav.dataset.hghPgRevealed = 'true';
 
-  const onEnter = () => controller.arm(() => revealAllRegions(doc));
-  const onLeave = () => controller.cancel();
+  const onEnter = () => controller.arm(() => revealAllRegions(doc), 'pointer');
+  const onLeave = () => controller.cancel('pointer');
+  const onFocusIn = (event) => { if (!nav.contains(event.relatedTarget)) controller.arm(() => revealAllRegions(doc), 'focus'); };
+  const onFocusOut = (event) => { if (!nav.contains(event.relatedTarget)) controller.cancel('focus'); };
   // pointerdown/up/cancel are guarded to non-mouse pointer types: mouse already
   // gets a correct arm/cancel lifecycle from pointerenter/pointerleave alone.
   // Without the guard, clicking (mousedown+mouseup) on e.g. Previous mid-hover
@@ -258,8 +236,10 @@ function build(doc, menu) {
   nav.addEventListener('pointerleave', onLeave);
   nav.addEventListener('pointerup', onNonMouseRelease);
   nav.addEventListener('pointercancel', onNonMouseRelease);
+  nav.addEventListener('focusin', onFocusIn);
+  nav.addEventListener('focusout', onFocusOut);
 
-  return {nav, center, controller, wings, undo, leftWing, rightWing, resizeObserver: null, listeners: {onEnter, onNonMousePress, onLeave, onNonMouseRelease}};
+  return {nav, center, controller, wings, undo, leftWing, rightWing, resizeObserver: null, listeners: {onEnter, onNonMousePress, onLeave, onNonMouseRelease, onFocusIn, onFocusOut}};
 }
 
 /** Sums each child's own rendered width (plus the flex gap between them), never
@@ -385,6 +365,8 @@ function teardown(menu, state) {
   state.nav.removeEventListener('pointerleave', state.listeners.onLeave);
   state.nav.removeEventListener('pointerup', state.listeners.onNonMouseRelease);
   state.nav.removeEventListener('pointercancel', state.listeners.onNonMouseRelease);
+  state.nav.removeEventListener('focusin', state.listeners.onFocusIn);
+  state.nav.removeEventListener('focusout', state.listeners.onFocusOut);
   for (let i = state.undo.length - 1; i >= 0; i--) state.undo[i]();
   state.nav.remove();
   states.delete(menu);
@@ -426,10 +408,8 @@ function setupResponsiveObserver(state) {
   } catch {}
 }
 
-/** Reserve compact centered Previous/Next; wings reveal after a sustained pointer hover over the
- *  whole region, or immediately on activating the always-focusable "More pages" trigger (the
- *  keyboard/touch path — see the Tab-reaches-trigger test) — never on a bare unactivated focus,
- *  which would otherwise arm an unwanted countdown while merely tabbing past. */
+/** Reserve centered Previous/Next and wing geometry; sustained pointer or keyboard focus
+ * reveals the native destinations without adding invisible tab stops. */
 export function enhancePagination(doc = document) {
   cleanupDisconnected(doc);
   for (const menu of doc.querySelectorAll('.page.buttons > .pagination.menu')) {

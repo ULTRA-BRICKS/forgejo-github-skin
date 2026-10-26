@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 // source files (stripping module syntax) into one classic script so these tests exercise the
 // production parser/enhancer, not a hand-rolled model of it.
 const core = (await fs.readFile(new URL('../../src/core.mjs', import.meta.url), 'utf8')).replaceAll('export ', '');
+const searchStream = (await fs.readFile(new URL('../../src/search-stream.mjs', import.meta.url), 'utf8')).replaceAll('export ', '');
 const universalSearch = (await fs.readFile(new URL('../../src/universal-search.mjs', import.meta.url), 'utf8'))
   .replace(/^import.*$/mg, '')
   .replaceAll('export ', '');
@@ -29,7 +30,7 @@ const PERSONAL_DASHBOARD_FIXTURE = '<div class="secondary-nav"><div class="ui se
 // re-running scripts on goBack/goForward; guard re-injection so it never depends on that.
 async function ensureInjected(page) {
   const ready = await page.evaluate(() => typeof window.parseSearchContext === 'function');
-  if (!ready) await page.addScriptTag({content: core + '\n' + universalSearch});
+  if (!ready) await page.addScriptTag({content: core + '\n' + searchStream + '\n' + universalSearch});
 }
 async function mount(page, url, body) {
   await page.route(url, (route) => route.fulfill({contentType: 'text/html', body: htmlDoc(body)}));
@@ -58,8 +59,8 @@ function openSearch(page, seed = '') {
 }
 
 function scopeRadios(page) {
-  return page.locator('#hgh-universal-search [role="radio"]').evaluateAll(
-    (nodes) => nodes.map((n) => ({scope: n.dataset.scope, label: n.textContent, checked: n.getAttribute('aria-checked')})),
+  return page.locator('#hgh-universal-search [role="menuitemradio"]').evaluateAll(
+    (nodes) => nodes.map((n) => ({scope: n.dataset.scope, label: n.getAttribute('aria-label'), checked: n.getAttribute('aria-checked')})),
   );
 }
 

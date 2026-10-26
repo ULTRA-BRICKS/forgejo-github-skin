@@ -291,8 +291,8 @@ test('on page 2, First and Previous coincide: the left wing is empty since Previ
     ],
   }));
   assert.deepEqual(plan.left, []);
-  assert.equal(plan.right.length, 2); // page 3, then a legitimate distinct Last (page 90)
-  assert.equal(plan.right[0].num, 3);
+  assert.deepEqual(plan.right.map(item => item.href), ['/repo/issues?page=90']);
+  assert.equal(plan.next.href, '/repo/issues?page=3');
   assert.equal(plan.previous.href, '/repo/issues?page=1');
 });
 
@@ -314,7 +314,7 @@ test('on the second-to-last page, Last and Next coincide: the right wing drops t
   assert.equal(plan.next.href, '/repo/issues?page=90');
 });
 
-test('First and Previous NOT coinciding (current far from page 2) keeps both distinct, matching the worked example', () => {
+test('First remains distinct from Previous while the numeric duplicate of Previous is omitted', () => {
   const plan = buildPaginationPlan(descriptor({
     first: {href: '/repo/issues', disabled: false, text: 'First'},
     previous: {href: '/repo/issues?page=5', disabled: false},
@@ -328,7 +328,7 @@ test('First and Previous NOT coinciding (current far from page 2) keeps both dis
     ],
   }));
   assert.equal(plan.left.some((item) => item.kind === 'first'), true);
-  assert.equal(plan.left.some((item) => item.num === 5), true); // "5" stays, right next to Previous
+  assert.equal(plan.left.some((item) => item.num === 5), false);
 });
 
 test('46 total pages on the last page merges 46 into the Last control, not a duplicate href', () => {
@@ -374,8 +374,6 @@ test('First merges with a real template-shaped page-1 neighbor, preserving First
   assert.equal(merged.href, '/repo/issues?type=all');
   const duplicate = plan.left.find((item) => item.num === 1 && item.kind !== 'first');
   assert.equal(duplicate, undefined);
-  assert.deepEqual(plan.left.map((item) => item.kind), ['first', 'page']);
-  assert.deepEqual(plan.left.map((item) => item.num), [1, 5]);
 });
 
 test('a first anchor without a matching page-1 entry never merges, even with matching pathname', () => {
@@ -391,7 +389,8 @@ test('a first anchor without a matching page-1 entry never merges, even with mat
   }));
   const first = plan.left.find((item) => item.kind === 'first');
   assert.equal(first.merged, false);
-  assert.deepEqual(plan.left.map((item) => item.num), [null, 3]);
+  assert.equal(first.num, null);
+  assert.equal(first.href, '/repo/issues?type=all');
 });
 
 test('pages split around the active entry appear exactly once, in native ascending order, on the correct side', () => {
@@ -409,8 +408,10 @@ test('pages split around the active entry appear exactly once, in native ascendi
       {num: 90, href: '/repo/issues?page=90', active: false},
     ],
   }));
-  assert.deepEqual(plan.left.map((item) => item.num), [1, 2, 5]);
-  assert.deepEqual(plan.right.map((item) => item.num), [7, 90]);
+  assert.deepEqual(plan.left.map((item) => item.num), [1, 2]);
+  assert.deepEqual(plan.right.map((item) => item.num), [90]);
+  assert.equal(plan.previous.href, '/repo/issues?page=5');
+  assert.equal(plan.next.href, '/repo/issues?page=7');
   const allNums = [...plan.left, ...plan.right].filter((item) => item.num !== null).map((item) => item.num);
   assert.equal(new Set(allNums).size, allNums.length, 'no page number appears in both wings');
   assert.equal(allNums.includes(6), false, 'the current page is never rendered');
@@ -496,4 +497,21 @@ test('total is null (never guessed) for cursor-based pagination where Last is un
     pages: [],
   }));
   assert.equal(plan.total, null);
+});
+
+test('a sibling reveal cancels a staggered named-input dwell without a late callback', (t) => {
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const session = fakeStorage();
+  const local = fakeStorage();
+  const first = createRevealController({session, local});
+  const second = createRevealController({session, local});
+  let lateCalls = 0;
+  first.arm(() => second.cancel(), 'focus');
+  t.mock.timers.tick(1000);
+  second.arm(() => { lateCalls++; }, 'pointer');
+  t.mock.timers.tick(1000);
+  assert.equal(first.isRevealed(), true);
+  t.mock.timers.tick(1000);
+  assert.equal(lateCalls, 0);
+  assert.equal(local.getItem(HABIT_KEY), '1');
 });

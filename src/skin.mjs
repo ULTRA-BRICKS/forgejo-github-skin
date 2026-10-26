@@ -542,8 +542,8 @@ function boot() {
     if (!shortcuts) return;
 
     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.key === '/' || key === 'k')) {
-      event.preventDefault();
-      focusBestSearch();
+      // Unclaimed when the header search cannot open (e.g. an instance opted out), so the browser keeps the chord.
+      if (focusBestSearch()) event.preventDefault();
       return;
     }
 

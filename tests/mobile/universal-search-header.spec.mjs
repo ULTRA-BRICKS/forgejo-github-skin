@@ -67,8 +67,9 @@ test('backend failure, restore and re-enhance preserve native controls and filte
   await expect(page.getByRole('status')).toContainText('temporarily unavailable');
   await expect(page.locator('#dashboard-repo-list input')).toBeHidden();
   await expect(page.getByRole('button',{name:'Filter'})).toBeVisible();
-  await page.getByRole('radio',{name:'Everywhere'}).click();
-  await expect(page.getByRole('radio',{name:'Everywhere'})).toHaveAttribute('aria-checked','true');
+  await page.locator('.hgh-search-scope-trigger').click();
+  await page.getByRole('menuitemradio',{name:'Everywhere'}).click();
+  await expect(page.getByRole('menuitemradio',{name:'Everywhere',includeHidden:true})).toHaveAttribute('aria-checked','true');
   await page.evaluate(()=>search.restoreUniversalSearch(document));
   await expect(page.locator('#dashboard-repo-list input')).toBeVisible();
   expect(await page.evaluate(()=>document.querySelector('#dashboard-repo-list input')===nativeInput)).toBe(true);
@@ -140,9 +141,13 @@ test('dashboard reset notifies the native filtering consumer and restores the or
       for(const row of repos.children)row.hidden=!row.textContent.toLowerCase().includes(nativeInput.value.toLowerCase());
     });
   });
-  await page.locator('#dashboard-repo-list input').fill('missing');
-  await expect(page.locator('#native-filtered-repositories li:visible')).toHaveCount(0);
   await enhance(page);
+  await page.evaluate(()=>{
+    nativeInput.value='missing';
+    nativeInput.dispatchEvent(new Event('input',{bubbles:true}));
+    history.replaceState(null,'','?q=missing&sort=recentupdate&archived=1#repos');
+  });
+  await expect(page.locator('#native-filtered-repositories li:visible')).toHaveCount(0);
   await expect(page.locator('#dashboard-repo-list input')).toBeHidden();
   const reset=page.getByRole('button',{name:'Clear repository filter: missing'});
   await expect(reset).toBeVisible();
@@ -150,9 +155,40 @@ test('dashboard reset notifies the native filtering consumer and restores the or
   await expect(page.locator('#dashboard-repo-list input')).toHaveValue('');
   await expect(page.locator('#native-filtered-repositories li:visible')).toHaveText(['Alpha repository','Beta repository']);
   await expect(reset).toHaveCount(0);
+  expect(await page.evaluate(()=>({
+    sort:new URL(location.href).searchParams.get('sort'),
+    archived:new URL(location.href).searchParams.get('archived'),hash:location.hash
+  }))).toEqual({sort:'recentupdate',archived:'1',hash:'#repos'});
   await expect(page.getByRole('button',{name:'Filter',exact:true})).toBeVisible();
   await page.evaluate(()=>search.restoreUniversalSearch(document));
   await expect(page.locator('#dashboard-repo-list input')).toBeVisible();
   await expect(page.locator('#dashboard-repo-list input')).toHaveValue('');
+  expect(await page.evaluate(()=>document.querySelector('#dashboard-repo-list input')===nativeInput)).toBe(true);
+  await page.locator('#dashboard-repo-list input').fill('missing');
+  await expect(reset).toHaveCount(0);
+  await enhance(page);
+  await expect(reset).toBeVisible();
+  await reset.click();
+  await expect(page.locator('#native-filtered-repositories li:visible')).toHaveCount(2);
+});
+
+test('dashboard filter mounted asynchronously still gains a visible reset without re-enhancement',async({page})=>{
+  await prepare(page,{kind:'dashboard'});
+  await page.evaluate(()=>{
+    window.filterHost=document.querySelector('.repos-search');
+    filterHost.remove();
+  });
+  await enhance(page);
+  await page.evaluate(()=>{
+    document.querySelector('#dashboard-repo-list').append(filterHost);
+    nativeInput.value='mounted-later';
+    nativeInput.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  const reset=page.getByRole('button',{name:'Clear repository filter: mounted-later'});
+  await expect(reset).toBeVisible();
+  await expect(page.locator('#dashboard-repo-list input')).toBeHidden();
+  await reset.click();
+  await expect(page.locator('#dashboard-repo-list input')).toHaveValue('');
+  await expect(reset).toHaveCount(0);
   expect(await page.evaluate(()=>document.querySelector('#dashboard-repo-list input')===nativeInput)).toBe(true);
 });

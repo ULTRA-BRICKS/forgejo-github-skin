@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import {REVEALED_KEY, HABIT_KEY} from '../../src/pagination-model.mjs';
 import {pagerHtml, tableSegmentHtml, dashboardHtml} from '../../stories/dashboard-pagination-fixtures.mjs';
+import {appearances, applyAppearance, captureProof} from './organization-proof.mjs';
 
 const model = await fs.readFile(new URL('../../src/pagination-model.mjs', import.meta.url), 'utf8');
 const enhancer = await fs.readFile(new URL('../../src/dashboard-pagination.mjs', import.meta.url), 'utf8');
@@ -75,6 +76,45 @@ async function vueChangePage(page, opts) {
     document.querySelector('#dashboard-repo-list .ui.attached.table.segment').outerHTML = html;
   }, tableSegmentHtml(opts));
 }
+
+test('a classic reveal and count correction never expose an invisible dashboard edge', async ({page}) => {
+  const classic = await fs.readFile(new URL('../../src/pagination.mjs', import.meta.url), 'utf8');
+  const classicCss = await fs.readFile(new URL('../../src/pagination.css', import.meta.url), 'utf8');
+  await prepare(page, dashboardHtml({page: 2, finalPage: 6}) +
+    '<div id="activity-feed"><div class="center page buttons"><div class="ui borderless pagination menu">' +
+    '<a class="item navigation" href="?page=1"><span class="navigation_label">First</span></a>' +
+    '<a class="item navigation" href="?page=5"><span class="navigation_label">Previous</span></a>' +
+    '<a class="active item">6</a>' +
+    '<a class="item navigation" href="?page=7"><span class="navigation_label">Next</span></a>' +
+    '<a class="item navigation" href="?page=90"><span class="navigation_label">Last</span></a>' +
+    '</div></div></div>');
+  await page.addStyleTag({content: classicCss});
+  await page.addScriptTag({content: `(() => {${classic.replace(/^import.*$/mg, '').replaceAll('export ', '')}\nwindow.enhanceClassic = enhancePagination;})();`});
+  await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+  await page.evaluate(() => {
+    window.config = {pageData: {dashboardRepoList: {searchLimit: 15}}};
+    document.querySelector('.repos-search').innerHTML = '<div class="repos-filter"><a class="active item">Sources<div class="ui label">45</div></a></div>';
+    enhanceDashboardPagination();
+    window.enhanceClassic();
+  });
+  await page.locator('.hgh-pagination').dispatchEvent('pointerenter', {pointerType: 'mouse'});
+  await page.clock.runFor(1000);
+  await page.locator('.hgh-vpg-next').focus();
+  await page.clock.runFor(1000);
+  await expect(page.locator('.hgh-pagination')).toHaveAttribute('data-hgh-pg-revealed', 'true');
+  await page.locator('.repos-filter .label').evaluate(label => { label.textContent = '90'; });
+  const last = page.locator('.hgh-vpg-last');
+  await expect(last).not.toHaveClass(/hgh-vpg-omitted/);
+  await expect(page.locator('.hgh-vpg')).not.toHaveAttribute('data-hgh-vpg-revealed');
+  await expect(last).toHaveCSS('opacity', '0');
+  await expect(last).toHaveJSProperty('inert', true);
+  await expect(last).toHaveAttribute('tabindex', '-1');
+  await page.clock.runFor(1000);
+  await expect(page.locator('.hgh-vpg')).toHaveAttribute('data-hgh-vpg-revealed', 'true');
+  await expect(last).toHaveJSProperty('inert', false);
+  await expect(last).toHaveAttribute('tabindex', '0');
+});
 
 test('a single page (finalPage 1, no pagination block at all) is a safe no-op', async ({page}) => {
   await prepare(page, dashboardHtml({page: 1, finalPage: 1}));
@@ -397,7 +437,7 @@ test('after three prior habit reveals, a brand new session reveals on first hove
   await page.evaluate((key) => localStorage.setItem(key, '3'), HABIT_KEY);
   await page.clock.install();
   await page.evaluate(() => enhanceDashboardPagination());
-  await expect(page.locator('.hgh-vpg-more')).toHaveCount(2); // still built compact (session itself not yet revealed)
+  await expect(page.locator('.hgh-vpg')).not.toHaveAttribute('data-hgh-vpg-revealed');
   await page.hover('.hgh-vpg');
   await expect(page.locator('.hgh-vpg[data-hgh-vpg-revealed]')).toHaveCount(1); // no clock advance needed
 });
@@ -412,56 +452,28 @@ test('an already-revealed session renders First/Last visible immediately with no
   expect(edgesInert).toEqual([false, false]);
 });
 
-test('Tab reaches a "More pages" trigger; activating it reveals immediately without invoking Vue\'s changePage or moving focus away', async ({page}) => {
+test('keyboard dwell reveals without invoking Vue navigation or moving focus away', async ({page}) => {
   await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
+  await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
   await page.evaluate(() => {
-    const first = [...document.querySelectorAll('.ui.borderless.pagination.menu > a.navigation')][0];
-    window.__firstHits = 0;
-    first.addEventListener('click', () => window.__firstHits++);
+    window.__navHits = 0;
+    for (const anchor of document.querySelectorAll('.pagination a')) anchor.addEventListener('click', () => window.__navHits++);
     enhanceDashboardPagination();
   });
-  // Real Tab presses (not a programmatic `.focus()` call), so the browser's own
-  // `:focus-visible` heuristic — which `makeTrigger`'s click handler now reads
-  // to decide whether to blur — genuinely sees this as keyboard navigation,
-  // not a scripted focus with no real input history behind it. Programmatically
-  // focus the last repo link first (real repo-list `<a href>`s precede the
-  // pager in DOM order, so a single Tab from the page start would land there,
-  // not the trigger) — only the FINAL Tab that actually reaches the trigger
-  // needs to be a genuine keypress, which it is here.
-  await page.locator('.repo-owner-name-list a').last().focus();
-  await page.keyboard.press('Tab');
-  const trigger = page.locator('.hgh-vpg-more-start');
-  await expect(trigger).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('.hgh-vpg[data-hgh-vpg-revealed]')).toHaveCount(1);
-  expect(await page.evaluate(() => window.__firstHits)).toBe(0);
-  // The key accessibility boundary `:focus-visible` exists to preserve: a real
-  // keyboard user's focus must never be yanked out from under them on
-  // activation, unlike the touch/mouse path which deliberately blurs.
-  await expect(trigger).toBeFocused();
+  await page.locator('.hgh-vpg-prev').focus();
+  await page.clock.runFor(1000);
+  await page.locator('.hgh-vpg-next').focus();
+  await page.clock.runFor(1000);
+  await expect(page.locator('.hgh-vpg')).toHaveAttribute('data-hgh-vpg-revealed', 'true');
+  expect(await page.evaluate(() => window.__navHits)).toBe(0);
+  await expect(page.locator('.hgh-vpg-next')).toBeFocused();
 });
 
-test('a trigger retired mid-reveal (hover path, not already-revealed) becomes genuinely display:none and drops out of the tab order', async ({page}) => {
-  await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
-  await page.clock.install();
-  await page.evaluate(() => enhanceDashboardPagination());
-  await page.hover('.hgh-vpg');
-  await page.clock.runFor(2000);
-  await expect(page.locator('.hgh-vpg[data-hgh-vpg-revealed]')).toHaveCount(1);
-  const triggers = await page.locator('.hgh-vpg-more').evaluateAll((els) => els.map((el) => ({
-    hidden: el.hasAttribute('hidden'),
-    display: getComputedStyle(el).display,
-  })));
-  for (const t of triggers) {
-    expect(t.hidden).toBe(true);
-    expect(t.display).toBe('none'); // the real regression: display:flex was beating [hidden] before the CSS fix
-  }
-});
 
 test('calling enhanceDashboardPagination twice does not double-wrap or double-listen; a restore/enhance cycle stays a clean single instance', async ({page}) => {
   await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
   await page.evaluate(() => { enhanceDashboardPagination(); enhanceDashboardPagination(); });
-  await expect(page.locator('.hgh-vpg-more')).toHaveCount(2);
   await page.clock.install();
   await page.hover('.hgh-vpg');
   await page.clock.runFor(2000);
@@ -493,22 +505,21 @@ test('restore returns the exact original DOM (identity + markup), and Vue\'s own
   expect(identical).toBe(true);
 });
 
-test('a retained reference to a torn-down trigger button is inert after restore: its click listener was removed, not just the node', async ({page}) => {
+test('restoring a focused pager cancels dwell and removes the focus listener', async ({page}) => {
   await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
-  const before = await page.evaluate(() => {
-    enhanceDashboardPagination();
-    window.__staleTrigger = document.querySelector('.hgh-vpg-more-start');
-    return window.__staleTrigger != null;
-  });
-  expect(before).toBe(true);
+  await page.clock.install();
+  await page.evaluate(() => enhanceDashboardPagination());
+  await page.locator('.hgh-vpg-prev').focus();
+  await page.clock.runFor(1000);
   await page.evaluate(() => restoreDashboardPagination());
-  const originalAfterRestore = await page.evaluate(() => document.getElementById('dashboard-repo-list').outerHTML);
-  // Retained reference outlives its removal from the DOM; clicking it must not
-  // reveal/mutate the now-pristine restored native pager.
-  await page.evaluate(() => window.__staleTrigger.click());
-  const afterStaleClick = await page.evaluate(() => document.getElementById('dashboard-repo-list').outerHTML);
-  expect(afterStaleClick).toBe(originalAfterRestore);
-  await expect(page.locator('.hgh-vpg')).toHaveCount(0);
+  const originalAfterRestore = await page.locator('#dashboard-repo-list').evaluate(node => node.outerHTML);
+  await page.evaluate(() => {
+    const pager = document.querySelector('.ui.borderless.pagination.menu');
+    pager.dispatchEvent(new FocusEvent('focusin', {bubbles: true}));
+  });
+  await page.clock.runFor(2000);
+  expect(await page.locator('#dashboard-repo-list').evaluate(node => node.outerHTML)).toBe(originalAfterRestore);
+  expect(await page.evaluate(() => localStorage.getItem(HABIT_KEY))).toBeNull();
 });
 
 test('restore preserves a genuinely pre-existing native inert attribute instead of always clearing it', async ({page}) => {
@@ -562,11 +573,13 @@ test('a Vue page-change remount (full teardown/rebuild of the table segment) is 
   await page.clock.runFor(1000); // armed, comfortably short of the 2000ms delay
   await vueChangePage(page, {page: 7, finalPage: 90});
   await page.waitForFunction(() => document.querySelector('.hgh-vpg[data-hgh-vpg-applied]') !== null);
+  // The replacement may receive a fresh pointerenter under the stationary mouse.
+  // Leave only after replacement so its legitimate timer cannot mask a leaked old timer.
+  await page.mouse.move(0, 0);
   await page.clock.runFor(2000); // well past the original delay from the old, now-detached pager
   await expect(page.locator('.hgh-vpg[data-hgh-vpg-revealed]')).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem(HABIT_KEY))).toBeNull();
   await expect(page.locator('.ui.borderless.pagination.menu > a.navigation.disabled')).toHaveCount(0);
-  await expect(page.locator('.hgh-vpg-more')).toHaveCount(2); // exactly one fresh pair, not accumulated
   // The detached old pager itself: no leftover classes/attrs/inert, and its keydown
   // handler (added by makeKeyboardOperable) was removed by teardownPager's undo.
   const oldState = await page.evaluate(() => ({
@@ -658,57 +671,65 @@ test('reduced motion removes the edge fade transition on reveal (normal motion k
   expect(normalDuration).toBe('0.15s'); // proves the reduced-motion rule actually did something
 });
 
-test('a coarse-pointer/no-hover (touch) context exposes the "more pages" trigger as a real, visibly discoverable button at rest — tapping it reveals First/Last immediately, without waiting the 2s hover delay and without invoking any Vue navigation anchor', async ({browser}) => {
-  const touchCtx = await browser.newContext({hasTouch: true, isMobile: true, viewport: {width: 375, height: 700}});
-  const touchPage = await touchCtx.newPage();
-  await prepare(touchPage, dashboardHtml({page: 6, finalPage: 90}));
-  await touchPage.evaluate(() => {
-    enhanceDashboardPagination();
-    window.__navHits = 0;
-    for (const a of document.querySelectorAll('.ui.borderless.pagination.menu > a.navigation')) {
-      a.addEventListener('click', () => window.__navHits++);
+test('touch pointer handlers reveal on sustained contact without changing pager geometry', async ({browser}) => {
+  const context = await browser.newContext({hasTouch: true, isMobile: true, viewport: {width: 320, height: 700}});
+  try {
+    const page = await context.newPage();
+    await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
+    await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+    await page.evaluate(() => {
+      enhanceDashboardPagination();
+      window.__navHits = 0;
+      for (const anchor of document.querySelectorAll('.pagination a')) anchor.addEventListener('click', () => window.__navHits++);
+    });
+    await expect(page.locator('.hgh-vpg-edge').first()).toHaveCSS('pointer-events', 'none');
+    const before = await centerRect(page);
+    await page.locator('.hgh-vpg').dispatchEvent('pointerdown', {pointerType: 'touch'});
+    await page.clock.runFor(1999);
+    await expect(page.locator('.hgh-vpg')).not.toHaveAttribute('data-hgh-vpg-revealed');
+    await page.clock.runFor(1);
+    await expect(page.locator('.hgh-vpg')).toHaveAttribute('data-hgh-vpg-revealed', 'true');
+    expect(await centerRect(page)).toEqual(before);
+    expect(await page.evaluate(() => window.__navHits)).toBe(0);
+    await page.locator('.hgh-vpg').dispatchEvent('pointerup', {pointerType: 'touch'});
+    await page.locator('.hgh-vpg-first').tap();
+    expect(await page.evaluate(() => window.__navHits)).toBe(1);
+  } finally {
+    await context.close();
+  }
+});
+
+test('trusted touch tap and hold preserve native activation after release', async ({browser, browserName}) => {
+  test.skip(browserName !== 'chromium', 'Trusted press/hold/release uses Chromium CDP; physical Safari remains release acceptance.');
+  const context = await browser.newContext({hasTouch: true, isMobile: true, viewport: {width: 320, height: 700}});
+  try {
+    const page = await context.newPage();
+    const session = await context.newCDPSession(page);
+    for (const hold of [false, true]) {
+      await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
+      await page.evaluate(() => {
+        sessionStorage.clear();
+        localStorage.clear();
+        enhanceDashboardPagination();
+        window.__navHits = 0;
+        document.querySelector('.hgh-vpg-next').addEventListener('click', () => window.__navHits++);
+      });
+      const next = page.locator('.hgh-vpg-next');
+      await next.scrollIntoViewIfNeeded();
+      const before = await centerRect(page);
+      const box = await next.boundingBox();
+      await session.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [{x: box.x + box.width / 2, y: box.y + box.height / 2}]});
+      if (hold) await expect(page.locator('.hgh-vpg')).toHaveAttribute('data-hgh-vpg-revealed', 'true');
+      else await expect(page.locator('.hgh-vpg')).not.toHaveAttribute('data-hgh-vpg-revealed');
+      expect(await page.evaluate(() => window.__navHits)).toBe(0);
+      await session.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
+      await expect.poll(() => page.evaluate(() => window.__navHits)).toBe(1);
+      expect(await centerRect(page)).toEqual(before);
     }
-  });
-  // Without the viewport meta tag, WebKit renders at a scaled 980px layout
-  // width instead of the real 375px device width, putting every geometry
-  // assertion and simulated tap below in the wrong coordinate space.
-  expect(await touchPage.evaluate(() => document.documentElement.clientWidth)).toBe(375);
-  // Exposed for real (not just hit-testable): opacity/pointer-events at rest,
-  // no hover/focus needed — this is what makes it discoverable to a touch user
-  // at all, unlike the mouse-only :focus-visible-gated skip-link behavior.
-  const trigger = touchPage.locator('.hgh-vpg-more-start');
-  await expect.poll(() => trigger.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
-  await expect.poll(() => trigger.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('auto');
-  // docs/requirements.md: "Touch targets added by this skin target at least
-  // 44x44 CSS px when space allows" — the pager's own row is shorter than
-  // that, so height is real, not just a claimed CSS property value.
-  // `Math.round` absorbs sub-pixel transform rounding noise (observed in
-  // WebKit as 43.99999237060547 from the `translateY(-50%)` centering) — the
-  // same real-geometry-tolerance convention this file's overflow assertions
-  // already use, not a loosened requirement.
-  const box = await trigger.evaluate((el) => el.getBoundingClientRect());
-  expect(Math.round(box.width)).toBeGreaterThanOrEqual(44);
-  expect(Math.round(box.height)).toBeGreaterThanOrEqual(44);
-  await expect(touchPage.locator('.hgh-vpg[data-hgh-vpg-revealed]')).toHaveCount(0);
-  await trigger.tap();
-  // Immediate — no page.clock/timer advance needed, unlike every hover-driven
-  // reveal test in this file, since a tap on the trigger's own click listener
-  // (shared with the keyboard path) reveals synchronously.
-  await expect(touchPage.locator('.hgh-vpg[data-hgh-vpg-revealed]')).toHaveCount(1);
-  await expect(touchPage.locator('.hgh-vpg-first[tabindex="0"]')).toHaveCount(1);
-  expect(await touchPage.evaluate(() => window.__navHits)).toBe(0); // no Vue anchor was clicked
-  // `retireTrigger()` defers hiding a trigger that's still `document.
-  // activeElement` until it blurs — correct for keyboard, but a real touch tap
-  // DOES focus the button in Chromium (confirmed empirically; WebKit does
-  // not), and a still-visible, still-`pointer-events:auto` 44px trigger paints
-  // ON TOP of the just-revealed First control (positioned descendants paint
-  // over in-flow siblings) regardless of DOM order. Without `makeTrigger`'s
-  // own touch-blur fix, this tap would silently land on the stranded trigger
-  // again instead of ever reaching First.
-  expect(await trigger.evaluate((el) => el.hidden)).toBe(true);
-  await touchPage.locator('.hgh-vpg-first').tap();
-  expect(await touchPage.evaluate(() => window.__navHits)).toBe(1); // First's own Vue listener fired exactly once
-  await touchCtx.close();
+  } finally {
+    await context.close();
+  }
 });
 
 for (const width of [320, 440, 640, 1280]) {
@@ -830,3 +851,116 @@ test('proof: measures exact before/after geometry and captures screenshots as te
   expect(after.next).toEqual(before.next);
   expect(after.docHeight).toBe(before.docHeight);
 });
+
+test('dashboard focus dwell reveals at exactly 2000ms with identical rectangles', async ({page}) => {
+  await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
+  await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+  await page.evaluate(() => enhanceDashboardPagination());
+  const geometry = () => page.evaluate(() => ({
+    boxes: [...document.querySelectorAll('.hgh-vpg, .hgh-vpg *')].map(node => node.getBoundingClientRect().toJSON()),
+    height: document.documentElement.scrollHeight,
+  }));
+  const before = await geometry();
+  await page.locator('.hgh-vpg-prev').focus();
+  await page.clock.runFor(1999);
+  await expect(page.locator('.hgh-vpg')).not.toHaveAttribute('data-hgh-vpg-revealed');
+  await page.clock.runFor(1);
+  await expect(page.locator('.hgh-vpg')).toHaveAttribute('data-hgh-vpg-revealed', 'true');
+  expect(await geometry()).toEqual(before);
+});
+
+test('compact dashboard pager exposes only Previous and Next to keyboard users', async ({page}) => {
+  await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
+  await page.evaluate(() => enhanceDashboardPagination());
+  const stops = await page.locator('.hgh-vpg').evaluate(nav => [...nav.querySelectorAll('a,button')].filter(node => node.tabIndex >= 0 && !node.closest('[inert]')).map(node => node.className));
+  expect(stops).toHaveLength(2);
+  expect(stops[0]).toContain('hgh-vpg-prev');
+  expect(stops[1]).toContain('hgh-vpg-next');
+});
+
+test('native filtered count suppresses First and Last when Previous and Next already reach them', async ({page}) => {
+  await prepare(page, dashboardHtml({page: 2, finalPage: 3}));
+  await page.evaluate(() => {
+    window.config = {pageData: {dashboardRepoList: {searchLimit: 15}}};
+    document.querySelector('.repos-search').innerHTML = '<div class="repos-filter"><a class="active item">Sources<div class="ui label">45</div></a></div>';
+    sessionStorage.setItem('hgh.pagination.v1.revealed', 'true');
+    enhanceDashboardPagination();
+  });
+  await expect(page.locator('.hgh-vpg-first')).toBeHidden();
+  await expect(page.locator('.hgh-vpg-last')).toBeHidden();
+  await expect(page.locator('.hgh-vpg-prev')).toBeVisible();
+  await expect(page.locator('.hgh-vpg-next')).toBeVisible();
+  const stops = await page.locator('.hgh-vpg').evaluate(nav => [...nav.querySelectorAll('a')].filter(node => node.tabIndex >= 0 && !node.closest('[inert]')).map(node => node.className));
+  expect(stops).toHaveLength(2);
+  await page.evaluate(() => restoreDashboardPagination());
+  await expect(page.locator('.pagination > a.navigation')).toHaveCount(4);
+});
+
+test('native count updates refresh Last on the same revealed pager', async ({page}) => {
+  await prepare(page, dashboardHtml({page: 2, finalPage: 6}));
+  await page.evaluate(() => {
+    window.config = {pageData: {dashboardRepoList: {searchLimit: 15}}};
+    document.querySelector('.repos-search').innerHTML = '<div class="repos-filter"><a class="active item">Sources<div class="ui label">45</div></a></div>';
+    sessionStorage.setItem('hgh.pagination.v1.revealed', 'true');
+    enhanceDashboardPagination();
+    window.retainedPager = document.querySelector('.hgh-vpg');
+  });
+  const last = page.locator('.hgh-vpg-last');
+  await expect(last).toBeHidden();
+  await page.locator('.repos-filter .label').evaluate(label => { label.firstChild.data = '90'; });
+  await expect(last).toBeVisible();
+  await expect(last).toHaveJSProperty('inert', false);
+  await last.focus();
+  await expect(last).toBeFocused();
+  await page.locator('.repos-filter .label').evaluate(label => { label.textContent = '45'; });
+  await expect(last).toBeHidden();
+  await expect(last).toHaveJSProperty('inert', true);
+  expect(await page.evaluate(() => document.querySelector('.hgh-vpg') === window.retainedPager)).toBe(true);
+});
+
+for (const appearance of appearances) {
+  test(`dashboard pager proof ${appearance.scheme} ${appearance.motion}`, async ({page}, testInfo) => {
+    await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
+    await applyAppearance(page, appearance);
+    await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+    await page.evaluate(() => enhanceDashboardPagination());
+    const geometry = () => page.evaluate(() => ({
+      boxes: [...document.querySelectorAll('.hgh-vpg, .hgh-vpg *')].map(node => node.getBoundingClientRect().toJSON()),
+      height: document.documentElement.scrollHeight,
+    }));
+    const before = await geometry();
+    await captureProof(page, testInfo, 'compact');
+    await page.locator('.hgh-vpg-prev').focus();
+    await page.clock.runFor(1999);
+    await expect(page.locator('.hgh-vpg')).not.toHaveAttribute('data-hgh-vpg-revealed');
+    await page.clock.runFor(1);
+    await expect(page.locator('.hgh-vpg')).toHaveAttribute('data-hgh-vpg-revealed', 'true');
+    expect(await geometry()).toEqual(before);
+    await expect(page.locator('.hgh-vpg-first')).toHaveCSS('opacity', '1');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await captureProof(page, testInfo, 'revealed');
+  });
+}
+
+for (const first of ['focus', 'pointer']) {
+  test(`mixed ${first}-first dwell continues while either input remains in dashboard pager`, async ({page}) => {
+    await prepare(page, dashboardHtml({page: 6, finalPage: 90}));
+    await page.clock.install({time: new Date('2026-10-01T12:00:00Z')});
+    await page.clock.pauseAt(new Date('2026-10-01T12:00:01Z'));
+    await page.evaluate(() => enhanceDashboardPagination());
+    if (first === 'focus') await page.locator('.hgh-vpg-prev').focus();
+    else await page.hover('.hgh-vpg');
+    await page.clock.runFor(1000);
+    if (first === 'focus') await page.hover('.hgh-vpg');
+    else await page.locator('.hgh-vpg-prev').focus();
+    await page.clock.runFor(500);
+    if (first === 'focus') await page.locator('.hgh-vpg-prev').evaluate(node => node.blur());
+    else await page.mouse.move(0, 0);
+    await page.clock.runFor(499);
+    await expect(page.locator('.hgh-vpg')).not.toHaveAttribute('data-hgh-vpg-revealed');
+    await page.clock.runFor(1);
+    await expect(page.locator('.hgh-vpg')).toHaveAttribute('data-hgh-vpg-revealed', 'true');
+  });
+}
