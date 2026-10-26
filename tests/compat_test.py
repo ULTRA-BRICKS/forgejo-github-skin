@@ -6,6 +6,7 @@ def load(name,file):
  module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); return module
 installer=load('installer','install.py')
 check_compat=load('check_compat','check-compat.py')
+compat=load('compat','_compat.py')
 MANIFEST=json.loads((ROOT/'skin.manifest.json').read_text())
 CONTRACT_FILES={'templates/base/head.tmpl':b'head','templates/repo/home.tmpl':b'home'}
 
@@ -33,7 +34,22 @@ class RepoMetadataTests(unittest.TestCase):
   files=[set(json.loads((ROOT/MANIFEST['sourceAudits'][v]).read_text())['sha256']) for v in order]
   for older,newer,version in zip(files,files[1:],order[1:]): self.assertLessEqual(older,newer,version)
  def test_unaudited_version_still_rejected(self):
-  with self.assertRaises(ValueError): installer.check_version('99.0.0',MANIFEST)
+  for version in ('99.0.0','16.0.6.1'):
+   with self.subTest(version=version), self.assertRaises(ValueError): installer.check_version(version,MANIFEST)
+ def test_gate_accepts_every_tested_version_against_its_own_audit(self):
+  for version in MANIFEST['testedForgejo']:
+   for requested in (version,f'v{version}+gitea-1.22.0'):
+    with self.subTest(requested=requested):
+     tested=compat.require_tested_version(requested,MANIFEST)
+     audit=json.loads((ROOT/MANIFEST['sourceAudits'][tested]).read_text())
+     self.assertEqual(compat.audit_fingerprints(audit,tested),audit['sha256'])
+ def test_gate_rejects_an_audit_borrowed_from_another_tested_version(self):
+  for version in MANIFEST['testedForgejo']:
+   for other in MANIFEST['testedForgejo']:
+    if other==version: continue
+    audit=json.loads((ROOT/MANIFEST['sourceAudits'][other]).read_text())
+    with self.subTest(version=version,audit_of=other), self.assertRaisesRegex(ValueError,re.escape(f'audit is for version {other}, not {version}')):
+     compat.audit_fingerprints(audit,version)
 
 class CheckCompatTests(unittest.TestCase):
  def setUp(self):
@@ -71,5 +87,27 @@ class CheckCompatTests(unittest.TestCase):
  def test_unparseable_audit_rejected(self):
   (self.root/'research/a.json').write_text('{not json')
   code,_,_=self.run_check(); self.assertEqual(code,2)
+ def test_audit_that_is_not_an_object_rejected(self):
+  for bad in ([],'abc',None):
+   with self.subTest(audit=bad):
+    self.write_audit(bad); code,out,err=self.run_check(); self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('audit is not a JSON object',err)
+ def test_audit_with_empty_fingerprint_map_rejected(self):
+  self.write_audit({'version':'9.9.9','sha256':{}})
+  code,out,err=self.run_check(); self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('no source fingerprints',err)
+ def test_audit_with_non_map_fingerprints_rejected(self):
+  for bad in (None,[],['templates/base/head.tmpl'],'abc',7):
+   with self.subTest(sha256=bad):
+    self.write_audit({'version':'9.9.9','sha256':bad})
+    code,out,err=self.run_check(); self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('no source fingerprints',err)
+ def test_audit_for_another_version_rejected(self):
+  self.write_audit({'version':'9.9.8','sha256':{name:sha(data) for name,data in CONTRACT_FILES.items()}})
+  code,out,err=self.run_check(); self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('audit is for version 9.9.8, not 9.9.9',err)
+ def test_audit_without_version_rejected(self):
+  self.write_audit({'sha256':{name:sha(data) for name,data in CONTRACT_FILES.items()}})
+  code,out,err=self.run_check(); self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('audit is for version',err)
+ def test_build_metadata_and_v_prefix_select_the_same_audit(self):
+  for version in ('9.9.9+gitea-1.22.0','v9.9.9'):
+   with self.subTest(version=version):
+    code,out,_=self.run_check(version); self.assertEqual(code,0); self.assertIn('2 source fingerprints',out)
 
 if __name__=='__main__': unittest.main()

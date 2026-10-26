@@ -18,3 +18,15 @@ def require_tested_version(version: str, manifest: dict) -> str:
             'Run source audit and browser QA first.'
         )
     return clean
+
+
+def audit_fingerprints(audit: object, version: str) -> dict:
+    """Return the audit's sha256 map, failing closed on a malformed audit or one for another version."""
+    if not isinstance(audit, dict):
+        raise ValueError('audit is not a JSON object')
+    if audit.get('version') != version:
+        raise ValueError(f'audit is for version {audit.get("version")}, not {version}')
+    fingerprints = audit.get('sha256')
+    if not isinstance(fingerprints, dict) or not fingerprints:
+        raise ValueError('audit has no source fingerprints')
+    return fingerprints

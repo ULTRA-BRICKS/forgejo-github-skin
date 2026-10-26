@@ -2,7 +2,7 @@
 """Fail closed when an upstream version or a consumed template contract changes."""
 import argparse, hashlib, json
 from pathlib import Path
-from _compat import require_tested_version
+from _compat import audit_fingerprints, require_tested_version
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,13 +16,14 @@ def main() -> int:
         manifest = json.loads((ROOT / 'skin.manifest.json').read_text())
         version = require_tested_version(args.version, manifest)
         audit = json.loads((ROOT / manifest.get('sourceAudits', {}).get(version, 'research/source-audit.json')).read_text())
+        fingerprints = audit_fingerprints(audit, version)
         errors = []
-        for name, expected in audit['sha256'].items():
+        for name, expected in fingerprints.items():
             file = args.source_checkout / name
             if not file.is_file(): errors.append(f'missing: {name}')
             elif hashlib.sha256(file.read_bytes()).hexdigest() != expected: errors.append(f'changed: {name}')
         if errors: raise ValueError('source contracts changed\n' + '\n'.join(errors))
-        print(f'PASS: {len(audit["sha256"])} source fingerprints match reviewed {version}; runtime smoke QA remains required.')
+        print(f'PASS: {len(fingerprints)} source fingerprints match reviewed {version}; runtime smoke QA remains required.')
         return 0
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as error:
         parser.exit(2, f'BLOCKED: {error}\n')
