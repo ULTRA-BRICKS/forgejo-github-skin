@@ -1,0 +1,19 @@
+{
+  "version": "16.0.6",
+  "tag": "v16.0.6",
+  "commit": "1aa13944143b3bc4312607239a68da23512d5ce3",
+  "source": "https://codeberg.org/forgejo/forgejo",
+  "method": "git fetch --depth 1 origin tag v16.0.6 from the source URL; commit resolved by git rev-parse v16.0.6^{commit} and matched to git ls-remote --tags; sha256 of each file at that commit",
+  "note": "All 8 fingerprints shared with research/source-audit-16.0.5.json are byte-identical at v16.0.6; templates/user/dashboard/feeds.tmpl (consumed by the organization dashboard fixtures) is additionally fingerprinted and equals its v16.0.5 content.",
+  "sha256": {
+    "templates/base/head.tmpl": "8e07e0386982edda39b6d69facf5fab8ab02d369d9ae4aa3a4af86115ef08e7b",
+    "templates/base/footer.tmpl": "99484944d0954677be3cd85db438e281430006909b9a8475dd462f9333b7f26f",
+    "templates/base/head_style.tmpl": "3afb35a7726a20d67d5c3e2e0f619b87869b67922c472448332bde5e3ab74b5c",
+    "templates/repo/header.tmpl": "73824a08a6c285cf661a1598d8242181ff0026367b4da0094f5beccb81dbb28d",
+    "templates/repo/home.tmpl": "4e1fc52c3ae36975309aa5ee7744f6ea552be1e16db91f09e8324ebea33a3e7e",
+    "templates/repo/view_file.tmpl": "e2a59d99fab215d2a1b94def6b97380ff220c6aef7789d939ef372fbf2cd9af1",
+    "templates/repo/branch_dropdown.tmpl": "0d3a657b58fa06b24c459854d60cc49bf9a85b7fe0f167236321748d1c93cf41",
+    "web_src/css/themes/theme-forgejo-light.css": "d554a2a29640ec4309d660c52838e4a94d9fe68b3e90634c04724679e1fac878",
+    "templates/user/dashboard/feeds.tmpl": "56b1bbb67070ac899c037d460440458f83729c19d6a7f72237e6e5c17edb3604"
+  }
+}

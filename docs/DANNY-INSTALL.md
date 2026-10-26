@@ -27,7 +27,7 @@ Resolve the full reviewed SHA from the merged PR before deployment; do not use a
 
 ## 2. Verify the actual running Forgejo version
 
-The 0.1.1 package includes source audits for 16.0.3 and 16.0.5. The live demo uses **16.0.5**. Supporting the older UI contract is not a recommendation to expose an older security release. Do not upgrade production as an incidental part of this theme installation.
+The 0.1.1 package includes source audits for 16.0.3, 16.0.5 and 16.0.6. The live demo uses **16.0.5**. Supporting the older UI contract is not a recommendation to expose an older security release. Do not upgrade production as an incidental part of this theme installation.
 
 ```sh
 forgejo --version

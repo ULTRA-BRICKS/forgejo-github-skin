@@ -5,7 +5,8 @@
   "manifestFormat": "hyperide-skin-manifest-1 (project-specific, NOT a DTCG extension standard)",
   "testedForgejo": [
     "16.0.3",
-    "16.0.5"
+    "16.0.5",
+    "16.0.6"
   ],
   "compatibilityMeaning": "Exact-version source audit, isolated asset/template loading and synthetic browser contracts; NOT full authenticated workflow parity certification.",
   "themes": [
@@ -28,6 +29,7 @@
   "permissions": "Existing server-generated links and forms only; no mutation API client.",
   "sourceAudits": {
     "16.0.3": "research/source-audit.json",
-    "16.0.5": "research/source-audit-16.0.5.json"
+    "16.0.5": "research/source-audit-16.0.5.json",
+    "16.0.6": "research/source-audit-16.0.6.json"
   }
 }
