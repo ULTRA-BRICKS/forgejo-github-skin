@@ -81,8 +81,14 @@ A shortcut may activate only an existing same-origin link or existing native For
 ## Native focus and interruption regression coverage
 
 The skin cancels a pending `G` sequence on Escape, editable/modal focus, composition,
-modified or already-handled keys, repeated keys, hash/history navigation and native
-HTMX swaps. Modified `?` is not a help command. Escape does not override composition,
+modified or already-handled keys, repeated keys, hash/history navigation, native
+HTMX swaps and any pointer press (mouse, touch or pen). The press is observed in the
+capture phase only, so the native control it hits keeps its handler, default action
+and focus; this matters for a native file-line click, which only calls
+`history.pushState` and fires neither `hashchange` nor `popstate`. Keyboard-activated
+controls already end the sequence through their own key.
+
+Modified `?` is not a help command. Escape does not override composition,
 an event already handled before capture or a native modal, including a modal opened
 inside an inert wrapper. Native input Escape handlers run before the skin's dismissal
 fallback; closing an inner filter keeps the outer disclosure open. Deferred focus

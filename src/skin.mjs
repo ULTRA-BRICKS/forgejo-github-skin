@@ -481,6 +481,9 @@ function boot() {
   window.addEventListener('hashchange', clearSequence);
   window.addEventListener('popstate', clearSequence);
   document.addEventListener('htmx:beforeSwap', clearSequence);
+  // Native file-line clicks only call history.pushState, which fires neither hashchange nor popstate; the press itself ends the prefix.
+  // Capture and observe only, so native handlers, defaults and focus are untouched.
+  document.addEventListener('pointerdown', clearSequence, true);
 
   document.addEventListener('keydown', (event) => {
     if (!enabled() || event.defaultPrevented || event.key !== 'Escape' || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
