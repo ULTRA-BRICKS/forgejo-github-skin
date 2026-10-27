@@ -1,4 +1,4 @@
-import contextlib, hashlib, importlib.util, io, json, pathlib, re, sys, tempfile, unittest
+import builtins, contextlib, hashlib, importlib.util, io, json, os, pathlib, re, sys, tempfile, unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 def load(name,file):
@@ -51,7 +51,7 @@ class RepoMetadataTests(unittest.TestCase):
     with self.subTest(version=version,audit_of=other), self.assertRaisesRegex(ValueError,re.escape(f'audit is for version {other}, not {version}')):
      compat.audit_fingerprints(audit,version)
 
-class CheckCompatTests(unittest.TestCase):
+class CheckCompatCase(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
   self.root=pathlib.Path(self.tmp.name)/'skin'; (self.root/'research').mkdir(parents=True)
@@ -71,6 +71,8 @@ class CheckCompatTests(unittest.TestCase):
     except SystemExit as exit: code=exit.code
   finally: check_compat.ROOT=original; sys.argv=argv
   return code,out.getvalue(),err.getvalue()
+
+class CheckCompatTests(CheckCompatCase):
  def test_matching_source_passes(self):
   code,out,_=self.run_check(); self.assertEqual(code,0); self.assertIn('2 source fingerprints',out)
  def test_changed_template_rejected(self):
@@ -127,5 +129,92 @@ class CheckCompatTests(unittest.TestCase):
   for version in ('9.9.9+gitea-1.22.0','v9.9.9'):
    with self.subTest(version=version):
     code,out,_=self.run_check(version); self.assertEqual(code,0); self.assertIn('2 source fingerprints',out)
+
+class Outside:
+ """Records any file object or descriptor opened on the identity of a file that lives outside the checkout."""
+ def __init__(self,*paths): self.identities={(s.st_dev,s.st_ino) for s in (pathlib.Path(p).stat() for p in paths)}; self.opened=[]
+ def note(self,fd):
+  try: st=os.fstat(fd)
+  except OSError: return
+  if (st.st_dev,st.st_ino) in self.identities: self.opened.append(fd)
+ def __enter__(self):
+  real_os_open,real_open=os.open,io.open; seen=self
+  def os_open(*args,**kwargs):
+   fd=real_os_open(*args,**kwargs); seen.note(fd); return fd
+  def open_file(*args,**kwargs):
+   handle=real_open(*args,**kwargs)
+   try: seen.note(handle.fileno())
+   except (OSError,ValueError,io.UnsupportedOperation): pass
+   return handle
+  self.restore=(os.open,io.open,builtins.open,os.supports_dir_fd); os.open,io.open,builtins.open=os_open,open_file,open_file
+  os.supports_dir_fd=os.supports_dir_fd|{os_open}  # the wrapper stands in for os.open, which supports dir_fd
+  return self
+ def __exit__(self,*exc): os.open,io.open,builtins.open,os.supports_dir_fd=self.restore
+
+class SymlinkEscapeTests(CheckCompatCase):
+ """Audit keys must name real regular files inside --source-checkout; a link anywhere in the path is refused unread."""
+ def audit_with(self,key,data=b'outside'):
+  self.write_audit({'version':'9.9.9','sha256':{**{name:sha(contents) for name,contents in CONTRACT_FILES.items()},key:sha(data)}})
+ def outside_dir(self):
+  outside=pathlib.Path(self.tmp.name)/'outside'; outside.mkdir(); (outside/'secret.tmpl').write_bytes(b'outside'); return outside
+ def assert_refused(self,key,outside=None):
+  with Outside(*([outside] if outside else [])) as seen: code,out,err=self.run_check()
+  self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn(f'unsafe: {key}',err); self.assertEqual(seen.opened,[])
+  self.assertLess(len(err),600)
+ def test_file_symlink_to_outside_file_refused_unread(self):
+  outside=self.outside_dir()/'secret.tmpl'; (self.checkout/'templates/home.tmpl').symlink_to(outside)
+  self.audit_with('templates/home.tmpl'); self.assert_refused('templates/home.tmpl',outside)
+ def test_directory_symlink_to_outside_directory_refused_unread(self):
+  outside=self.outside_dir(); (self.checkout/'link').symlink_to(outside,target_is_directory=True)
+  self.audit_with('link/secret.tmpl'); self.assert_refused('link/secret.tmpl',outside/'secret.tmpl')
+ def test_nested_parent_directory_symlink_refused_unread(self):
+  outside=self.outside_dir(); (self.checkout/'templates/sub').symlink_to(outside,target_is_directory=True)
+  self.audit_with('templates/sub/secret.tmpl'); self.assert_refused('templates/sub/secret.tmpl',outside/'secret.tmpl')
+ def test_relative_link_climbing_out_refused_unread(self):
+  outside=self.outside_dir(); (self.checkout/'templates/up').symlink_to('../../outside/secret.tmpl')
+  self.audit_with('templates/up'); self.assert_refused('templates/up',outside/'secret.tmpl')
+ def test_symlink_inside_checkout_is_refused_too(self):
+  (self.checkout/'templates/alias.tmpl').symlink_to('base/head.tmpl')
+  self.audit_with('templates/alias.tmpl',CONTRACT_FILES['templates/base/head.tmpl']); self.assert_refused('templates/alias.tmpl')
+ def test_dangling_symlink_refused_with_bounded_error(self):
+  (self.checkout/'templates/gone.tmpl').symlink_to(pathlib.Path(self.tmp.name)/'does-not-exist')
+  self.audit_with('templates/gone.tmpl'); self.assert_refused('templates/gone.tmpl')
+ def test_symlink_loops_refused_with_bounded_error(self):
+  (self.checkout/'a').symlink_to('b'); (self.checkout/'b').symlink_to('a'); (self.checkout/'loop').symlink_to('loop',target_is_directory=True)
+  for key in ('a','b','loop','loop/x.tmpl'):
+   with self.subTest(key=key): self.audit_with(key); self.assert_refused(key)
+ def test_directory_as_key_refused(self):
+  self.audit_with('templates/base'); self.assert_refused('templates/base')
+ def test_special_file_refused_without_blocking(self):
+  import subprocess
+  os.mkfifo(self.checkout/'templates/pipe.tmpl'); self.audit_with('templates/pipe.tmpl')
+  (self.root/'scripts').mkdir(); (self.root/'scripts/check-compat.py').write_bytes((ROOT/'scripts/check-compat.py').read_bytes()); (self.root/'scripts/_compat.py').write_bytes((ROOT/'scripts/_compat.py').read_bytes())
+  run=subprocess.run([sys.executable,str(self.root/'scripts/check-compat.py'),'--source-checkout',str(self.checkout),'--version','9.9.9'],capture_output=True,text=True,stdin=subprocess.DEVNULL,timeout=20)
+  self.assertEqual(run.returncode,2); self.assertNotIn('PASS',run.stdout); self.assertIn('unsafe: templates/pipe.tmpl',run.stderr)
+ def test_symlink_to_special_file_outside_refused_without_blocking(self):
+  outside=pathlib.Path(self.tmp.name)/'outside.pipe'; os.mkfifo(outside); (self.checkout/'templates/pipe.tmpl').symlink_to(outside)
+  self.audit_with('templates/pipe.tmpl'); self.assert_refused('templates/pipe.tmpl',outside)
+ def test_real_cli_exits_2_without_pass_on_file_and_directory_symlinks(self):
+  import subprocess
+  outside=self.outside_dir(); (self.checkout/'templates/home.tmpl').symlink_to(outside/'secret.tmpl'); (self.checkout/'link').symlink_to(outside,target_is_directory=True)
+  (self.root/'scripts').mkdir(); (self.root/'scripts/check-compat.py').write_bytes((ROOT/'scripts/check-compat.py').read_bytes()); (self.root/'scripts/_compat.py').write_bytes((ROOT/'scripts/_compat.py').read_bytes())
+  for key in ('templates/home.tmpl','link/secret.tmpl'):
+   with self.subTest(key=key):
+    self.audit_with(key)
+    run=subprocess.run([sys.executable,str(self.root/'scripts/check-compat.py'),'--source-checkout',str(self.checkout),'--version','9.9.9'],capture_output=True,text=True,stdin=subprocess.DEVNULL,timeout=20)
+    self.assertEqual(run.returncode,2); self.assertNotIn('PASS',run.stdout); self.assertIn(f'unsafe: {key}',run.stderr)
+ def test_keys_containing_dots_are_hashed_and_accepted(self):
+  keys={'templates/a..b.tmpl':b'one','templates/.hidden.tmpl':b'two','templates/.../x.tmpl':b'three','templates/v1.0.3/y..tmpl':b'four'}
+  for key,data in keys.items(): (self.checkout/key).parent.mkdir(parents=True,exist_ok=True); (self.checkout/key).write_bytes(data)
+  self.write_audit({'version':'9.9.9','sha256':{**{name:sha(contents) for name,contents in CONTRACT_FILES.items()},**{key:sha(data) for key,data in keys.items()}}})
+  code,out,err=self.run_check(); self.assertEqual((code,err),(0,'')); self.assertIn('6 source fingerprints',out)
+ def test_checkout_path_itself_may_be_a_symlink(self):
+  real=self.checkout; link=pathlib.Path(self.tmp.name)/'upstream-link'; link.symlink_to(real,target_is_directory=True); self.checkout=link
+  code,out,_=self.run_check(); self.assertEqual(code,0); self.assertIn('2 source fingerprints',out)
+ def test_platform_without_descriptor_relative_open_fails_closed(self):
+  real=os.supports_dir_fd; os.supports_dir_fd=set()
+  try: code,out,err=self.run_check()
+  finally: os.supports_dir_fd=real
+  self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('descriptor-relative',err)
 
 if __name__=='__main__': unittest.main()

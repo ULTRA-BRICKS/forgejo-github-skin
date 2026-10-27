@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Fail closed when an upstream version or a consumed template contract changes."""
-import argparse, hashlib, json
+import argparse, json
 from pathlib import Path
-from _compat import audit_fingerprints, require_tested_version
+from _compat import UnsafeSourcePath, audit_fingerprints, require_tested_version, sha256_in_checkout
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,9 +19,10 @@ def main() -> int:
         fingerprints = audit_fingerprints(audit, version)
         errors = []
         for name, expected in fingerprints.items():
-            file = args.source_checkout / name
-            if not file.is_file(): errors.append(f'missing: {name}')
-            elif hashlib.sha256(file.read_bytes()).hexdigest() != expected: errors.append(f'changed: {name}')
+            try:
+                if sha256_in_checkout(args.source_checkout, name) != expected: errors.append(f'changed: {name}')
+            except FileNotFoundError: errors.append(f'missing: {name}')
+            except UnsafeSourcePath: errors.append(f'unsafe: {name} (a symlink or non-regular file; keys must be regular files inside the source checkout)')
         if errors: raise ValueError('source contracts changed\n' + '\n'.join(errors))
         print(f'PASS: {len(fingerprints)} source fingerprints match reviewed {version}; runtime smoke QA remains required.')
         return 0

@@ -29,6 +29,7 @@ const selfParameterizedSuites = [
   'universal-search-stream.spec.mjs',
   'search-scope-resize.spec.mjs',
   'universal-search-coverage.spec.mjs',
+  'pagination-accessible-names.spec.mjs',
 ];
 
 export default defineConfig({

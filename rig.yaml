@@ -14,3 +14,14 @@ ci:
     secret-scan:
       enabled: true
       tier: block
+
+# Complexity gate (`rig lint check`, machine-wide since rig #775). dist/public/assets/hypergithub/<version>/ holds
+# byte-identical release copies of src/*.mjs, and every release adds a new copy of functions that already exceeded the
+# default limits (cognitive 15, cyclomatic 20) before the gate existed; refactoring them is not part of a release.
+# The limits below are the current worst case of those shipped functions (boot in skin.mjs: cognitive 66, cyclomatic 69),
+# so the gate still rejects any function more complex than what already ships. The line-count check keeps its defaults.
+lint_checks:
+  complexity:
+    enabled: true
+    max_cognitive: 66
+    max_cyclomatic: 69

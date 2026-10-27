@@ -1,6 +1,6 @@
-/* Generated from DTCG tokens.json. Skin 0.3.8; Forgejo base theme keeps syntax styles. */
+/* Generated from DTCG tokens.json. Skin 0.3.9; Forgejo base theme keeps syntax styles. */
 @import url("./theme-forgejo-dark.css");
-@import url("../hypergithub/0.3.8/skin.css");
+@import url("../hypergithub/0.3.9/skin.css");
 :root {
   --hgh-space-s2: 2px;
   --hgh-space-s4: 4px;

@@ -36,7 +36,7 @@ python3 scripts/check-compat.py \
   --version 16.0.5
 ```
 
-The source checkout must match the actual binary release. A failed fingerprint check is a stop condition, not something to bypass. Restart and smoke-test on each supported update.
+The source checkout must match the actual binary release. A failed fingerprint check is a stop condition, not something to bypass. The check reads each audited file as a regular file inside the checkout and refuses (exit 2, `unsafe:`) any symlink on the path, so use a real checkout rather than one assembled from links; the checkout directory itself may be a symlink. Restart and smoke-test on each supported update.
 
 ## 3. Back up configuration privately, then run the installer
 

@@ -1,4 +1,5 @@
 import '../src/pagination.css';
+import cachedTheme037 from '../dist/public/assets/hypergithub/0.3.7/pagination.css?raw';
 import {enhancePagination, restorePagination} from '../src/pagination.mjs';
 import {REVEALED_KEY, HABIT_KEY} from '../src/pagination-model.mjs';
 
@@ -178,4 +179,18 @@ export const Mobile320RevealedNames = {
     root.style.boxSizing = 'border-box';
     return root;
   },
+};
+
+export const Mobile320RevealedNamesCachedTheme = {
+  name: 'Mobile 320px, revealed, returning visitor: the cached 0.3.7 stylesheet is loaded before this release and First/Last keep their names',
+  // A returning visitor's browser can still hold the 0.3.7 theme stylesheet (display:none on the edge label) while the current
+  // release stylesheet is appended after it. The immutable 0.3.7 pagination.css goes first in <head>, in upgrade order.
+  beforeEach: () => {
+    const cached = document.createElement('style');
+    cached.dataset.hghCachedReleaseTheme = '';
+    cached.textContent = cachedTheme037;
+    document.head.prepend(cached);
+    return () => cached.remove();
+  },
+  render: Mobile320RevealedNames.render,
 };

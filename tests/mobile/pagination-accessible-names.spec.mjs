@@ -10,6 +10,9 @@ import {applyAppearance} from './organization-proof.mjs';
 const model = await fs.readFile(new URL('../../src/pagination-model.mjs', import.meta.url), 'utf8');
 const enhancer = await fs.readFile(new URL('../../src/pagination.mjs', import.meta.url), 'utf8');
 const css = await fs.readFile(new URL('../../src/pagination.css', import.meta.url), 'utf8');
+// The 0.3.7 stylesheet is immutable release history. A returning visitor's browser can still hold it as the page's own theme
+// stylesheet while skin.mjs appends the current release stylesheet after it, so both are loaded in that order.
+const cached037 = await fs.readFile(new URL('../../dist/public/assets/hypergithub/0.3.7/pagination.css', import.meta.url), 'utf8');
 const inlineModule = model.replaceAll('export ', '') + '\n' + enhancer.replace(/^import.*$/mg, '').replaceAll('export ', '');
 
 const LABELS = {
@@ -42,18 +45,20 @@ function nativePagination({current, total, lang = 'en', edgeAriaLabels = {}, mer
 let server, base;
 test.beforeAll(async () => {
   server = http.createServer((req, res) => {
-    const body = Buffer.from(new URL(req.url, 'http://x').searchParams.get('b') || '', 'base64').toString('utf8');
-    const lang = new URL(req.url, 'http://x').searchParams.get('l') || 'en';
+    const query = new URL(req.url, 'http://x').searchParams;
+    const body = Buffer.from(query.get('b') || '', 'base64').toString('utf8');
+    const lang = query.get('l') || 'en';
+    const sheets = (query.get('cached') === '0.3.7' ? `<style>${cached037}</style>` : '') + `<style>${css}</style>`;
     res.setHeader('Content-Type', 'text/html');
-    res.end(`<!doctype html><html lang="${lang}"><head><meta charset="utf8"><style>${css}</style></head><body>${body}<script>${inlineModule}</script></body></html>`);
+    res.end(`<!doctype html><html lang="${lang}"><head><meta charset="utf8">${sheets}</head><body>${body}<script>${inlineModule}</script></body></html>`);
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
 test.afterAll(async () => { await new Promise((resolve) => server.close(resolve)); });
 
-async function open(page, html, lang = 'en') {
-  await page.goto(`${base}/?l=${lang}&b=${encodeURIComponent(Buffer.from(html, 'utf8').toString('base64'))}`);
+async function open(page, html, lang = 'en', cached = '') {
+  await page.goto(`${base}/?l=${lang}&cached=${cached}&b=${encodeURIComponent(Buffer.from(html, 'utf8').toString('base64'))}`);
 }
 
 /** Chromium's computed accessibility node (role, name, ignored) for the element matching `selector`. */
@@ -74,9 +79,9 @@ const FIRST = '.hgh-pg-wing-left a.hgh-pg-edge';
 const LAST = '.hgh-pg-wing-right a.hgh-pg-edge';
 
 /** Opens the production enhancer on `html` at `width` with a paused fake clock, so dwell time advances only through runFor. */
-async function enhanced(page, {width, html, lang = 'en', scheme = 'light'}) {
+async function enhanced(page, {width, html, lang = 'en', scheme = 'light', cached = ''}) {
   await page.setViewportSize({width, height: 900});
-  await open(page, html, lang);
+  await open(page, html, lang, cached);
   await applyAppearance(page, {scheme, motion: 'no-preference'});
   await page.clock.install({time: 0});
   await page.clock.pauseAt(100);
@@ -95,17 +100,21 @@ async function dwell(page) {
   await expect(page.locator('.hgh-pagination[data-hgh-pg-revealed]')).toHaveCount(1);
 }
 
-const scenarios = [
+const markups = [
   {title: 'merged (page 1 / last page folded into the edge link)', markup: {current: 6, total: 90}},
   {title: 'unmerged (edge link carries only its native label)', markup: {current: 6, total: 90, mergeable: false}},
 ];
+const scenarios = [
+  ...markups.map((m) => ({...m, cached: '', widths: [320, 360, 390, 440]})),
+  ...markups.map((m) => ({...m, title: `${m.title} with the cached 0.3.7 stylesheet loaded before the current one`, cached: '0.3.7', widths: [320, 440]})),
+];
 
-for (const {title, markup} of scenarios) {
-  for (const width of [320, 360, 390, 440]) {
+for (const {title, markup, cached, widths} of scenarios) {
+  for (const width of widths) {
     for (const scheme of ['light', 'dark']) {
       test(`${title} ${width}px ${scheme}: revealed First/Last expose computed accessible names, hidden ones stay inert, nothing moves`, async ({page, browserName}) => {
         test.skip(browserName !== 'chromium', 'computed accessibility tree is read over the Chromium DevTools protocol');
-        const cdp = await enhanced(page, {width, html: nativePagination(markup), scheme});
+        const cdp = await enhanced(page, {width, html: nativePagination(markup), scheme, cached});
         await expect(page.locator('.hgh-pagination[data-hgh-pg-wrap]')).toHaveCount(1);
 
         // Before the reveal the edge links are not in the accessibility tree, not focusable, not hit-testable.
@@ -178,30 +187,55 @@ test('native localized labels name the links (Russian) and a pre-existing aria-l
   await expect(page.locator(FIRST)).not.toHaveAttribute('aria-label', /.*/);
 });
 
-test('restorePagination returns the native First/Last anchors byte-for-byte, labels included', async ({page}) => {
-  await page.setViewportSize({width: 320, height: 900});
-  await open(page, nativePagination({current: 6, total: 90}));
-  const original = await page.locator('.pagination.menu').evaluate((el) => el.outerHTML);
-  await page.clock.install();
-  await page.evaluate(() => enhancePagination());
-  await page.hover('.hgh-pagination');
-  await page.clock.runFor(2000);
-  await page.evaluate(() => restorePagination());
-  await expect(page.locator('.hgh-pagination')).toHaveCount(0);
-  expect(await page.locator('.pagination.menu').evaluate((el) => el.outerHTML)).toBe(original);
-  expect(await page.locator('.pagination.menu').evaluate((el) => el.hidden)).toBe(false);
+for (const cached of ['', '0.3.7']) {
+  test(`restorePagination returns the native First/Last anchors byte-for-byte, labels included${cached ? ' (cached 0.3.7 stylesheet loaded before the current one)' : ''}`, async ({page}) => {
+    await page.setViewportSize({width: 320, height: 900});
+    await open(page, nativePagination({current: 6, total: 90}), 'en', cached);
+    const original = await page.locator('.pagination.menu').evaluate((el) => el.outerHTML);
+    await page.clock.install();
+    await page.evaluate(() => enhancePagination());
+    await page.hover('.hgh-pagination');
+    await page.clock.runFor(2000);
+    await page.evaluate(() => restorePagination());
+    await expect(page.locator('.hgh-pagination')).toHaveCount(0);
+    expect(await page.locator('.pagination.menu').evaluate((el) => el.outerHTML)).toBe(original);
+    expect(await page.locator('.pagination.menu').evaluate((el) => el.hidden)).toBe(false);
+  });
+}
+
+test('the cached 0.3.7 stylesheet changes no geometry, inert state or accessible name compared with a fresh load', async ({browser, browserName}) => {
+  test.skip(browserName !== 'chromium', 'computed accessibility tree is read over the Chromium DevTools protocol');
+  const observe = async (width, cached) => {
+    const context = await browser.newContext();
+    const tab = await context.newPage();
+    const cdp = await enhanced(tab, {width, html: nativePagination({current: 6, total: 90}), cached});
+    const hidden = {first: (await axNode(cdp, FIRST)).ignored, last: (await axNode(cdp, LAST)).ignored, inert: await tab.locator('.hgh-pg-wing-items').first().getAttribute('inert'), before: await rects(tab)};
+    await dwell(tab);
+    const result = {hidden, rects: await rects(tab), first: await axNode(cdp, FIRST), last: await axNode(cdp, LAST)};
+    await context.close();
+    return result;
+  };
+  for (const width of [320, 440]) {
+    const fresh = await observe(width, '');
+    expect(await observe(width, '0.3.7'), `${width}px`).toEqual(fresh);
+    expect(fresh.first.name).toMatch(/\bFirst\b/);
+  }
 });
 
-test('Storybook narrow revealed story exposes First/Last in the computed accessibility tree', async ({page, browserName}) => {
-  test.skip(browserName !== 'chromium', 'computed accessibility tree is read over the Chromium DevTools protocol');
-  await page.setViewportSize({width: 320, height: 900});
-  await page.goto('/iframe.html?id=screens-pagination--mobile-320-revealed-names&viewMode=story');
-  await expect(page.locator('.hgh-pagination[data-hgh-pg-wrap][data-hgh-pg-revealed]')).toHaveCount(1);
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Accessibility.enable');
-  await cdp.send('DOM.enable');
-  const first = await axNode(cdp, FIRST), last = await axNode(cdp, LAST);
-  expect(first.ignored || last.ignored).toBe(false);
-  expect(first.name).toMatch(/\bFirst\b/);
-  expect(last.name).toMatch(/\bLast\b/);
-});
+for (const [story, label] of [['mobile-320-revealed-names', 'narrow revealed'], ['mobile-320-revealed-names-cached-theme', 'narrow revealed, with the 0.3.7 stylesheet loaded first,']]) {
+  test(`Storybook ${label} story exposes First/Last in the computed accessibility tree`, async ({page, browserName, baseURL}) => {
+    test.skip(browserName !== 'chromium', 'computed accessibility tree is read over the Chromium DevTools protocol');
+    test.skip(!baseURL, 'needs the Storybook server (MOBILE_QA_URL); the native fixture config has none');
+    await page.setViewportSize({width: 320, height: 900});
+    await page.goto(`/iframe.html?id=screens-pagination--${story}&viewMode=story`);
+    await expect(page.locator('.hgh-pagination[data-hgh-pg-wrap][data-hgh-pg-revealed]')).toHaveCount(1);
+    if (story.includes('cached')) expect(await page.evaluate(() => document.head.firstElementChild?.matches('style[data-hgh-cached-release-theme]'))).toBe(true);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Accessibility.enable');
+    await cdp.send('DOM.enable');
+    const first = await axNode(cdp, FIRST), last = await axNode(cdp, LAST);
+    expect(first.ignored || last.ignored).toBe(false);
+    expect(first.name).toMatch(/\bFirst\b/);
+    expect(last.name).toMatch(/\bLast\b/);
+  });
+}
