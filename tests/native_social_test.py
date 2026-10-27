@@ -400,6 +400,21 @@ class GenerationTests(NativeSocialCase):
                 self.assertIn("preserve administrator changes", run.stderr)
                 self.assertEqual(self.target.read_text(), "{{/* administrator */}}\n")
 
+    def test_an_installed_template_with_other_line_endings_is_preserved_byte_for_byte(self):
+        # Text-mode reads translate CRLF and lone CR to LF, which made these compare equal to the script's own output.
+        generated = self.expected()
+        self.assertIn("\n", generated)
+        self.target.parent.mkdir(parents=True)
+        for name, converted in (("crlf", generated.replace("\n", "\r\n")), ("cr", generated.replace("\n", "\r"))):
+            self.target.write_bytes(converted.encode("utf-8"))
+            for extra in ([], ["--apply"], ["--remove", "--apply"]):
+                with self.subTest(endings=name, extra=extra):
+                    run = self.cli(*extra)
+                    self.assertNotEqual(run.returncode, 0, run.stdout)
+                    self.assertEqual(run.stdout, "")
+                    self.assertIn("Existing template differs; preserve administrator changes", run.stderr)
+                    self.assertEqual(self.target.read_bytes(), converted.encode("utf-8"))
+
     def test_a_symlinked_target_template_is_rejected_unwritten(self):
         kept = self.outside_dir / "kept.tmpl"
         kept.write_text("kept")

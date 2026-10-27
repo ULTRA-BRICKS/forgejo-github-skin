@@ -77,17 +77,18 @@ def main():
         source = raw.decode("utf-8")
     except UnicodeDecodeError as error:
         raise ValueError(f"Audited source {audit['path']!r} is not valid UTF-8") from error
-    content = generate(source, args.preview_origin, audit["sha256"])
+    content = generate(source, args.preview_origin, audit["sha256"]).encode("utf-8")
     target = args.custom_path / "templates/base/head_opengraph.tmpl"
     if target.is_symlink():
         raise ValueError("Template symlink rejected")
     exists = target.exists()
-    if exists and target.read_text(encoding="utf-8") != content:
+    # Bytes, not text: a text read turns CRLF into LF and would accept a file the script did not write.
+    if exists and target.read_bytes() != content:
         raise ValueError("Existing template differs; preserve administrator changes")
     plan = {
         "testedForgejo": audit["version"],
         "target": str(target),
-        "sha256": hashlib.sha256(content.encode()).hexdigest(),
+        "sha256": hashlib.sha256(content).hexdigest(),
         "action": "remove" if args.remove else "unchanged" if exists else "create",
         "applied": args.apply,
     }
@@ -97,7 +98,7 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         fd, temporary = tempfile.mkstemp(prefix=".og-", dir=target.parent)
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            with os.fdopen(fd, "wb") as handle:
                 os.fchmod(handle.fileno(), 0o644)
                 handle.write(content)
             os.replace(temporary, target)
