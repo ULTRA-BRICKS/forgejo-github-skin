@@ -84,6 +84,24 @@ class CheckCompatTests(unittest.TestCase):
  def test_audit_without_fingerprints_field_rejected(self):
   self.write_audit({'version':'9.9.9'})
   code,_,_=self.run_check(); self.assertEqual(code,2)
+ def test_audit_with_path_escaping_fingerprint_key_rejected(self):
+  outside=pathlib.Path(self.tmp.name)/'outside.tmpl'; outside.write_bytes(b'outside')
+  for key in ('',str(outside),'/etc/hostname','../outside.tmpl','templates/../../outside.tmpl','templates/..','..','..\\outside.tmpl','templates\\..\\..\\outside.tmpl','C:\\Windows\\win.ini','C:outside.tmpl','\\outside.tmpl'):
+   with self.subTest(key=key):
+    self.write_audit({'version':'9.9.9','sha256':{**{name:sha(data) for name,data in CONTRACT_FILES.items()},key:sha(b'outside')}})
+    code,out,err=self.run_check(); self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('outside the source checkout',err)
+ def test_audit_keys_that_merely_contain_dots_are_accepted(self):
+  for key in ('templates/a..b.tmpl','templates/.hidden.tmpl','templates/.../x.tmpl'):
+   with self.subTest(key=key): self.assertEqual(compat.audit_fingerprints({'version':'9.9.9','sha256':{key:sha(b'x')}},'9.9.9'),{key:sha(b'x')})
+ def test_real_cli_exits_2_without_pass_on_escaping_key(self):
+  import subprocess
+  outside=pathlib.Path(self.tmp.name)/'outside.tmpl'; outside.write_bytes(b'outside')
+  (self.root/'scripts').mkdir(); (self.root/'scripts/check-compat.py').write_bytes((ROOT/'scripts/check-compat.py').read_bytes()); (self.root/'scripts/_compat.py').write_bytes((ROOT/'scripts/_compat.py').read_bytes())
+  for key in ('',str(outside),'../outside.tmpl'):
+   with self.subTest(key=key):
+    self.write_audit({'version':'9.9.9','sha256':{**{name:sha(data) for name,data in CONTRACT_FILES.items()},key:sha(b'outside')}})
+    run=subprocess.run([sys.executable,str(self.root/'scripts/check-compat.py'),'--source-checkout',str(self.checkout),'--version','9.9.9'],capture_output=True,text=True,stdin=subprocess.DEVNULL)
+    self.assertEqual(run.returncode,2); self.assertNotIn('PASS',run.stdout); self.assertIn('outside the source checkout',run.stderr)
  def test_unparseable_audit_rejected(self):
   (self.root/'research/a.json').write_text('{not json')
   code,_,_=self.run_check(); self.assertEqual(code,2)

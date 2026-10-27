@@ -167,3 +167,15 @@ export const Dark = {
     return shell(nativePagination({current: 6, total: 90}), {dark: true});
   },
 };
+
+export const Mobile320RevealedNames = {
+  name: 'Mobile 320px, revealed: First/Last keep their accessible names (visually hidden native labels)',
+  render: () => {
+    clearPaginationStorage();
+    try { sessionStorage.setItem(REVEALED_KEY, 'true'); } catch {}
+    const root = shell(nativePagination({current: 6, total: 90}));
+    root.style.width = '320px';
+    root.style.boxSizing = 'border-box';
+    return root;
+  },
+};

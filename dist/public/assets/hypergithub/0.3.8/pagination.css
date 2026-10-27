@@ -1,0 +1,64 @@
+/* The browser's `[hidden]{display:none}` default is user-agent-origin CSS, so any
+   author-origin rule beats it regardless of specificity — Fomantic's own
+   `.ui(...).menu{display:…}` does exactly that (issue #6: production showed
+   getComputedStyle(display)=='inline-flex' on a menu with hidden=true, First/1/2/Last
+   still rendered/hit-testable alongside the new compact bar). This rule already
+   out-specifies `.ui.pagination.menu` on its own (four classes plus two attribute
+   selectors vs. three classes), but `!important` makes that guaranteed rather than
+   contingent on Fomantic never raising its own specificity. Matches any hidden
+   `.page.buttons > .pagination.menu` while a hypergithub theme is active — not only the
+   one enhancePagination() itself hides — which also keeps the separately-owned Vue
+   dashboard pager (`#dashboard-repo-list …`, no `.page.buttons` ancestor) out of reach.
+   Gated on `data-theme` so a cached/still-enabled stylesheet can never suppress the
+   native pager once the skin itself is switched off. */
+html:is([data-theme="hypergithub-light"],[data-theme="hypergithub-dark"],[data-theme="hypergithub-auto"]) .page.buttons>.pagination.menu[hidden]{display:none!important}
+
+/* Compact-by-default pagination. Loaded by pagination.mjs's markup only; `.hgh-pagination`
+   itself never touches native Forgejo pagination before enhancement or any other
+   component's styles (the hidden-native-menu override above is the sole exception). */
+.hgh-pagination{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--hgh-color-text,#1f2328)}
+.hgh-pagination *{box-sizing:border-box}
+.hgh-pagination a{text-decoration:none;color:inherit;cursor:pointer}
+.hgh-pg-center{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+
+/* Ghost buttons: no fill/border until hover or focus, so the compact state reads
+   as bare "< Previous  Next >" text. */
+.hgh-pagination a.item{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 10px;border:1px solid transparent;border-radius:6px;background:transparent;font-weight:500;white-space:nowrap}
+.hgh-pagination a.item:not(.disabled):hover{background:var(--hgh-color-subtle,#f6f8fa);border-color:var(--hgh-color-border,#d1d9e0)}
+.hgh-pagination a.item:focus-visible{outline:2px solid var(--hgh-color-link,#0969da);outline-offset:2px}
+.hgh-pagination a.item.disabled{opacity:.45;cursor:default;pointer-events:none}
+.hgh-pagination a.item svg{width:14px;height:14px;fill:currentColor;flex:0 0 auto}
+.hgh-pg-prev .navigation_label::before{content:'‹ '}
+.hgh-pg-next .navigation_label::after{content:' ›'}
+.hgh-pg-prev svg,.hgh-pg-next svg{display:none}
+
+.hgh-pg-number,.hgh-pg-edge{min-width:32px;justify-content:center;padding:0 8px}
+.hgh-pg-edge-num{font-weight:600}
+.hgh-pg-edge .navigation_label{font-size:12px;opacity:.75}
+.hgh-pg-ellipsis{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:32px;color:var(--hgh-color-muted,#59636e)}
+
+/* Wings reserve their full natural width from first paint (visibility:hidden keeps
+   the box, unlike display:none) so revealing them never moves the center pair. */
+.hgh-pg-wing{position:relative;display:flex;align-items:center;flex:0 0 auto;min-height:32px}
+.hgh-pg-wing-items{display:flex;align-items:center;gap:4px;visibility:hidden;opacity:0;pointer-events:none;transition:opacity .15s ease}
+.hgh-pagination[data-hgh-pg-revealed] .hgh-pg-wing-items{visibility:visible;opacity:1;pointer-events:auto}
+
+
+.hgh-pg-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+
+@media (prefers-reduced-motion:reduce){
+  .hgh-pg-wing-items{transition:none}
+}
+
+/* Narrow layout, toggled by pagination.mjs's applyResponsiveLayout() from a
+   measured available-width comparison (not a viewport media query) — see
+   there for the full design rationale. */
+.hgh-pagination[data-hgh-pg-wrap]{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"center center" "left right";row-gap:4px;column-gap:4px;justify-items:center}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-center{grid-area:center;justify-self:center}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing-left{grid-area:left;justify-self:start}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing-right{grid-area:right;justify-self:end}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing{min-width:0!important}
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-wing-items{flex-wrap:wrap;row-gap:4px;min-width:0}
+.hgh-pagination[data-hgh-pg-wrap] a.item{padding:0 8px}
+/* Visually hidden, not display:none: the label is the edge link's only accessible name (the chevron is aria-hidden), and it must keep occupying no space. */
+.hgh-pagination[data-hgh-pg-wrap] .hgh-pg-edge .navigation_label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}

@@ -1,5 +1,6 @@
 """Shared Forgejo compatibility helpers used by audit and installer gates."""
 from __future__ import annotations
+from pathlib import PurePosixPath, PureWindowsPath
 
 
 def normalize_forgejo_version(version: str) -> str:
@@ -29,4 +30,7 @@ def audit_fingerprints(audit: object, version: str) -> dict:
     fingerprints = audit.get('sha256')
     if not isinstance(fingerprints, dict) or not fingerprints:
         raise ValueError('audit has no source fingerprints')
+    for name in fingerprints:
+        if not name or any(path.anchor or '..' in path.parts for path in (PurePosixPath(name), PureWindowsPath(name))):
+            raise ValueError(f'audit fingerprint key {name!r} is empty, absolute or outside the source checkout')
     return fingerprints

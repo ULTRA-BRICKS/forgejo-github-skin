@@ -1,6 +1,6 @@
 import {defineConfig} from '@playwright/test';
 // These specs set their own 320/440/1280 viewports, so the extra Chromium viewport projects would only repeat them.
-const selfParameterized=/universal-search-(stream|stream-stories|coverage)\.spec\.mjs$/;
+const selfParameterized=/(universal-search-(stream|stream-stories|coverage)|pagination-accessible-names)\.spec\.mjs$/;
 export default defineConfig({
   testDir:'tests/mobile', timeout:25000, expect:{timeout:5000,toHaveScreenshot:{animations:'disabled',maxDiffPixelRatio:0.002}},
   workers:2, reporter:[['list'],['json',{outputFile:'.qa/mobile-tests.json'}]],
