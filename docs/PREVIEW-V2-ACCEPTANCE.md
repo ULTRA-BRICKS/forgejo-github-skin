@@ -36,7 +36,7 @@ python3 scripts/sharing/native-social.py \
 # Inspect the dry-run plan, then repeat with --apply and restart Forgejo normally.
 ```
 
-The script pins the upstream partial hash, refuses to replace an administrator's different template, and supports `--remove --apply` for removal of its own exact output. An upstream change must be reviewed, not bypassed. The generated native override is independent of the skin's general CSS installer. Recheck it as part of each Forgejo update.
+The script pins the upstream partial hash and reads the partial only as a regular file inside the source checkout: a symlink anywhere on the path, a loop, a dangling link or a special file is refused unread. It refuses to replace an administrator's different template, and supports `--remove --apply` for removal of its own exact output. An upstream change must be reviewed, not bypassed. The generated native override is independent of the skin's general CSS installer. Recheck it as part of each Forgejo update.
 
 Old `/s/` and `/share` browser links immediately redirect to the validated source before any metadata lookup. `/inspect` is the explicit troubleshooting page. Original Forgejo URLs are the intended user-facing links; no special share URL is required when the native overlay or the authenticated Slack application is configured.
 

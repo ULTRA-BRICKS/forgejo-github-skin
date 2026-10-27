@@ -217,4 +217,36 @@ class SymlinkEscapeTests(CheckCompatCase):
   finally: os.supports_dir_fd=real
   self.assertEqual(code,2); self.assertNotIn('PASS',out); self.assertIn('descriptor-relative',err)
 
+class CheckoutReaderTests(unittest.TestCase):
+ """sha256_in_checkout and read_bytes_in_checkout share one descriptor-relative walk."""
+ READERS=(compat.sha256_in_checkout,compat.read_bytes_in_checkout)
+ def setUp(self):
+  self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+  self.base=pathlib.Path(self.tmp.name); self.checkout=self.base/'upstream'; (self.checkout/'templates').mkdir(parents=True)
+  (self.base/'outside.tmpl').write_bytes(b'outside')
+ def test_bytes_are_returned_exactly_and_match_the_digest(self):
+  data=b'\xef\xbb\xbfone\r\ntwo\xff\x00'; (self.checkout/'templates/x.tmpl').write_bytes(data)
+  self.assertEqual(compat.read_bytes_in_checkout(self.checkout,'templates/x.tmpl'),data)
+  self.assertEqual(compat.sha256_in_checkout(self.checkout,'templates/x.tmpl'),sha(data))
+ def test_keys_that_could_leave_the_checkout_are_refused_by_the_walk_itself(self):
+  for key in ('','.','/',str(self.base/'outside.tmpl'),'../outside.tmpl','templates/../../outside.tmpl'):
+   for read in self.READERS:
+    with self.subTest(key=key,read=read.__name__), self.assertRaises(compat.UnsafeSourcePath): read(self.checkout,key)
+ def test_links_are_refused_and_absent_files_are_not_found(self):
+  (self.checkout/'templates/link.tmpl').symlink_to(self.base/'outside.tmpl'); (self.checkout/'dirlink').symlink_to(self.base,target_is_directory=True)
+  for read in self.READERS:
+   for key in ('templates/link.tmpl','dirlink/outside.tmpl'):
+    with self.subTest(key=key,read=read.__name__), self.assertRaises(compat.UnsafeSourcePath): read(self.checkout,key)
+   with self.subTest(read=read.__name__), self.assertRaises(FileNotFoundError): read(self.checkout,'templates/absent.tmpl')
+ @unittest.skipUnless(os.path.isdir('/proc/self/fd'),'counts open descriptors through /proc')
+ def test_no_descriptor_leaks_on_success_or_refusal(self):
+  (self.checkout/'templates/x.tmpl').write_bytes(b'x'); (self.checkout/'templates/link.tmpl').symlink_to(self.base/'outside.tmpl')
+  before=len(os.listdir('/proc/self/fd'))
+  for _ in range(20):
+   for read in self.READERS:
+    read(self.checkout,'templates/x.tmpl')
+    for key in ('templates/link.tmpl','../x','templates/absent.tmpl'):
+     with self.assertRaises((compat.UnsafeSourcePath,FileNotFoundError)): read(self.checkout,key)
+  self.assertEqual(len(os.listdir('/proc/self/fd')),before)
+
 if __name__=='__main__': unittest.main()

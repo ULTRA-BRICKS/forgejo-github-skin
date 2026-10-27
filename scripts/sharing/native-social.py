@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Optional native-URL OG overlay. Exact source gate; dry-run unless --apply."""
 
-import argparse, hashlib, json, os, re, tempfile
+import argparse, hashlib, json, os, re, sys, tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+from _compat import UnsafeSourcePath, read_bytes_in_checkout  # noqa: E402
+
 MARKER = (
     "{{/* managed: hypergithub-native-social-v2; generated from audited upstream */}}\n"
 )
@@ -50,13 +53,36 @@ def main():
     parser.add_argument("--remove", action="store_true")
     args = parser.parse_args()
     audit = json.loads((ROOT / "research/native-social-audit.json").read_text())
-    source = (args.source_checkout / audit["path"]).read_text()
+    if not isinstance(audit, dict) or not all(
+        isinstance(audit.get(key), str) for key in ("version", "path", "sha256")
+    ):
+        raise ValueError(
+            "Native social audit is malformed: version, path and sha256 must be strings"
+        )
+    try:
+        raw = read_bytes_in_checkout(args.source_checkout, audit["path"])
+    except UnsafeSourcePath as error:
+        raise ValueError(
+            f"Audited source {audit['path']!r} must be a relative path to a regular "
+            "file inside --source-checkout, not a link or special file"
+        ) from error
+    except FileNotFoundError as error:
+        raise ValueError(
+            f"Audited source {audit['path']!r} is missing from --source-checkout "
+            f"{str(args.source_checkout)!r}"
+        ) from error
+    # Strict UTF-8: a valid decode re-encodes to exactly `raw`, so the digest generate() checks is the digest of
+    # the bytes read from the one validated descriptor.
+    try:
+        source = raw.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ValueError(f"Audited source {audit['path']!r} is not valid UTF-8") from error
     content = generate(source, args.preview_origin, audit["sha256"])
     target = args.custom_path / "templates/base/head_opengraph.tmpl"
     if target.is_symlink():
         raise ValueError("Template symlink rejected")
     exists = target.exists()
-    if exists and target.read_text() != content:
+    if exists and target.read_text(encoding="utf-8") != content:
         raise ValueError("Existing template differs; preserve administrator changes")
     plan = {
         "testedForgejo": audit["version"],
@@ -71,7 +97,7 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         fd, temporary = tempfile.mkstemp(prefix=".og-", dir=target.parent)
         try:
-            with os.fdopen(fd, "w") as handle:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 os.fchmod(handle.fileno(), 0o644)
                 handle.write(content)
             os.replace(temporary, target)

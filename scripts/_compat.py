@@ -2,6 +2,7 @@
 from __future__ import annotations
 import errno, hashlib, os, stat
 from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import BinaryIO
 
 
 def normalize_forgejo_version(version: str) -> str:
@@ -69,17 +70,20 @@ def _open_child(parent_fd: int, part: str, directory: bool) -> int:
     return fd
 
 
-def sha256_in_checkout(checkout: Path, key: str) -> str:
-    """Hash the regular file at a relative key, refusing any symlink on the way instead of reading through it.
+def _open_in_checkout(checkout: Path, key: str) -> BinaryIO:
+    """Open the regular file at a relative key for binary reading, refusing any symlink on the way.
 
     The checkout itself is opened as given (the operator chooses it); every deeper component is opened relative to the
-    previous descriptor with O_NOFOLLOW, so no path below the checkout can be redirected outside it.
-    Raises FileNotFoundError for an absent file and UnsafeSourcePath for a link or a non-regular file.
+    previous descriptor with O_NOFOLLOW, so no path below the checkout can be redirected outside it. A key that is empty,
+    absolute or has a '..' component is refused before any open. The caller closes the returned file, which is the very
+    inode the walk inspected last, so whatever it reads is what was validated.
+    Raises FileNotFoundError for an absent file and UnsafeSourcePath for a link, a non-regular file or an escaping key.
     """
     if os.open not in os.supports_dir_fd or os.stat not in os.supports_dir_fd or os.stat not in os.supports_follow_symlinks or not hasattr(os, 'O_NOFOLLOW') or not hasattr(os, 'O_DIRECTORY'):
         raise ValueError('this platform has no descriptor-relative open; refusing to read source files without root confinement')
-    parts = PurePosixPath(key).parts
-    if not parts:
+    path = PurePosixPath(key)
+    parts = path.parts
+    if not parts or path.is_absolute() or '..' in parts:
         raise UnsafeSourcePath(key)
     fd = os.open(checkout, os.O_RDONLY | os.O_DIRECTORY | getattr(os, 'O_CLOEXEC', 0))
     try:
@@ -87,12 +91,28 @@ def sha256_in_checkout(checkout: Path, key: str) -> str:
             child = _open_child(fd, part, directory=index < len(parts) - 1)
             os.close(fd)
             fd = child
-        digest = hashlib.sha256()
-        with os.fdopen(fd, 'rb') as handle:
-            fd = -1
-            for chunk in iter(lambda: handle.read(1 << 20), b''):
-                digest.update(chunk)
-        return digest.hexdigest()
+        handle = os.fdopen(fd, 'rb')
+        fd = -1
+        return handle
     finally:
         if fd >= 0:
             os.close(fd)
+
+
+def sha256_in_checkout(checkout: Path, key: str) -> str:
+    """Hash the regular file at a relative key without reading through any symlink (see _open_in_checkout)."""
+    digest = hashlib.sha256()
+    with _open_in_checkout(checkout, key) as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def read_bytes_in_checkout(checkout: Path, key: str) -> bytes:
+    """Return the exact bytes of the regular file at a relative key without reading through any symlink.
+
+    Callers that must verify a digest hash these bytes themselves, so the content that was checked is the content used;
+    never hash with sha256_in_checkout and then read the key again, which opens it a second time.
+    """
+    with _open_in_checkout(checkout, key) as handle:
+        return handle.read()
