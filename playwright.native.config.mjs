@@ -17,6 +17,7 @@ const nativeSuites = [
   'search-scope-menu.spec.mjs',
   'universal-search-capability.spec.mjs',
   'native-diff-layout.spec.mjs',
+  'keyboard-pointer-interruption.spec.mjs',
 ];
 const mobileSuites = [
   'native-controls.spec.mjs',

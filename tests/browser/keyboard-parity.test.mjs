@@ -94,7 +94,7 @@ test('help omits hidden and disabled commands rather than promising unavailable 
   assert.ok(!commands.includes('l'), 'disabled ancestor blocks the native label filter');
 });
 
-for (const interruption of ['Escape', 'typing', 'composition', 'modal', 'modifier', 'hash', 'history', 'HTMX', 'handled', 'repeat']) {
+for (const interruption of ['Escape', 'typing', 'composition', 'modal', 'modifier', 'hash', 'history', 'pointer', 'HTMX', 'handled', 'repeat']) {
   test(`navigation prefix is cancelled by ${interruption}`, async t => {
     const page = await pageFor(t);
     await freezePrefixClockAndObserveNavigation(page);
@@ -122,6 +122,15 @@ for (const interruption of ['Escape', 'typing', 'composition', 'modal', 'modifie
         history.back();
       });
     });
+    // A native file-line click only calls history.pushState (Forgejo repo-code.ts): no hashchange, no popstate.
+    if (interruption === 'pointer') {
+      await page.evaluate(() => {
+        document.querySelector('main').insertAdjacentHTML('beforeend', '<table><tr><td class="lines-num"><span id="L3" data-line-number="3" style="display:inline-block;width:24px;height:16px"></span></td></tr></table>');
+        document.addEventListener('click', event => { if (event.target.matches('.lines-num span')) history.pushState(null, null, '#' + event.target.id); });
+      });
+      await page.locator('#L3').click();
+      assert.equal(new URL(page.url()).hash, '#L3');
+    }
     if (interruption === 'HTMX') await page.evaluate(() => document.dispatchEvent(new Event('htmx:beforeSwap')));
     if (interruption === 'handled' || interruption === 'repeat') await page.evaluate(interruption => {
       const event = new KeyboardEvent('keydown', {key:'x', bubbles:true, cancelable:true, repeat:interruption==='repeat'});
